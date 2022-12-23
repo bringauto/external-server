@@ -4,7 +4,7 @@ import time
 
 import paho.mqtt.client as mqtt
 
-from module.utils import check_file_exists
+from external_server.utils import check_file_exists
 
 
 class Server:

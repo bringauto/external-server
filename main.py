@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from module import argparse_init, Server
+from external_server import argparse_init, Server
 
 
 def main():
