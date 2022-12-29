@@ -9,9 +9,10 @@ def argparse_init() -> argparse.Namespace:
     parser.add_argument('-p', '--port', type=int, default=1883,
                         help='port of the MQTT server')
     parser.add_argument('--tls', action=argparse.BooleanOptionalAction, help='Tls authentication')
-    parser.add_argument('--ca', type=str, help='path to ca certification, used if tls is set')
-    parser.add_argument('--cert', type=str, help='path to cert file, used if tls is set')
-    parser.add_argument('--key', type=str, help='path to key file, used if tls is set')
+    tls = parser.add_argument_group('tls', description='if tls is used, set following arguments')
+    tls.add_argument('--ca', type=str, help='path to ca certification')
+    tls.add_argument('--cert', type=str, help='path to cert file')
+    tls.add_argument('--key', type=str, help='path to key file')
     return parser.parse_args()
 
 
