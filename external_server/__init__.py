@@ -1,9 +1,8 @@
 
-
 __all__ = (
-    'argparse_init',
-    'Server',
+    "argparse_init",
+    "ExternalServer",
 )
 
-from .server import Server
 from .utils import argparse_init
+from .external_server import ExternalServer
