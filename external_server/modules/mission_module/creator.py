@@ -5,6 +5,7 @@ from pydantic import BaseModel, ValidationError
 from pydantic.dataclasses import dataclass
 
 from external_server.modules.message_creator import MessageCreator
+import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 import external_server.protobuf.InternalProtocol_pb2 as internal_protocol
 
 
@@ -59,12 +60,18 @@ class MissionCreator(MessageCreator):
         super().__init__()
         self.action = Action.START
 
-    def create_command(self, status_bytes: bytes) -> internal_protocol.DeviceCommand:
-        message = internal_protocol.DeviceCommand()
+    def create_command(self, session_id: str, status_bytes: bytes) -> external_protocol.Command:
+        device_command = internal_protocol.DeviceCommand()
         status = self._parse_status(status_bytes)
         stops, action = self._create_stops(status.nextStop, status.state)
-        message.commandData = AutonomyCommand(stops=stops, route='test', action=action).json().encode()
-        return message
+        device_command.commandData = AutonomyCommand(
+            stops=stops, route='test', action=action).json().encode()
+        command = external_protocol.Command()
+        command.sessionId = session_id
+        command.messageCounter = 5  # TODO check order
+        # TODO device
+        command.deviceCommand.CopyFrom(device_command)
+        return command
 
     def _parse_status(self, status_bytes: bytes) -> AutonomyStatus:
         try:

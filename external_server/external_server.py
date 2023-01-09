@@ -3,7 +3,7 @@ import string
 import time
 
 from external_server.utils import check_file_exists
-from external_server.modules.car_accessory_module.creator import CarAccessoryCreator
+from external_server.modules import CarAccessoryCreator
 import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 
 import paho.mqtt.client as mqtt
@@ -24,7 +24,7 @@ class ExternalServer:
             protocol=mqtt.MQTTv5,
             transport='tcp')
         self.mqtt_client.on_connect = lambda client, userdata, flags, rc, properties:\
-            self.mqtt_client.subscribe('to-server/CAR1', qos=2)
+            client.subscribe('to-server/CAR1', qos=2)
         self.mqtt_client.on_disconnect = lambda client, userdata, rc, properties:\
             print("Unexpected disconnection.") if rc != 0 else print('Disconnect')
         self.mqtt_client.on_message = self._on_message
@@ -61,27 +61,29 @@ class ExternalServer:
         self.running = False
         self.mqtt_client.disconnect()
 
-    def _on_message(self, client, userdata, message) -> None:
-        print(f'Message topic: {message.topic}')
+    def _on_message(self, client: mqtt.Client, userdata, message: mqtt.MQTTMessage) -> None:
         message_external_client = external_protocol.ExternalClient().FromString(message.payload)
         message_external_server = external_protocol.ExternalServer()
+        car_accessory_creator = CarAccessoryCreator()
+        session_id = message_external_client.connect.sessionId
         if message_external_client.HasField("connect"):
-            connect_response = external_protocol.ConnectResponse()
-            connect_response.type = external_protocol.ConnectResponse.Type.OK
+            print(f'Received connect message on topic: {message.topic}')
+            connect_response = car_accessory_creator.create_connect_response(session_id)
             message_external_server.connectReponse.CopyFrom(connect_response)
+            client.publish('to-client/CAR1', message_external_server.SerializeToString())
         elif message_external_client.HasField("status"):
-            #print(message_external_client.status)
-            status_response = external_protocol.StatusResponse()
-            status_response.type = external_protocol.StatusResponse.Type.OK
-            status_response.messageCounter = 2
+            print(f'Received status message on topic: {message.topic}')
+            status_response = car_accessory_creator.create_status_response(
+                session_id,
+                message_external_client.status.messageCounter
+            )
             message_external_server.statusResponse.CopyFrom(status_response)
-            self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
+            client.publish('to-client/CAR1', message_external_server.SerializeToString())
 
-            car_accessory_creator = CarAccessoryCreator()
             message_external_server = external_protocol.ExternalServer()
             message_external_server.command.CopyFrom(
-                car_accessory_creator.create_command(message_external_client.status.deviceStatus.statusData)
+                car_accessory_creator.create_command(session_id, message_external_client.status.deviceStatus.statusData)
             )
+            client.publish('to-client/CAR1', message_external_server.SerializeToString())
         elif message_external_client.HasField("commandResponse"):
-            print('command response')
-        self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
+            print(f'Received command response on topic: {message.topic}')
