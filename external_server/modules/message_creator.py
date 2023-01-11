@@ -16,7 +16,7 @@ class MessageCreator(ABC):
         status_response = external_protocol.StatusResponse()
         status_response.sessionId = session_id
         status_response.type = external_protocol.StatusResponse.Type.OK
-        status_response.messageCounter = message_counter + 1  # TODO check order
+        status_response.messageCounter = message_counter  # TODO check order
         return status_response
 
     @abstractmethod
