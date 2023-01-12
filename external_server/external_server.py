@@ -2,6 +2,7 @@ import random
 import string
 import time
 
+from external_server.exceptions import ConnectSequenceException
 from external_server.utils import check_file_exists
 from external_server.modules import (
     CarAccessoryCreator,
@@ -85,50 +86,63 @@ class ExternalServer:
                 print("Connected to MQTT broker")
                 self._init_sequence()
                 self.mqtt_client.loop_forever()
+            except ConnectSequenceException:
+                print('Connect sequence failed')
             except ConnectionRefusedError:
                 print("Unable to connect, trying again")
+            finally:
                 time.sleep(1)
 
     def _init_sequence(self):
-        message = mqtt_sub.simple('to-server/CAR1', port=1883)
+        message = mqtt_sub.simple('to-server/CAR1', hostname=self.ip, port=self.port)
         message_external_client = external_protocol.ExternalClient().FromString(message.payload)
         car_accessory_creator = CarAccessoryCreator()
         if not message_external_client.HasField("connect"):
-            print('Init sequence: Connect message was expected')
-            return
-        print(f'Init sequence: Received connect message')
+            print('Connect sequence: Connect message has been expected')
+            raise ConnectSequenceException
+        print('Connect sequence: Connect message has been received')
         connect_response = car_accessory_creator.create_connect_response(message_external_client.connect.sessionId)
         message_external_server = external_protocol.ExternalServer()
-        message_external_server.connectReponse.CopyFrom(connect_response)
-        self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
+        message_external_server.connectReponse.CopyFrom(connect_response) # recompile protobuf files: reponse
         devices = message_external_client.connect.devices
-        messages = mqtt_sub.simple('to-server/CAR1', port=1883, msg_count=len(devices))
-        for message in messages:
+        devices_num = len(devices)
+        self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
+        print('Connect sequence: Connect message has been sent')
+
+        messages = mqtt_sub.simple('to-server/CAR1', hostname=self.ip, port=self.port, msg_count=devices_num)
+        for i, message in enumerate(messages):
             message_external_client = external_protocol.ExternalClient().FromString(message.payload)
             if not message_external_client.HasField("status"):
-                print('Init sequence: Status message expected')
-                return
-            print(f'Init sequence: Received status message')
-            status_response = car_accessory_creator.create_status_response(
-                message_external_client.connect.sessionId,
-                message_external_client.status.messageCounter
+                print('Connect sequence: Status message has been expected')
+                raise ConnectSequenceException
+            print(f'Connect sequence: Status message has been received {i}')
+            message_external_server.statusResponse.CopyFrom(
+                car_accessory_creator.create_status_response(
+                    message_external_client.connect.sessionId,
+                    message_external_client.status.messageCounter
+                )
             )
-            message_external_server.statusResponse.CopyFrom(status_response)
             self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
-        for _ in range(len(devices)):
+            print(f'Connect sequence: Status message has been sent {i}')
+
+        for i in range(devices_num):
             message_external_server = external_protocol.ExternalServer()
             message_external_server.command.CopyFrom(
-                car_accessory_creator.create_command(message_external_client.connect.sessionId, message_external_client.status.deviceStatus.statusData)
+                car_accessory_creator.create_command(
+                    message_external_client.connect.sessionId,
+                    message_external_client.status.deviceStatus.statusData
+                )
             )
             self.mqtt_client.publish('to-client/CAR1', message_external_server.SerializeToString())
-        messages = mqtt_sub.simple('to-server/CAR1', port=1883, msg_count=len(devices))
-        for message in messages:
+            print(f'Connect sequence: Command message has been sent {i}')
+
+        messages = mqtt_sub.simple('to-server/CAR1', hostname=self.ip, port=self.port, msg_count=devices_num)
+        for i, message in enumerate(messages):
             message_external_client = external_protocol.ExternalClient().FromString(message.payload)
             if not message_external_client.HasField("commandResponse"):
-                print('Init sequence: Command response message expected')
-                return
-            print(f'Init sequence: Received command response message')
-        # pak uz muzu loopovat a ocekavat statusy a commandy posilat jen kdyz se mi chce
+                print('Connect sequence: Command response has been expected')
+                raise ConnectSequenceException
+            print(f'Connect sequence: Command response has been received {i}')
 
     def stop(self) -> None:
         self.running = False
