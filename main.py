@@ -19,6 +19,7 @@ def main() -> None:
     try:
         server.start()
     except KeyboardInterrupt:
+        print('Server stopped')
         server.stop()
 
 
