@@ -60,16 +60,16 @@ class MissionCreator(MessageCreator):
         super().__init__()
         self.action = Action.START
 
-    def create_command(self, session_id: str, status_bytes: bytes) -> external_protocol.Command:
+    def create_command(self, session_id: str, counter: int,
+                       status: internal_protocol.DeviceStatus) -> external_protocol.Command:
         device_command = internal_protocol.DeviceCommand()
-        status = self._parse_status(status_bytes)
-        stops, action = self._create_stops(status.nextStop, status.state)
-        device_command.commandData = AutonomyCommand(
-            stops=stops, route='test', action=action).json().encode()
+        statusData = self._parse_status(status.statusData)
+        stops, action = self._create_stops(statusData.nextStop, statusData.state)
+        device_command.commandData = AutonomyCommand(stops=stops, route='test', action=action).json().encode()
         command = external_protocol.Command()
         command.sessionId = session_id
-        command.messageCounter = 5  # TODO check order
-        # TODO device
+        command.messageCounter = counter
+        command.device.CopyFrom(status.device)
         command.deviceCommand.CopyFrom(device_command)
         return command
 

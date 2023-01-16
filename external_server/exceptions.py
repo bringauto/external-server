@@ -1,4 +1,3 @@
 
-
 class ConnectSequenceException(Exception):
     pass

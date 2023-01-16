@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import external_server.protobuf.InternalProtocol_pb2 as internal_protocol
 import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 
 
@@ -20,5 +21,6 @@ class MessageCreator(ABC):
         return status_response
 
     @abstractmethod
-    def create_command(self, session_id: str, status_bytes: bytes) -> external_protocol.Command:
+    def create_command(self, session_id: str, counter: int,
+                       status: internal_protocol.DeviceStatus) -> external_protocol.Command:
         pass

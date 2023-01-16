@@ -7,13 +7,14 @@ import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 
 class CarAccessoryCreator(MessageCreator):
 
-    def create_command(self, session_id: str, status_bytes: bytes) -> external_protocol.Command:
-        status = json.loads(status_bytes)
+    def create_command(self, session_id: str, counter: int,
+                       status: internal_protocol.DeviceStatus) -> external_protocol.Command:
+        statusData = json.loads(status.statusData)
         device_command = internal_protocol.DeviceCommand()
-        device_command.commandData = json.dumps({"lit_up": True if status["pressed"] else False}).encode()
+        device_command.commandData = json.dumps({"lit_up": True if statusData["pressed"] else False}).encode()
         command = external_protocol.Command()
         command.sessionId = session_id
-        command.messageCounter = 5  # TODO check order
-        # TODO device
+        command.messageCounter = counter
+        command.device.CopyFrom(status.device)
         command.deviceCommand.CopyFrom(device_command)
         return command
