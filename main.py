@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
+import logging
 
 from external_server import (
     argparse_init,
     ExternalServer
 )
 
+from rich.logging import RichHandler
+
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+    )
     args = argparse_init()
     server = ExternalServer(args.ip_address, args.port)
     server.init_mqtt_client()
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
-            print('TLS requires ca certificate, PEM encoded client certificate and private key to this certificate')
+            logging.error('TLS requires ca certificate, PEM encoded client certificate and private key to this certificate')
             return
         server.set_tls(args.ca, args.cert, args.key)
 
     try:
         server.start()
     except KeyboardInterrupt:
-        print('Server stopped')
         server.stop()
 
 
