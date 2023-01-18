@@ -2,7 +2,7 @@ import random
 import string
 import time
 import logging
-from queue import Queue
+from queue import Queue, Empty
 
 from external_server.exceptions import ConnectSequenceException
 from external_server.utils import check_file_exists
@@ -17,6 +17,8 @@ import paho.mqtt.client as mqtt
 
 
 class ExternalServer:
+
+    TIMEOUT = 30
 
     def __init__(self, ip: str, port: int) -> None:
         self.ip = ip
@@ -74,15 +76,13 @@ class ExternalServer:
                 logging.info("Server connected to MQTT broker")
                 self.mqtt_client.loop_start()
                 self._init_sequence()
+                self._normal_communication()
             except ConnectSequenceException:
                 logging.error("Connect sequence failed")
-                time.sleep(1)
-                continue
             except ConnectionRefusedError:
                 logging.error("Unable to connect, trying again")
-                time.sleep(1)
-                continue
-            self._normal_communication()
+            except Empty:
+                logging.error("Client timed out")
 
     def _init_sequence(self):
         devices_num = self._init_connect()
@@ -97,7 +97,9 @@ class ExternalServer:
             raise ConnectSequenceException()
         logging.info("Connect sequence: Connect message has been received")
         connect_response = self.message_creator[ModuleType.MISSION_MODULE.value].create_connect_response(
-            received_msg.connect.sessionId)
+            received_msg.connect.sessionId,
+            external_protocol.ConnectResponse.Type.OK
+        )
         sent_msg = external_protocol.ExternalServer()
         sent_msg.connectResponse.CopyFrom(connect_response)
         devices = received_msg.connect.devices
@@ -109,7 +111,7 @@ class ExternalServer:
     def _init_status(self, devices_num: int) -> Queue:
         received_statuses = Queue()
         for i in range(devices_num):
-            received_msg = self.received_msgs.get(block=True)
+            received_msg = self.received_msgs.get(block=True, timeout=ExternalServer.TIMEOUT)
             if not received_msg.HasField("status"):
                 logging.error("Connect sequence: Status message has been expected")
                 raise ConnectSequenceException()
@@ -148,7 +150,7 @@ class ExternalServer:
             logging.info(f"Connect sequence: Command message has been sent {i}")
 
         for i in range(devices_num):
-            received_msg = self.received_msgs.get(block=True)
+            received_msg = self.received_msgs.get(block=True, timeout=ExternalServer.TIMEOUT)
             if not received_msg.HasField("commandResponse"):
                 logging.error("Connect sequence: Command response message has been expected")
                 raise ConnectSequenceException()
@@ -159,8 +161,7 @@ class ExternalServer:
 
     def _normal_communication(self):
         while self.mqtt_client.is_connected():
-            # TODO probably some timeout and after that reconnect and probably add it to the _init_sequence too
-            received_msg = self.received_msgs.get(block=True)
+            received_msg = self.received_msgs.get(block=True, timeout=ExternalServer.TIMEOUT)
             if isinstance(received_msg, bool):
                 logging.error("Unexpected disconnection.")
                 break
@@ -168,6 +169,13 @@ class ExternalServer:
             session_id = received_msg.connect.sessionId
             if received_msg.HasField("connect"):
                 logging.warning("Received unexpected connect message")
+                connect_response = self.message_creator[ModuleType.MISSION_MODULE.value].create_connect_response(
+                    received_msg.connect.sessionId,
+                    external_protocol.ConnectResponse.Type.ALREADY_LOGGED
+                )
+                sent_msg = external_protocol.ExternalServer()
+                sent_msg.connectResponse.CopyFrom(connect_response)
+                self.mqtt_client.publish('to-client/CAR1', sent_msg.SerializeToString())
 
             elif received_msg.HasField("status"):
                 logging.info("Received Status message message")
