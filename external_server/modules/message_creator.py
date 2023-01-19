@@ -6,7 +6,8 @@ import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 
 class MessageCreator(ABC):
 
-    def create_connect_response(self, session_id: str, connect_response_type: external_protocol.ConnectResponse.Type) -> external_protocol.ConnectResponse:
+    def create_connect_response(self, session_id: str, connect_response_type: external_protocol.ConnectResponse.Type)\
+            -> external_protocol.ConnectResponse:
         connect_response = external_protocol.ConnectResponse()
         connect_response.sessionId = session_id
         connect_response.type = connect_response_type

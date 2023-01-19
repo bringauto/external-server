@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import logging
 
+from rich.logging import RichHandler
+
 from external_server import (
     argparse_init,
     ExternalServer
 )
-
-from rich.logging import RichHandler
 
 
 def main() -> None:
@@ -18,7 +18,8 @@ def main() -> None:
     server.init_mqtt_client()
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
-            logging.error('TLS requires ca certificate, PEM encoded client certificate and private key to this certificate')
+            logging.error('TLS requires ca certificate, PEM encoded client certificate\
+                           and private key to this certificate')
             return
         server.set_tls(args.ca, args.cert, args.key)
 
