@@ -37,6 +37,7 @@ class ExternalServer:
             protocol=mqtt.MQTTv5,
             transport='tcp'
         )
+        self.connected = False
 
     @property
     def command_counter(self):
@@ -72,8 +73,9 @@ class ExternalServer:
     def start(self) -> None:
         while True:
             try:
-                if not self.mqtt_client.is_connected():
+                if not self.connected:
                     self.mqtt_client.connect(self.ip, port=self.port, keepalive=60)
+                    self.connected = True
                 logging.info("Server connected to MQTT broker")
                 self.mqtt_client.loop_start()
                 self._init_sequence()
@@ -139,10 +141,11 @@ class ExternalServer:
             logging.info(f"Connect sequence: Command response message has been received {i}")
 
     def _normal_communication(self):
-        while self.mqtt_client.is_connected():
+        while self.connected:
             received_msg = self.received_msgs.get(block=True, timeout=ExternalServer.TIMEOUT)
             if isinstance(received_msg, bool):
                 logging.error("Unexpected disconnection.")
+                self.connected = False
                 break
 
             if received_msg.HasField("connect"):
