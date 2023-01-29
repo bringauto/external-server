@@ -1,3 +1,5 @@
 paho-mqtt >= 1.6.1
 protobuf >= 4.21.12
 rich >= 13
+
+pydantic >= 1.10
