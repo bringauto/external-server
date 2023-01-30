@@ -15,8 +15,7 @@ class MqttClient:
         self.received_msgs = Queue()
         self.mqtt_client = mqtt.Client(
             client_id=''.join(random.choices(string.ascii_uppercase + string.digits, k=20)),
-            protocol=mqtt.MQTTv5,
-            clean_session=True
+            protocol=mqtt.MQTTv5
         )
         self._is_connected = False
 
@@ -40,7 +39,7 @@ class MqttClient:
         self.received_msgs.put(message_external_client)
 
     def connect(self, ip: str, port: int) -> None:
-        self.mqtt_client.connect(ip, port=port, keepalive=60)
+        self.mqtt_client.connect(ip, port=port, keepalive=60, clean_start=True)
         self._is_connected = True
         logging.info("Server connected to MQTT broker")
 
