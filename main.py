@@ -15,7 +15,6 @@ def main() -> None:
     )
     args = argparse_init()
     server = ExternalServer(args.ip_address, args.port)
-    server.init_mqtt_client()
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
             logging.error('TLS requires ca certificate, PEM encoded client certificate\
