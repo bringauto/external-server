@@ -48,18 +48,16 @@ class ExternalServer:
             try:
                 if not self.mqtt_client.is_connected:
                     self.mqtt_client.connect(self.ip, self.port)
-                logging.info("Server connected to MQTT broker")
-                self.mqtt_client.start()
+                    self.mqtt_client.start()
                 self._init_sequence()
                 self._normal_communication()
             except ConnectSequenceException:
                 logging.error("Connect sequence failed")
             except ConnectionRefusedError:
                 logging.error("Unable to connect, trying again")
+                time.sleep(0.5)
             except Empty:
                 logging.error("Client timed out")
-            finally:
-                time.sleep(0.5)
 
     def _init_sequence(self) -> None:
         devices_num = self._init_seq_connect()
@@ -128,11 +126,11 @@ class ExternalServer:
             logging.info(f"Connect sequence: Command response message has been received {i}")
 
     def _normal_communication(self):
-        while self.mqtt_client.is_connected:
+        while True:
             received_msg = self.mqtt_client.get(timeout=ExternalServer.TIMEOUT)
             if isinstance(received_msg, bool):
-                logging.error("Unexpected disconnection.")
-                self.mqtt_client.is_connected = False
+                logging.error("Unexpected disconnection")
+                self.mqtt_client.stop()
                 break
 
             if received_msg.HasField("connect"):
@@ -145,7 +143,7 @@ class ExternalServer:
                 logging.warning("Sending Connect response message")
 
             elif received_msg.HasField("status"):
-                logging.info("Received Status message message")
+                logging.info(f"Received Status message message, counter: {received_msg.status.messageCounter}")
                 # TODO remove duplicity
                 match received_msg.status.deviceState:
                     case external_protocol.Status.DeviceState.RUNNING:

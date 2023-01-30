@@ -16,6 +16,7 @@ class MqttClient:
         self.mqtt_client = mqtt.Client(
             client_id=''.join(random.choices(string.ascii_uppercase + string.digits, k=20)),
             protocol=mqtt.MQTTv5,
+            clean_session=True
         )
         self._is_connected = False
 
@@ -41,12 +42,14 @@ class MqttClient:
     def connect(self, ip: str, port: int) -> None:
         self.mqtt_client.connect(ip, port=port, keepalive=60)
         self._is_connected = True
+        logging.info("Server connected to MQTT broker")
 
     def start(self) -> None:
         self.mqtt_client.loop_start()
 
     def stop(self) -> None:
         self.mqtt_client.loop_stop()
+        self._is_connected = False
 
     def publish(self, msg) -> None:
         self.mqtt_client.publish('to-client/CAR1', msg.SerializeToString())
@@ -57,7 +60,3 @@ class MqttClient:
     @property
     def is_connected(self) -> bool:
         return self._is_connected
-
-    @is_connected.setter
-    def is_connected(self, connected: bool) -> None:
-        self._is_connected = connected
