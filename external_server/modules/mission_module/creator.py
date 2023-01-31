@@ -5,7 +5,6 @@ from pydantic import BaseModel, ValidationError
 from pydantic.dataclasses import dataclass
 
 from external_server.modules.message_creator import MessageCreator
-import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 import external_server.protobuf.InternalProtocol_pb2 as internal_protocol
 
 
@@ -60,24 +59,18 @@ class MissionCreator(MessageCreator):
         super().__init__()
         self.action = Action.START
 
-    def create_command(self, session_id: str, counter: int,
-                       status: internal_protocol.DeviceStatus) -> external_protocol.Command:
+    def _create_internal_command(self, status: internal_protocol.DeviceStatus) -> internal_protocol.DeviceCommand:
         device_command = internal_protocol.DeviceCommand()
-        statusData = self._parse_status(status.statusData)
-        stops, action = self._create_stops(statusData.nextStop, statusData.state)
+        status_data = self._parse_status(status.statusData)
+        stops, action = self._create_stops(status_data.nextStop, status_data.state)
         device_command.commandData = AutonomyCommand(stops=stops, route='test', action=action).json().encode()
-        command = external_protocol.Command()
-        command.sessionId = session_id
-        command.messageCounter = counter
-        command.device.CopyFrom(status.device)
-        command.deviceCommand.CopyFrom(device_command)
-        return command
+        return device_command
 
     def _parse_status(self, status_bytes: bytes) -> AutonomyStatus:
         try:
             return AutonomyStatus.parse_raw(status_bytes)
-        except ValidationError as e:
-            logging.error(f'Status validation failed: {e}')
+        except ValidationError as exc:
+            logging.error(f'Status validation failed: {exc}')
             raise ValueError from None
 
     def _create_stops(self, next_stop: Station | None, state: State) -> tuple[list[Station], Action]:

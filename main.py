@@ -10,6 +10,7 @@ from external_server import (
 
 
 def main() -> None:
+    """Main entry of external server"""
     logging.basicConfig(
         level=logging.DEBUG, format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
     )

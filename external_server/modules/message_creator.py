@@ -17,10 +17,18 @@ class MessageCreator(ABC):
         status_response = external_protocol.StatusResponse()
         status_response.sessionId = session_id
         status_response.type = external_protocol.StatusResponse.Type.OK
-        status_response.messageCounter = message_counter  # TODO check order
+        status_response.messageCounter = message_counter
         return status_response
 
+    def create_external_command(self, session_id: str, counter: int,
+                                status: internal_protocol.DeviceStatus) -> external_protocol.Command:
+        command = external_protocol.Command()
+        command.sessionId = session_id
+        command.messageCounter = counter
+        command.device.CopyFrom(status.device)
+        command.deviceCommand.CopyFrom(self._create_internal_command(status))
+        return command
+
     @abstractmethod
-    def create_command(self, session_id: str, counter: int,
-                       status: internal_protocol.DeviceStatus) -> external_protocol.Command:
+    def _create_internal_command(self, status: internal_protocol.DeviceStatus) -> internal_protocol.DeviceCommand:
         pass
