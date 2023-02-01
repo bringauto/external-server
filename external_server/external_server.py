@@ -19,7 +19,7 @@ class ExternalServer:
     def __init__(self, ip: str, port: int) -> None:
         self.ip = ip
         self.port = port
-        self.ack_checker = AcknowledgmentChecker()
+        self.command_response_checker = AcknowledgmentChecker()
         self.connected_devices = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False)))
         self.message_creator = {
             ModuleType.MISSION_MODULE.value: MissionCreator(),
@@ -53,7 +53,7 @@ class ExternalServer:
             except Empty:
                 logging.error("Client timed out")
             finally:
-                self.ack_checker.reset()
+                self.command_response_checker.reset()
 
     def _init_sequence(self) -> None:
         devices_num = self._init_seq_connect()
@@ -116,18 +116,18 @@ class ExternalServer:
             if not received_msg.HasField("commandResponse"):
                 logging.error("Command response message has been expected")
                 raise ConnectSequenceException()
-            self.ack_checker.check_command_response(received_msg.commandResponse.messageCounter)
+            self.command_response_checker.remove_ack(received_msg.commandResponse.messageCounter)
 
-    def _normal_communication(self):
+    def _normal_communication(self) -> None:
         while True:
             received_msg = self.mqtt_client.get(timeout=ExternalServer.TIMEOUT)
             if isinstance(received_msg, bool):
                 logging.error("Unexpected disconnection")
                 self.mqtt_client.stop()
                 break
-            if self.ack_checker.check_timer():
+            if self.command_response_checker.check_time_out():
                 logging.error("Command response message has not been recieved in time")
-                self.ack_checker.reset()
+                self.command_response_checker.reset()
                 break
 
             if received_msg.HasField("connect"):
@@ -180,7 +180,7 @@ class ExternalServer:
                         self.connected_devices[device.module][device.deviceType][device.deviceRole] = False
 
             elif received_msg.HasField("commandResponse"):
-                self.ack_checker.check_command_response(received_msg.commandResponse.messageCounter)
+                self.command_response_checker.remove_ack(received_msg.commandResponse.messageCounter)
 
     def stop(self) -> None:
         logging.info('Server stopped')
@@ -213,7 +213,7 @@ class ExternalServer:
 
     def _create_command(self, status: external_protocol.Status) -> external_protocol.ExternalServer:
         module = status.status.deviceStatus.device.module
-        command_counter = self.ack_checker.get_next_counter()
+        command_counter = self.command_response_checker.add_ack()
         sent_msg = external_protocol.ExternalServer()
         sent_msg.command.CopyFrom(
             self.message_creator[module].create_external_command(

@@ -12,7 +12,7 @@ import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
 class MqttClient:
 
     def __init__(self) -> None:
-        self.received_msgs = Queue()
+        self.received_msgs: Queue[external_protocol.ExternalClient] = Queue()
         self.mqtt_client = mqtt.Client(
             client_id=''.join(random.choices(string.ascii_uppercase + string.digits, k=20)),
             protocol=mqtt.MQTTv5
@@ -29,7 +29,7 @@ class MqttClient:
 
     def init_mqtt_client(self) -> None:
         self.mqtt_client.on_connect = lambda client, _userdata, _flags, _rc, _properties:\
-            client.subscribe('to-server/CAR1', qos=2)
+            client.subscribe('to-server/CAR1', qos=0)
         self.mqtt_client.on_disconnect = lambda _client, _userdata, rc, _properties:\
             self.received_msgs.put(False) if rc != 0 else logging.info("Disconnect")
         self.mqtt_client.on_message = self._on_message
@@ -50,10 +50,10 @@ class MqttClient:
         self.mqtt_client.loop_stop()
         self._is_connected = False
 
-    def publish(self, msg) -> None:
-        self.mqtt_client.publish('to-client/CAR1', msg.SerializeToString())
+    def publish(self, msg: external_protocol.ExternalServer) -> None:
+        self.mqtt_client.publish('to-client/CAR1', msg.SerializeToString(), qos=0)
 
-    def get(self, timeout: int = None):
+    def get(self, timeout: int | None = None) -> external_protocol.ExternalClient:
         return self.received_msgs.get(block=True, timeout=timeout)
 
     @property
