@@ -52,6 +52,8 @@ class ExternalServer:
                 time.sleep(0.5)
             except Empty:
                 logging.error("Client timed out")
+            finally:
+                self.ack_checker.reset()
 
     def _init_sequence(self) -> None:
         devices_num = self._init_seq_connect()
@@ -96,7 +98,8 @@ class ExternalServer:
                                 expected: {external_protocol.Status.DeviceState.CONNECTING}")
                 raise ConnectSequenceException()
 
-            logging.info(f"Received Status message message, messageCounter: {status_msg.status.messageCounter}")
+            logging.info(f"Received Status message message, messageCounter: {status_msg.status.messageCounter} \
+                           error: {status_msg.status.errorMessage}")
             received_statuses.put(status_msg)
             sent_msg = self._create_status_response(status_msg)
             self.mqtt_client.publish(sent_msg)
