@@ -151,7 +151,7 @@ class ExternalServer:
 
             elif received_msg.HasField("status"):
                 logging.info(f"Received Status message message, messageCounter: {received_msg.status.messageCounter}")
-                self._reset_msg_checker_if_session_id_is_ok(received_msg.status)
+                self._reset_msg_checker_if_session_id_is_ok(received_msg.status.sessionId)
                 match received_msg.status.deviceState:
                     case external_protocol.Status.DeviceState.RUNNING:
                         device = received_msg.status.deviceStatus.device
@@ -192,7 +192,7 @@ class ExternalServer:
                         self.connected_devices[device.module][device.deviceType][device.deviceRole] = False
 
             elif received_msg.HasField("commandResponse"):
-                self._reset_msg_checker_if_session_id_is_ok(received_msg.commandResponse)
+                self._reset_msg_checker_if_session_id_is_ok(received_msg.commandResponse.sessionId)
                 self.command_response_checker.remove_ack(received_msg.commandResponse.messageCounter)
 
     def stop(self) -> None:
@@ -247,13 +247,9 @@ class ExternalServer:
                                    device_state: external_protocol.Status.DeviceState) -> bool:
         return status.status.deviceState == device_state
 
-    def _check_session_id(self, msg: external_protocol.Connect
-                          | external_protocol.Status
-                          | external_protocol.CommandResponse) -> bool:
-        return self.session_id == msg.sessionId
+    def _check_session_id(self, msg_session_id: str) -> bool:
+        return self.session_id == msg_session_id
 
-    def _reset_msg_checker_if_session_id_is_ok(self, msg: external_protocol.Connect
-                                               | external_protocol.Status
-                                               | external_protocol.CommandResponse) -> None:
-        if self._check_session_id(msg):
+    def _reset_msg_checker_if_session_id_is_ok(self, msg_session_id: str) -> None:
+        if self._check_session_id(msg_session_id):
             self.msg_checker.reset()
