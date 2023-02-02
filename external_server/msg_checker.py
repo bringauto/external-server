@@ -6,7 +6,7 @@ from external_server.timeout import TIMEOUT
 class MessagesChecker:
 
     def __init__(self) -> None:
-        self.timer: None | threading.Timer = None
+        self.timer: threading.Timer = threading.Timer(TIMEOUT, self._set_time_out)
         self.time_out = threading.Event()
 
     def _set_time_out(self) -> None:
@@ -20,8 +20,9 @@ class MessagesChecker:
         self.timer.start()
 
     def stop(self) -> None:
-        self.timer.cancel()
-        self.timer.join()
+        if self.timer.is_alive():
+            self.timer.cancel()
+            self.timer.join()
         self.time_out.clear()
 
     def reset(self) -> None:

@@ -11,7 +11,7 @@ Directory contains fake external server the communicates with external client, w
 
 - `-i or --ip-address <str>` = ip address of the module gateway, default = `127.0.0.1`
 - `-p or --port <int>` = port of the module gateway, default = `1883`
-- `--tls` = tls authentication
+- `--tls` = tls mqtt authentication
 
 ### TLS arguments
 
