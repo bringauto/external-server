@@ -1,10 +1,10 @@
 import logging
 import threading
 
+from external_server.timeout import TIMEOUT
+
 
 class AcknowledgmentChecker:
-
-    TIME_OUT = 30
 
     def __init__(self) -> None:
         self.messages: list[tuple[int, threading.Timer]] = []
@@ -14,7 +14,7 @@ class AcknowledgmentChecker:
 
     def add_ack(self) -> int:
         self.counter += 1
-        timer = threading.Timer(AcknowledgmentChecker.TIME_OUT, self._set_time_out)
+        timer = threading.Timer(TIMEOUT, self._set_time_out)
         timer.start()
         self.messages.append((self.counter, timer))
         return self.counter
@@ -27,26 +27,28 @@ class AcknowledgmentChecker:
             self.recieved_acks.append(msg_counter)
             logging.warning("Command response message has been recieved in bad order")
             return
-        _, timer = self.messages.pop(0)
-        timer.cancel()
+        self._pop_timer()
         logging.info(f"Received Command response message was acknowledged, messageCounter: {msg_counter}")
         while self.recieved_acks:
             for counter, _ in self.messages:
                 if counter in self.recieved_acks:
-                    _, timer = self.messages.pop(0)
-                    timer.cancel()
+                    self._pop_timer()
                     self.recieved_acks.remove(counter)
                     logging.info(f"Older Command response message was acknowledged, messageCounter: {counter}")
                     break
                 else:
                     return
 
+    def _pop_timer(self) -> None:
+        _, timer = self.messages.pop(0)
+        timer.cancel()
+        timer.join()
+
     def check_time_out(self) -> bool:
         return self.time_out.is_set()
 
     def reset(self) -> None:
         while self.messages:
-            _, timer = self.messages.pop(0)
-            timer.cancel()
+            self._pop_timer()
         self.recieved_acks.clear()
         self.time_out.clear()

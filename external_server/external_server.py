@@ -4,24 +4,29 @@ from collections import defaultdict
 from queue import Empty, Queue
 
 import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
-from external_server.exceptions import ConnectSequenceException
+from external_server.ack_checker import AcknowledgmentChecker
+from external_server.exceptions import (ConnectSequenceException,
+                                        NormalCommunicationException)
 from external_server.modules import CarAccessoryCreator, MissionCreator
 from external_server.modules.module_type import ModuleType
 from external_server.mqtt_client import MqttClient
+from external_server.msg_checker import MessagesChecker
+from external_server.timeout import TIMEOUT
 from external_server.utils import check_file_exists
-from external_server.ack_checker import AcknowledgmentChecker
 
 
 class ExternalServer:
 
-    TIMEOUT = 30
-
+    # check status message order, probably AcknowledgmentChecker can be used for that,
+    # but change logging messages to be more generic
     def __init__(self, ip: str, port: int) -> None:
         self.ip = ip
         self.port = port
+        self.session_id = ''
+        self.msg_checker = MessagesChecker()
         self.command_response_checker = AcknowledgmentChecker()
         self.connected_devices = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: False)))
-        self.message_creator = {
+        self.msg_creator = {
             ModuleType.MISSION_MODULE.value: MissionCreator(),
             ModuleType.CAR_ACCESSORY_MODULE.value: CarAccessoryCreator()
         }
@@ -50,10 +55,13 @@ class ExternalServer:
             except ConnectionRefusedError:
                 logging.error("Unable to connect, trying again")
                 time.sleep(0.5)
-            except Empty:
+            except Empty:  # if 30 seconds any message has not been received
                 logging.error("Client timed out")
+            except NormalCommunicationException as nc_exc:
+                logging.error(nc_exc)
             finally:
                 self.command_response_checker.reset()
+                self.msg_checker.stop()
 
     def _init_sequence(self) -> None:
         devices_num = self._init_seq_connect()
@@ -67,13 +75,14 @@ class ExternalServer:
             logging.error("Connect message has been expected")
             raise ConnectSequenceException()
         logging.info("Connect message has been received")
+        self.session_id = received_msg.connect.sessionId
 
         devices = received_msg.connect.devices
         for device in devices:
             self.connected_devices[device.module][device.deviceType][device.deviceRole] = True
 
         sent_msg = self._create_connect_response(
-            received_msg.connect.sessionId,
+            self.session_id,
             external_protocol.ConnectResponse.Type.OK
         )
         self.mqtt_client.publish(sent_msg)
@@ -83,7 +92,7 @@ class ExternalServer:
         received_statuses = Queue()
         for _ in range(devices_num):
 
-            status_msg = self.mqtt_client.get(timeout=ExternalServer.TIMEOUT)
+            status_msg = self.mqtt_client.get(timeout=TIMEOUT)
             if not status_msg.HasField("status"):
                 logging.error("Status message has been expected")
                 raise ConnectSequenceException()
@@ -112,26 +121,28 @@ class ExternalServer:
             self.mqtt_client.publish(sent_msg)
 
         for _ in range(devices_num):
-            received_msg = self.mqtt_client.get(timeout=ExternalServer.TIMEOUT)
+            received_msg = self.mqtt_client.get(timeout=TIMEOUT)
             if not received_msg.HasField("commandResponse"):
                 logging.error("Command response message has been expected")
                 raise ConnectSequenceException()
             self.command_response_checker.remove_ack(received_msg.commandResponse.messageCounter)
 
     def _normal_communication(self) -> None:
+        self.msg_checker.start()
         while True:
-            received_msg = self.mqtt_client.get(timeout=ExternalServer.TIMEOUT)
+            received_msg = self.mqtt_client.get(timeout=TIMEOUT)
             if isinstance(received_msg, bool):
-                logging.error("Unexpected disconnection")
                 self.mqtt_client.stop()
-                break
+                raise NormalCommunicationException("Unexpected disconnection")
             if self.command_response_checker.check_time_out():
-                logging.error("Command response message has not been recieved in time")
-                self.command_response_checker.reset()
-                break
+                raise NormalCommunicationException("Command response message has not been recieved in time")
+            if self.msg_checker.check_time_out():
+                raise NormalCommunicationException("Connected session has been timed out")
 
             if received_msg.HasField("connect"):
-                logging.warning("Received unexpected Connect message")
+                logging.warning("Received Connect message")
+                if self._check_session_id(received_msg.connect.sessionId):
+                    raise NormalCommunicationException("Connected session sent Connect message")
                 sent_msg = self._create_connect_response(
                     received_msg.connect.sessionId,
                     external_protocol.ConnectResponse.Type.ALREADY_LOGGED
@@ -140,6 +151,7 @@ class ExternalServer:
 
             elif received_msg.HasField("status"):
                 logging.info(f"Received Status message message, messageCounter: {received_msg.status.messageCounter}")
+                self._reset_msg_checker_if_session_id_is_ok(received_msg.status)
                 match received_msg.status.deviceState:
                     case external_protocol.Status.DeviceState.RUNNING:
                         device = received_msg.status.deviceStatus.device
@@ -180,14 +192,17 @@ class ExternalServer:
                         self.connected_devices[device.module][device.deviceType][device.deviceRole] = False
 
             elif received_msg.HasField("commandResponse"):
+                self._reset_msg_checker_if_session_id_is_ok(received_msg.commandResponse)
                 self.command_response_checker.remove_ack(received_msg.commandResponse.messageCounter)
 
     def stop(self) -> None:
         logging.info('Server stopped')
         self.mqtt_client.stop()
+        self.command_response_checker.reset()
+        self.msg_checker.stop()
 
     def _create_connect_response(self, session_id: str, connect_response_type: int) -> external_protocol.ExternalServer:
-        connect_response = self.message_creator[ModuleType.MISSION_MODULE.value].create_connect_response(
+        connect_response = self.msg_creator[ModuleType.MISSION_MODULE.value].create_connect_response(
             session_id,
             connect_response_type
         )
@@ -198,12 +213,12 @@ class ExternalServer:
 
     def _create_status_response(self, status: external_protocol.Status) -> external_protocol.ExternalServer:
         module = status.status.deviceStatus.device.module
-        if module not in self.message_creator:
+        if module not in self.msg_creator:
             logging.error(f"Module {module} is not supported")
             raise ConnectSequenceException()
         sent_msg = external_protocol.ExternalServer()
         sent_msg.statusResponse.CopyFrom(
-            self.message_creator[module].create_status_response(
+            self.msg_creator[module].create_status_response(
                 status.status.sessionId,
                 status.status.messageCounter
             )
@@ -216,7 +231,7 @@ class ExternalServer:
         command_counter = self.command_response_checker.add_ack()
         sent_msg = external_protocol.ExternalServer()
         sent_msg.command.CopyFrom(
-            self.message_creator[module].create_external_command(
+            self.msg_creator[module].create_external_command(
                 status.status.sessionId,
                 command_counter,
                 status.status.deviceStatus
@@ -231,3 +246,14 @@ class ExternalServer:
     def _check_status_device_state(self, status: external_protocol.ExternalClient,
                                    device_state: external_protocol.Status.DeviceState) -> bool:
         return status.status.deviceState == device_state
+
+    def _check_session_id(self, msg: external_protocol.Connect
+                          | external_protocol.Status
+                          | external_protocol.CommandResponse) -> bool:
+        return self.session_id == msg.sessionId
+
+    def _reset_msg_checker_if_session_id_is_ok(self, msg: external_protocol.Connect
+                                               | external_protocol.Status
+                                               | external_protocol.CommandResponse) -> None:
+        if self._check_session_id(msg):
+            self.msg_checker.reset()
