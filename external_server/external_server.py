@@ -4,21 +4,20 @@ from collections import defaultdict
 from queue import Empty, Queue
 
 import external_server.protobuf.ExternalProtocol_pb2 as external_protocol
-from external_server.ack_checker import AcknowledgmentChecker
+from external_server.checker.ack_checker import AcknowledgmentChecker
+from external_server.checker.checker import Checker
+from external_server.checker.msg_checker import MessagesChecker
 from external_server.exceptions import (ConnectSequenceException,
                                         NormalCommunicationException)
 from external_server.modules import CarAccessoryCreator, MissionCreator
 from external_server.modules.module_type import ModuleType
 from external_server.mqtt_client import MqttClient
-from external_server.msg_checker import MessagesChecker
-from external_server.timeout import TIMEOUT
 from external_server.utils import check_file_exists
 
 
 class ExternalServer:
 
-    # check status message order, probably AcknowledgmentChecker can be used for that,
-    # but change logging messages to be more generic
+    # check status message order, use OrderChecker
     def __init__(self, ip: str, port: int) -> None:
         self.ip = ip
         self.port = port
@@ -71,6 +70,9 @@ class ExternalServer:
 
     def _init_seq_connect(self) -> int:
         received_msg = self.mqtt_client.get()
+        if isinstance(received_msg, bool):
+            self.mqtt_client.stop()
+            raise ConnectSequenceException()
         if not received_msg.HasField("connect"):
             logging.error("Connect message has been expected")
             raise ConnectSequenceException()
@@ -92,7 +94,7 @@ class ExternalServer:
         received_statuses = Queue()
         for _ in range(devices_num):
 
-            status_msg = self.mqtt_client.get(timeout=TIMEOUT)
+            status_msg = self.mqtt_client.get(timeout=Checker.TIMEOUT)
             if not status_msg.HasField("status"):
                 logging.error("Status message has been expected")
                 raise ConnectSequenceException()
@@ -121,7 +123,7 @@ class ExternalServer:
             self.mqtt_client.publish(sent_msg)
 
         for _ in range(devices_num):
-            received_msg = self.mqtt_client.get(timeout=TIMEOUT)
+            received_msg = self.mqtt_client.get(timeout=Checker.TIMEOUT)
             if not received_msg.HasField("commandResponse"):
                 logging.error("Command response message has been expected")
                 raise ConnectSequenceException()
@@ -130,7 +132,7 @@ class ExternalServer:
     def _normal_communication(self) -> None:
         self.msg_checker.start()
         while True:
-            received_msg = self.mqtt_client.get(timeout=TIMEOUT)
+            received_msg = self.mqtt_client.get(timeout=Checker.TIMEOUT)
             if isinstance(received_msg, bool):
                 self.mqtt_client.stop()
                 raise NormalCommunicationException("Unexpected disconnection")
@@ -152,6 +154,7 @@ class ExternalServer:
             elif received_msg.HasField("status"):
                 logging.info(f"Received Status message message, messageCounter: {received_msg.status.messageCounter}")
                 self._reset_msg_checker_if_session_id_is_ok(received_msg.status.sessionId)
+                #check status order
                 match received_msg.status.deviceState:
                     case external_protocol.Status.DeviceState.RUNNING:
                         device = received_msg.status.deviceStatus.device

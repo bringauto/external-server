@@ -1,12 +1,13 @@
 import logging
 import threading
 
-from external_server.timeout import TIMEOUT
+from external_server.checker.checker import Checker
 
 
-class AcknowledgmentChecker:
+class AcknowledgmentChecker(Checker):
 
     def __init__(self) -> None:
+        super().__init__()
         self.messages: list[tuple[int, threading.Timer]] = []
         self.recieved_acks: list[int] = []
         self.counter = 0
@@ -14,13 +15,10 @@ class AcknowledgmentChecker:
 
     def add_ack(self) -> int:
         self.counter += 1
-        timer = threading.Timer(TIMEOUT, self._set_time_out)
+        timer = threading.Timer(Checker.TIMEOUT, super()._set_time_out)
         timer.start()
         self.messages.append((self.counter, timer))
         return self.counter
-
-    def _set_time_out(self) -> None:
-        self.time_out.set()
 
     def remove_ack(self, msg_counter: int) -> None:
         if not self.messages or msg_counter != self.messages[0][0]:
@@ -43,9 +41,6 @@ class AcknowledgmentChecker:
         _, timer = self.messages.pop(0)
         timer.cancel()
         timer.join()
-
-    def check_time_out(self) -> bool:
-        return self.time_out.is_set()
 
     def reset(self) -> None:
         while self.messages:
