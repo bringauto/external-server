@@ -2,7 +2,6 @@ import threading
 
 
 class Checker:
-
     TIMEOUT = 30
 
     def __init__(self) -> None:

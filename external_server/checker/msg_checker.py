@@ -2,6 +2,7 @@ import threading
 
 from external_server.checker.checker import Checker
 
+
 class MessagesChecker(Checker):
     """
     Checks if connected session did not timed out
@@ -13,7 +14,9 @@ class MessagesChecker(Checker):
 
     def __init__(self) -> None:
         super().__init__()
-        self.timer: threading.Timer = threading.Timer(Checker.TIMEOUT, self._set_time_out)
+        self.timer: threading.Timer = threading.Timer(
+            Checker.TIMEOUT, self._set_time_out
+        )
 
     def start(self) -> None:
         self.timer = threading.Timer(Checker.TIMEOUT, super()._set_time_out)

@@ -54,30 +54,37 @@ class AutonomyCommand(BaseModel):
 
 
 class MissionCreator(MessageCreator):
-
     def __init__(self) -> None:
         super().__init__()
         self.action = Action.START
 
-    def _create_internal_command(self, status: internal_protocol.DeviceStatus) -> internal_protocol.DeviceCommand:
+    def _create_internal_command(
+        self, status: internal_protocol.DeviceStatus
+    ) -> internal_protocol.DeviceCommand:
         device_command = internal_protocol.DeviceCommand()
         status_data = self._parse_status(status.statusData)
         stops, action = self._create_stops(status_data.nextStop, status_data.state)
-        device_command.commandData = AutonomyCommand(stops=stops, route='test', action=action).json().encode()
+        device_command.commandData = (
+            AutonomyCommand(stops=stops, route="test", action=action).json().encode()
+        )
         return device_command
 
     def _parse_status(self, status_bytes: bytes) -> AutonomyStatus:
         try:
             return AutonomyStatus.parse_raw(status_bytes)
         except ValidationError as exc:
-            logging.error(f'Status validation failed: {exc}')
+            logging.error(f"Status validation failed: {exc}")
             raise ValueError from None
 
-    def _create_stops(self, next_stop: Station | None, state: State) -> tuple[list[Station], Action]:
+    def _create_stops(
+        self, next_stop: Station | None, state: State
+    ) -> tuple[list[Station], Action]:
         if next_stop is None:
-            self.stops: list[Station] = [Station('Hrnčířská', Position(1, 2, 3)),
-                                         Station('Semillaso', Position(4, 5, 6)),
-                                         Station('Česká', Position(7, 8, 9))]
+            self.stops: list[Station] = [
+                Station("Hrnčířská", Position(1, 2, 3)),
+                Station("Semillaso", Position(4, 5, 6)),
+                Station("Česká", Position(7, 8, 9)),
+            ]
             return self.stops, self.action
 
         if state == State.IN_STOP and self.action == Action.START:
