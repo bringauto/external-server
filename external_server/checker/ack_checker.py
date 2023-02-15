@@ -25,17 +25,13 @@ class AcknowledgmentChecker(Checker):
             logging.warning("Command response message has been recieved in bad order")
             return
         self._pop_timer()
-        logging.info(
-            f"Received Command response message was acknowledged, messageCounter: {msg_counter}"
-        )
+        logging.info(f"Received Command response message was acknowledged, messageCounter: {msg_counter}")
         while self.recieved_acks:
             for counter, _ in self.messages:
                 if counter in self.recieved_acks:
                     self._pop_timer()
                     self.recieved_acks.remove(counter)
-                    logging.info(
-                        f"Older Command response message was acknowledged, messageCounter: {counter}"
-                    )
+                    logging.info(f"Older Command response message was acknowledged, messageCounter: {counter}")
                     break
                 else:
                     return

@@ -12,9 +12,7 @@ class MqttClient:
     def __init__(self) -> None:
         self.received_msgs: Queue[external_protocol.ExternalClient] = Queue()
         self.mqtt_client = mqtt.Client(
-            client_id="".join(
-                random.choices(string.ascii_uppercase + string.digits, k=20)
-            ),
+            client_id="".join(random.choices(string.ascii_uppercase + string.digits, k=20)),
             protocol=mqtt.MQTTv5,
         )
         self._is_connected = False
@@ -24,27 +22,21 @@ class MqttClient:
         self.mqtt_client.tls_insecure_set(True)
 
     def init_mqtt_client(self) -> None:
-        self.mqtt_client.on_connect = (
-            lambda client, _userdata, _flags, _rc, _properties: client.subscribe(
-                "to-server/CAR1", qos=0
-            )
+        self.mqtt_client.on_connect = lambda client, _userdata, _flags, _rc, _properties: client.subscribe(
+            "to-server/CAR1", qos=0
         )
         self.mqtt_client.on_disconnect = self._on_disconnect
         self.mqtt_client.on_message = self._on_message
 
-    def _on_disconnect(self, _client, _userdata, rc, _properties) -> None:
-        self.received_msgs.put(False) if rc != 0 else logging.info("Disconnect")
+    def _on_disconnect(self, _client, _userdata, ret_code, _properties) -> None:
+        self.received_msgs.put(False) if ret_code != 0 else logging.info("Disconnect")
 
-    def _on_message(
-        self, _client: mqtt.Client, _userdata, message: mqtt.MQTTMessage
-    ) -> None:
-        message_external_client = external_protocol.ExternalClient().FromString(
-            message.payload
-        )
+    def _on_message(self, _client: mqtt.Client, _userdata, message: mqtt.MQTTMessage) -> None:
+        message_external_client = external_protocol.ExternalClient().FromString(message.payload)
         self.received_msgs.put(message_external_client)
 
-    def connect(self, ip: str, port: int) -> None:
-        self.mqtt_client.connect(ip, port=port, keepalive=60, clean_start=True)
+    def connect(self, ip_address: str, port: int) -> None:
+        self.mqtt_client.connect(ip_address, port=port, keepalive=60, clean_start=True)
         self._is_connected = True
         logging.info("Server connected to MQTT broker")
 

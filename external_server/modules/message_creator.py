@@ -15,9 +15,7 @@ class MessageCreator(ABC):
         connect_response.type = connect_response_type
         return connect_response
 
-    def create_status_response(
-        self, session_id: str, message_counter: int
-    ) -> external_protocol.StatusResponse:
+    def create_status_response(self, session_id: str, message_counter: int) -> external_protocol.StatusResponse:
         status_response = external_protocol.StatusResponse()
         status_response.sessionId = session_id
         status_response.type = external_protocol.StatusResponse.Type.OK
@@ -35,7 +33,5 @@ class MessageCreator(ABC):
         return command
 
     @abstractmethod
-    def _create_internal_command(
-        self, status: internal_protocol.DeviceStatus
-    ) -> internal_protocol.DeviceCommand:
+    def _create_internal_command(self, status: internal_protocol.DeviceStatus) -> internal_protocol.DeviceCommand:
         pass
