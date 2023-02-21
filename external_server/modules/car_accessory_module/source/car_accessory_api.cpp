@@ -2,14 +2,14 @@
 #include <iostream>
 #include <atomic>
 
-#include <proto/CarAccessoryModule.pb.h>
+#include <CarAccessoryModule.pb.h>
 
 
 
 extern "C" {
-#include "external_server_interface.h"
+#include <external_server_interface.h>
 }
-
+extern "C" {
 struct context {
 	char button;
 	struct device_identification device;
@@ -98,3 +98,39 @@ forward_error_message(const struct buffer error_msg, const struct device_identif
 	return 0;
 }
 
+int command_ack(const struct buffer command, const void *context) {
+	printf("[Car Accessory Module][INFO]: Command was succesfully delivered");
+	return 0;
+}
+
+int get_module_number() {
+	return 2;
+}
+
+int device_connected(const struct device_identification device, const void *context) {
+	auto con = (struct context *)context;
+	con->device = device;
+	return 0;
+}
+
+int device_disconnected(const disconnect_types disconnectType, const struct device_identification device,
+						const void *context) {
+	switch(disconnectType) {
+		case announced:
+			printf("[Car Accessory Module][INFO]: Device disconnected %s/%s\n", device.device_role, device.device_name);
+			break;
+		case timeout:
+			printf("[Car Accessory Module][WARNING]: Device timeout %s/%s\n", device.device_role, device.device_name);
+			break;
+		case error:
+			printf("[Car Accessory Module][ERROR]: Device error. Disconnected %s/%s\n", device.device_role,
+				   device.device_name);
+			break;
+	}
+	auto con = (struct context *)context;
+	con->device.device_name = "";
+	con->device.device_role = "";
+	con->device.device_type = -1;
+	return 0;
+}
+}
