@@ -33,8 +33,6 @@ int main() {
 	}
 	status.SerializeToArray(statusData.data, statusData.size);
 	for(int i = 0; i < 3; ++i) {
-
-	} {
 		forward_status(statusData, device, context);
 		sleep(5);
 	}

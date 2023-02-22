@@ -3,22 +3,16 @@
 #include <atomic>
 
 #include <CarAccessoryModule.pb.h>
-
-
-
-extern "C" {
 #include <external_server_interface.h>
-}
-extern "C" {
+
 struct context {
 	char button;
 	struct device_identification device;
 	command_forwarder forwardCommand = nullptr;
-	std::thread listenThread;
 	std::atomic<bool> stopThread;
 };
 
-void listenKeyboard(const struct context *context) {
+void listenKeyboard(struct context *context) {
 	char b;
 
 	auto command = CarAccessoryModule::ButtonCommand();
@@ -62,26 +56,26 @@ int destroy(void **context) {
 	}
 	auto con = (struct context *)context;
 	con->stopThread = true;
-	con->listenThread.join();
+//	con->listenThread.join();
 //	free(con->device);
-	free(context);
+	free(*context);
 	context = nullptr;
 	return 0;
 }
 
-int register_command_callback(command_forwarder forward_command, const void *context) {
+int register_command_callback(command_forwarder forward_command, void * context) {
 	if(context == nullptr) {
 		return -1;
 	}
 	auto con = (struct context *)context;
 	con->forwardCommand = forward_command;
 	std::thread keyboardListener(listenKeyboard, con);
-	con->listenThread.swap(keyboardListener);
-//	con->listenThread.detach();
+//	con->listenThread.swap(keyboardListener);
+	keyboardListener.detach();
 	return 0;
 }
 
-int forward_status(const struct buffer device_status, const struct device_identification device, const void *context) {
+int forward_status(const struct buffer device_status, const struct device_identification device, void *context) {
 	CarAccessoryModule::ButtonStatus status;
 	status.ParseFromArray(device_status.data, device_status.size);
 	printf("[Car Accessory Module][INFO]: Received status from: %s/%s. Is pressed: %s\n", device.device_role,
@@ -90,7 +84,7 @@ int forward_status(const struct buffer device_status, const struct device_identi
 }
 
 int
-forward_error_message(const struct buffer error_msg, const struct device_identification device, const void *context) {
+forward_error_message(const struct buffer error_msg, const struct device_identification device, void *context) {
 	CarAccessoryModule::ButtonError buttonError;
 	buttonError.ParseFromArray(error_msg.data, error_msg.size);
 	printf("[Car Accessory Module][INFO]: Received error message from: %s/%s. Press count: %d\n",
@@ -107,14 +101,13 @@ int get_module_number() {
 	return 2;
 }
 
-int device_connected(const struct device_identification device, const void *context) {
+int device_connected(const struct device_identification device, void *context) {
 	auto con = (struct context *)context;
 	con->device = device;
 	return 0;
 }
 
-int device_disconnected(const disconnect_types disconnectType, const struct device_identification device,
-						const void *context) {
+int device_disconnected(const disconnect_types disconnectType, const struct device_identification device, void *context) {
 	switch(disconnectType) {
 		case announced:
 			printf("[Car Accessory Module][INFO]: Device disconnected %s/%s\n", device.device_role, device.device_name);
@@ -132,5 +125,4 @@ int device_disconnected(const disconnect_types disconnectType, const struct devi
 	con->device.device_role = "";
 	con->device.device_type = -1;
 	return 0;
-}
 }
