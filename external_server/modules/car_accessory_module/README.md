@@ -17,4 +17,4 @@ make
 ```
 
 ### Config
-"<command_key>"="button"
+button = <command_key>

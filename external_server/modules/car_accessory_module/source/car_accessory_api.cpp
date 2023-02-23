@@ -56,8 +56,6 @@ int destroy(void **context) {
 	}
 	auto con = (struct context *)context;
 	con->stopThread = true;
-//	con->listenThread.join();
-//	free(con->device);
 	free(*context);
 	context = nullptr;
 	return 0;
@@ -70,7 +68,6 @@ int register_command_callback(command_forwarder forward_command, void * context)
 	auto con = (struct context *)context;
 	con->forwardCommand = forward_command;
 	std::thread keyboardListener(listenKeyboard, con);
-//	con->listenThread.swap(keyboardListener);
 	keyboardListener.detach();
 	return 0;
 }
@@ -93,12 +90,12 @@ forward_error_message(const struct buffer error_msg, const struct device_identif
 }
 
 int command_ack(const struct buffer command, const void *context) {
-	printf("[Car Accessory Module][INFO]: Command was succesfully delivered");
+	printf("[Car Accessory Module][INFO]: Command was successfully delivered");
 	return 0;
 }
 
 int get_module_number() {
-	return 2;
+	return 2; 	/// Based on module number form .proto file
 }
 
 int device_connected(const struct device_identification device, void *context) {
