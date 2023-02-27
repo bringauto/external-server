@@ -5,11 +5,6 @@ SET(CMAKE_CXX_STANDARD 20)
 
 OPTION(BRINGAUTO_SAMPLES "Build samples" OFF)
 
-#FIND_PACKAGE(CMLIB
-#        COMPONENTS CMDEF CMUTIL
-#        REQUIRED
-#        )
-
 FIND_PACKAGE(Protobuf 3.17.3 REQUIRED)
 ADD_LIBRARY(protobuf_lib SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/proto/CarAccessoryModule.pb.cc
@@ -25,5 +20,3 @@ IF(BRINGAUTO_SAMPLES)
     ADD_EXECUTABLE(test_api main.cpp)
     TARGET_LINK_LIBRARIES(test_api PUBLIC car_accessory_api protobuf_lib)
 ENDIF()
-#INSTALL(TARGETS car_accessory_api
-#        DESTINATION lib/)
