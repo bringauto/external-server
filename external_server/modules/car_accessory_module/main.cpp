@@ -6,8 +6,9 @@
 
 
 
-void* getKey(const char* const key, void *context) {
-	return (void *)"b";
+char* getKey(const char* const key, void *context) {
+//	char button[5] = {"bbbb"};
+	return (char*)"asdf";
 }
 
 int forwardCommand(const struct buffer command, const struct device_identification device, void *context) {

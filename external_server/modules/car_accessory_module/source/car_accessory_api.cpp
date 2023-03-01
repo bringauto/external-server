@@ -6,9 +6,9 @@
 #include <external_server_interface.h>
 
 struct context {
-	char button;
-	std::vector<struct device_identification> device;
-	command_forwarder forwardCommand = nullptr;
+	char button {};
+	std::vector<struct device_identification> devices;
+	command_forwarder forwardCommand { nullptr };
 	std::atomic<bool> stopThread;
 };
 
@@ -28,26 +28,25 @@ void listenKeyboard(struct context *context, void *external_server_context) {
 	while(!context->stopThread) {
 		std::cin >> b;
 		if(b == context->button) {
-			context->forwardCommand(commandData, context->device, external_server_context); //TODO foreach
+			for(auto device : context->devices) {
+				context->forwardCommand(commandData, device, external_server_context);
+			}
 		}
 	}
 	free(commandData.data);
 }
 
 void *init(key_getter get_key, void *external_server_context) {
-	char *button = reinterpret_cast<char *>(get_key("button", external_server_context));
+	char *button = get_key("button", external_server_context);
 	if(button == nullptr) {
 		printf("[Car Accessory Module][ERROR]: Invalid value for argument button\n");
 		return nullptr;
 	}
-	auto *context = (struct context *)(malloc(sizeof(struct context)));
-	if(context == nullptr) {
-		printf("[Car Accessory Module][ERROR]: Memory allocation error\n");
-		return nullptr;
-	}
-	context->stopThread = false;
-	context->button = button[0];
-	return context;
+	auto *contextPtr = new context;
+
+	contextPtr->stopThread = false;
+	contextPtr->button = button[0];
+	return contextPtr;
 }
 
 int destroy(void **context) {
@@ -56,7 +55,7 @@ int destroy(void **context) {
 	}
 	auto con = (struct context *)context;
 	con->stopThread = true;
-	free(*context);
+	delete *context;
 	context = nullptr;
 	return 0;
 }
@@ -99,7 +98,10 @@ int get_module_number() {
 
 int device_connected(const struct device_identification device, void *context) {
 	auto con = (struct context *)context;
-	con->device = device;
+	struct device_identification newDevice = {device.device_type}; //, memcpy(device.device_role), device.device_name};
+	strcpy(newDevice.device_role, device.device_role );
+	strcpy(newDevice.device_name, device.device_name );
+	con->devices.emplace_back(newDevice);
 	return 0; // TODO deep copy a pridat do vectoru
 }
 
@@ -117,8 +119,13 @@ int device_disconnected(const disconnect_types disconnectType, const struct devi
 			break;
 	}
 	auto con = (struct context *)context; //TODO odstranit z vektoru
-	con->device.device_name = "";
-	con->device.device_role = "";
-	con->device.device_type = -1;
-	return 0;
+
+	for (auto it = con->devices.begin(); it != con->devices.end();) {
+		if (it->device_type == device.device_type && strcmp(it->device_role, device.device_role) == 0
+			&& strcmp(it->device_name, device.device_name) == 0) {
+			con->devices.erase(it);
+			return 0;
+		}
+	}
+	return -3;
 }
