@@ -36,11 +36,12 @@ struct buffer {
  * @brief Get value from configuration file based on passed key
  * TODO link for key_getter and how to pass keys for structures etc.
  * @param key - key-value parameter's key
+ * @param value - target buffer, where the obtained value will be put
  * @param external_server_context - context maintained in the External server, needed by callback functions
  *
- * @return key-value's value
+ * @return 0 if found, -1 if not found, -2 other error
  */
-typedef char *(*key_getter)(const char *const key, void *external_server_context);
+typedef int (*key_getter)(const char *const key, buffer* value, const void *const external_server_context);
 
 /**
  * @brief Callback function, which pass a serialized command to the External server, which adds necessary information and sends it to the device
@@ -51,7 +52,7 @@ typedef char *(*key_getter)(const char *const key, void *external_server_context
  *
  * @return TODO Should it control if device is connected? I think not, but discuss. Otherwise return void, since command is asynchronous and if it was successfully delivered, command_ack is called
  */
-typedef int (*command_forwarder)(const struct buffer command, const struct device_identification device, void *external_server_context);
+typedef int (*command_forwarder)(const struct buffer command, const struct device_identification device, const void *const external_server_context);
 
 /**
  * @short Create context for specific application.
@@ -67,7 +68,7 @@ typedef int (*command_forwarder)(const struct buffer command, const struct devic
  *
  * @return context of the device used for calling other library functions, NULL if an error occurs
  */
-void *init(key_getter get_key, void *external_server_context);
+void *init(key_getter get_key, const void *const external_server_context);
 
 /**
  * @short Clean up.
@@ -134,7 +135,7 @@ int device_connected(const struct device_identification device, void *context);
  *
  * @return 0 if successful, -1 if context is incorrect, -2 other error
  */
-int register_command_callback(command_forwarder forward_command, void *context, void *external_server_context);
+int register_command_callback(command_forwarder forward_command, void *context, const void *const external_server_context);
 
 /**
  * @brief Acknowledge that command has been successfully delivered to the device
