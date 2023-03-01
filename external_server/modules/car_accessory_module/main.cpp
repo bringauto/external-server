@@ -6,7 +6,7 @@
 
 
 
-int getKey(const char* const key, buffer *value void *context) {
+int getKey(const char* const key, buffer *value, void *context) {
 	value->data = malloc(sizeof(char));
 	value->size = 1;
 	return 0;
