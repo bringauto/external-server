@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+#define NAME_LENGTH 64
+
 enum disconnect_types {
 	announced = 0,
 	timeout = 1,
@@ -17,8 +19,8 @@ enum disconnect_types {
  */
 struct device_identification {
 	int device_type;
-	const char *device_role;
-	const char *device_name;
+	char device_role[NAME_LENGTH];
+	char device_name[NAME_LENGTH];
 };
 
 /**
@@ -38,7 +40,7 @@ struct buffer {
  *
  * @return key-value's value
  */
-typedef void *(*key_getter)(const char *const key, void *external_server_context);
+typedef char *(*key_getter)(const char *const key, void *external_server_context);
 
 /**
  * @brief Callback function, which pass a serialized command to the External server, which adds necessary information and sends it to the device

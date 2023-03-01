@@ -16,9 +16,9 @@ int forwardCommand(const struct buffer command, const struct device_identificati
 }
 
 int main() {
-	int myContext[1] = {get_module_number()};
-	auto context = init(getKey, (void *)myContext);
-	register_command_callback(forwardCommand, context, (void *)myContext);
+	int myContext = {get_module_number()};
+	auto context = init(getKey, (void *)&myContext);
+	register_command_callback(forwardCommand, context, (void *)&myContext);
 
 	struct device_identification device = {0, "GreenButton", "A-1"};
 	device_connected(device, context);

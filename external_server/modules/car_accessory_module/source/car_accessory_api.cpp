@@ -7,7 +7,7 @@
 
 struct context {
 	char button;
-	struct device_identification device;
+	std::vector<struct device_identification> device;
 	command_forwarder forwardCommand = nullptr;
 	std::atomic<bool> stopThread;
 };
@@ -28,7 +28,7 @@ void listenKeyboard(struct context *context, void *external_server_context) {
 	while(!context->stopThread) {
 		std::cin >> b;
 		if(b == context->button) {
-			context->forwardCommand(commandData, context->device, external_server_context);
+			context->forwardCommand(commandData, context->device, external_server_context); //TODO foreach
 		}
 	}
 	free(commandData.data);
@@ -100,7 +100,7 @@ int get_module_number() {
 int device_connected(const struct device_identification device, void *context) {
 	auto con = (struct context *)context;
 	con->device = device;
-	return 0;
+	return 0; // TODO deep copy a pridat do vectoru
 }
 
 int device_disconnected(const disconnect_types disconnectType, const struct device_identification device, void *context) {
@@ -116,7 +116,7 @@ int device_disconnected(const disconnect_types disconnectType, const struct devi
 				   device.device_name);
 			break;
 	}
-	auto con = (struct context *)context;
+	auto con = (struct context *)context; //TODO odstranit z vektoru
 	con->device.device_name = "";
 	con->device.device_role = "";
 	con->device.device_type = -1;
