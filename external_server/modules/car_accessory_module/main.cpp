@@ -6,9 +6,10 @@
 
 
 
-char* getKey(const char* const key, void *context) {
-//	char button[5] = {"bbbb"};
-	return (char*)"asdf";
+int getKey(const char* const key, buffer *value void *context) {
+	value->data = malloc(sizeof(char));
+	value->size = 1;
+	return 0;
 }
 
 int forwardCommand(const struct buffer command, const struct device_identification device, void *context) {
