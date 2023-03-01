@@ -6,18 +6,19 @@
 
 
 
-void* getKey(const char* const key) {
+void* getKey(const char* const key, void *context) {
 	return (void *)"b";
 }
 
-int forwardCommand(const struct buffer command, const struct device_identification device) {
+int forwardCommand(const struct buffer command, const struct device_identification device, void *context) {
 	std::cout << "Serializing command to ExternalServer Command message" << std::endl;
 	return 0;
 }
 
 int main() {
-	auto context = init(getKey);
-	register_command_callback(forwardCommand, context);
+	int myContext[1] = {get_module_number()};
+	auto context = init(getKey, (void *)myContext);
+	register_command_callback(forwardCommand, context, (void *)myContext);
 
 	struct device_identification device = {0, "GreenButton", "A-1"};
 	device_connected(device, context);
