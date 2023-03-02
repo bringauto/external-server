@@ -18,9 +18,21 @@ int forwardCommand(const struct buffer command, const struct device_identificati
 }
 
 int main() {
-	int myContext = {get_module_number()};
-	auto context = init(getKey, (void *)&myContext);
-	register_command_callback(forwardCommand, context, (void *)&myContext);
+	struct config configuration;
+
+	char key[] = "button";
+	configuration.parameters = new struct key_value;
+	configuration.size = 1;
+	configuration.parameters->key.data = (void *)key;
+	configuration.parameters->key.size = 6;
+	char value[] = "b";
+	configuration.parameters->value.data = (void *)value;
+	configuration.parameters->value.size = 1;
+
+
+
+	auto context = init(configuration);
+//	register_command_callback(forwardCommand, context, (void *)&myContext);
 
 	struct device_identification device = {0, "GreenButton", "A-1"};
 	device_connected(device, context);

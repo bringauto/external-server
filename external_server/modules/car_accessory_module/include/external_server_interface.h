@@ -33,7 +33,7 @@ struct buffer {
 };
 
 /**
- * @brief Parameter structure containing the parameters key and its value
+ * @brief Parameter structure containing the parameters key and its value in buffers
  */
 struct key_value {
 	buffer key;
@@ -45,7 +45,7 @@ struct key_value {
  */
 struct config {
 	key_value* parameters;
-	size_t count;
+	size_t size;
 };
 
 /**

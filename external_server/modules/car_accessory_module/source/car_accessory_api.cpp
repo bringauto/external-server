@@ -6,14 +6,13 @@
 #include <external_server_interface.h>
 
 struct context {
-	char button {};
 	std::vector<struct device_identification> devices;
-	command_forwarder forwardCommand { nullptr };
+	std::vector<std::tuple<CarAccessoryModule::ButtonCommand, struct device_identification>> commandVector;
 	std::atomic<bool> stopThread;
 };
 
-void listenKeyboard(struct context *context, void *external_server_context) {
-	char b;
+void listenKeyboard(struct context *context, char button) {
+	char inputChar;
 
 	auto command = CarAccessoryModule::ButtonCommand();
 	command.set_command(CarAccessoryModule::ButtonCommand_Command::ButtonCommand_Command_PRESS);
@@ -26,27 +25,34 @@ void listenKeyboard(struct context *context, void *external_server_context) {
 	}
 	command.SerializeToArray(commandData.data, commandData.size);
 	while(!context->stopThread) {
-		std::cin >> b;
-		if(b == context->button) {
+		std::cin >> inputChar;
+		if(inputChar == button) {
 			for(auto device : context->devices) {
-				context->forwardCommand(commandData, device, external_server_context);
+				std::cout << "1230";
+//				context->commandVector.push_back(std::make_tuple(commandData, device));
 			}
+			// TODO notify
 		}
 	}
 	free(commandData.data);
 }
 
-void *init(key_getter get_key, void *external_server_context) {
-	char *button = get_key("button", external_server_context);
-	if(button == nullptr) {
-		printf("[Car Accessory Module][ERROR]: Invalid value for argument button\n");
+void *init(struct config config_data) {
+	if(config_data.size > 0 && strcmp((char *)config_data.parameters[0].key.data, "button") == 0) {
+		char button[config_data.parameters[0].value.size];
+		strcpy(button, (char *)config_data.parameters[0].value.data);
+
+		auto *contextPtr = new context;
+
+		contextPtr->stopThread = false;
+
+		std::thread keyboardListener(listenKeyboard, contextPtr, button[0]);
+		keyboardListener.detach();
+
+		return contextPtr;
+	} else {
 		return nullptr;
 	}
-	auto *contextPtr = new context;
-
-	contextPtr->stopThread = false;
-	contextPtr->button = button[0];
-	return contextPtr;
 }
 
 int destroy(void **context) {
@@ -60,15 +66,12 @@ int destroy(void **context) {
 	return 0;
 }
 
-int register_command_callback(command_forwarder forward_command, void *context, void *external_server_context) {
-	if(context == nullptr) {
-		return -1;
-	}
-	auto con = (struct context *)context;
-	con->forwardCommand = forward_command;
-	std::thread keyboardListener(listenKeyboard, con, external_server_context);
-	keyboardListener.detach();
-	return 0;
+int wait_for_command(int timeout_time_in_ms) {
+	return 0; // TODO
+}
+
+int get_command(buffer* command, device_identification* device) {
+	return 0; // TODO
 }
 
 int forward_status(const struct buffer device_status, const struct device_identification device, void *context) {
@@ -97,6 +100,9 @@ int get_module_number() {
 }
 
 int device_connected(const struct device_identification device, void *context) {
+	if (context == nullptr) {
+		return -1;
+	}
 	auto con = (struct context *)context;
 	struct device_identification newDevice = {device.device_type}; //, memcpy(device.device_role), device.device_name};
 	strcpy(newDevice.device_role, device.device_role );
