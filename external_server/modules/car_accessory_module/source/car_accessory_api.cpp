@@ -91,9 +91,12 @@ int get_command(buffer* command, device_identification* device, void *context) {
 	struct context *con = (struct context*)context;
 	auto commandTuple = con->commandVector.back();
 
-	command->size = std::get<0>(commandTuple).ByteSizeLong();
+	command->size = CarAccessoryModule::ButtonCommand::Command_ARRAYSIZE;
 	command->data = malloc(command->size);
-	std::get<0>(commandTuple).SerializeToArray(command->data, command->size);
+	if (command->data == nullptr || !std::get<0>(commandTuple).SerializeToArray(command->data, (int)command->size)) {
+		printf("[Car Accessory Module][ERROR]: Error while serializing command");
+		return -2;
+	}
 
 	auto deviceIdentification = std::get<1>(commandTuple);
 	strcpy(device->device_name, deviceIdentification.device_name);
@@ -101,7 +104,7 @@ int get_command(buffer* command, device_identification* device, void *context) {
 	device->device_type = deviceIdentification.device_type;
 
 	con->commandVector.pop_back();
-	return con->commandVector.size();
+	return (int)con->commandVector.size();
 	}
 
 int forward_status(const struct buffer device_status, const struct device_identification device, void *context) {
