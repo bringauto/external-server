@@ -143,7 +143,7 @@ int get_command(buffer* command, device_identification* device, void *context);
 /**
  * @brief Acknowledge that command has been successfully delivered to the device
  *
- * @param command successfully delivered command TODO only acknowledge succesfull or also the reason of unsucefull? As a user, I would like to know
+ * @param command successfully delivered command
  * @return 0 if successful, -1 if context is incorrect, -2 if timeout occurred while sending ack, -3 other error
  */
 int command_ack(const struct buffer command, void *context);
