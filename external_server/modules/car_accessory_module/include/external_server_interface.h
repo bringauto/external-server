@@ -128,7 +128,7 @@ int device_connected(const struct device_identification device, void *context);
  * @param timeout_time_in_ms - maximum blocking time until timeout
  * @return 0 if a command is obtainable, -1 otherwise
  */
-int wait_for_command(int timeout_time_in_ms);
+int wait_for_command(int timeout_time_in_ms, void *context);
 
 /**
  * @brief Obtain a single command from API
@@ -138,7 +138,7 @@ int wait_for_command(int timeout_time_in_ms);
  * @param device - identification of the target device of the command
  * @return number of remaining commands, -1 if an error occurred
  */
-int get_command(buffer* command, device_identification* device);
+int get_command(buffer* command, device_identification* device, void *context);
 
 /**
  * @brief Acknowledge that command has been successfully delivered to the device

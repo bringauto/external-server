@@ -4,11 +4,16 @@
 
 #include <CarAccessoryModule.pb.h>
 #include <external_server_interface.h>
+#include <condition_variable>
+
+
 
 struct context {
 	std::vector<struct device_identification> devices;
 	std::vector<std::tuple<CarAccessoryModule::ButtonCommand, struct device_identification>> commandVector;
 	std::atomic<bool> stopThread;
+	std::condition_variable commandCondition;
+	std::mutex commandMutex;
 };
 
 void listenKeyboard(struct context *context, char button) {
@@ -28,10 +33,9 @@ void listenKeyboard(struct context *context, char button) {
 		std::cin >> inputChar;
 		if(inputChar == button) {
 			for(auto device : context->devices) {
-				std::cout << "1230";
-//				context->commandVector.push_back(std::make_tuple(commandData, device));
+				context->commandVector.emplace_back(command, device);
 			}
-			// TODO notify
+			context->commandCondition.notify_all();
 		}
 	}
 	free(commandData.data);
@@ -66,8 +70,9 @@ int destroy(void **context) {
 	return 0;
 }
 
-int wait_for_command(int timeout_time_in_ms) {
-	return 0; // TODO
+int wait_for_command(int timeout_time_in_ms, void * context) {
+	struct context* con = (struct context*)context;
+	std::unique_lock<std::mutex> lock(con->commandMutex);
 }
 
 int get_command(buffer* command, device_identification* device) {
