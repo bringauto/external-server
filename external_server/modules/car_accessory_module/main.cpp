@@ -7,9 +7,9 @@
 
 
 
-void commandGetter(bool *listenCommands, void *context) {
+void commandGetter(std::atomic<bool> *listenCommands, void *context) {
 	int commandsLeft = 0;
-	while(listenCommands) {
+	while(*listenCommands) {
 		if(wait_for_command(3000, context) == 0) {
 			do {
 				buffer command;
@@ -43,7 +43,7 @@ int main() {
 	struct device_identification device = {0, "GreenButton", "A-1"};
 	device_connected(device, context);
 
-	bool listenCommands = true;
+	std::atomic<bool> listenCommands = true;
 	std::thread commandGet(commandGetter, &listenCommands, context);
 
 
