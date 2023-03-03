@@ -71,13 +71,38 @@ int destroy(void **context) {
 }
 
 int wait_for_command(int timeout_time_in_ms, void * context) {
+	if(context == nullptr) {
+		return -2;
+	}
 	struct context* con = (struct context*)context;
 	std::unique_lock<std::mutex> lock(con->commandMutex);
+	auto timeout_time = std::chrono::system_clock::now() + std::chrono::milliseconds(timeout_time_in_ms);
+	if(con->commandCondition.wait_until(lock, timeout_time) == std::cv_status::timeout) {
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
-int get_command(buffer* command, device_identification* device) {
-	return 0; // TODO
-}
+int get_command(buffer* command, device_identification* device, void *context) {
+	if(context == nullptr) {
+		return -1;
+	}
+	struct context *con = (struct context*)context;
+	auto commandTuple = con->commandVector.back();
+
+	command->size = std::get<0>(commandTuple).ByteSizeLong();
+	command->data = malloc(command->size);
+	std::get<0>(commandTuple).SerializeToArray(command->data, command->size);
+
+	auto deviceIdentification = std::get<1>(commandTuple);
+	strcpy(device->device_name, deviceIdentification.device_name);
+	strcpy(device->device_role, deviceIdentification.device_role);
+	device->device_type = deviceIdentification.device_type;
+
+	con->commandVector.pop_back();
+	return con->commandVector.size();
+	}
 
 int forward_status(const struct buffer device_status, const struct device_identification device, void *context) {
 	CarAccessoryModule::ButtonStatus status;
