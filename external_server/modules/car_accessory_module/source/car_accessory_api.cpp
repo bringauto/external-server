@@ -134,11 +134,11 @@ int device_connected(const struct device_identification device, void *context) {
 		return -1;
 	}
 	auto con = (struct context *)context;
-	struct device_identification newDevice = {device.device_type}; //, memcpy(device.device_role), device.device_name};
+	struct device_identification newDevice = {device.device_type};
 	strcpy(newDevice.device_role, device.device_role );
 	strcpy(newDevice.device_name, device.device_name );
 	con->devices.emplace_back(newDevice);
-	return 0; // TODO deep copy a pridat do vectoru
+	return 0;
 }
 
 int device_disconnected(const disconnect_types disconnectType, const struct device_identification device, void *context) {
@@ -154,7 +154,7 @@ int device_disconnected(const disconnect_types disconnectType, const struct devi
 				   device.device_name);
 			break;
 	}
-	auto con = (struct context *)context; //TODO odstranit z vektoru
+	auto con = (struct context *)context;
 
 	for (auto it = con->devices.begin(); it != con->devices.end();) {
 		if (it->device_type == device.device_type && strcmp(it->device_role, device.device_role) == 0
