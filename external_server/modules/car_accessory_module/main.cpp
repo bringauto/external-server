@@ -3,18 +3,24 @@
 
 #include <external_server_interface.h>
 #include <CarAccessoryModule.pb.h>
+#include <thread>
 
 
 
-int getKey(const char* const key, buffer *value, void *context) {
-	value->data = malloc(sizeof(char));
-	value->size = 1;
-	return 0;
-}
-
-int forwardCommand(const struct buffer command, const struct device_identification device, void *context) {
-	std::cout << "Serializing command to ExternalServer Command message" << std::endl;
-	return 0;
+void commandGetter(bool *listenCommands, void *context) {
+	int commandsLeft = 0;
+	while(listenCommands) {
+		if(wait_for_command(3000, context) == 0) {
+			do {
+				buffer command;
+				struct device_identification device;
+				commandsLeft = get_command(&command, &device, context);
+				std::cout << "Command from device " << device.device_name << std::endl;
+			} while(commandsLeft > 0);
+		} else {
+			std::cout << "Waiting again" << std::endl;
+		}
+	}
 }
 
 int main() {
@@ -37,6 +43,10 @@ int main() {
 	struct device_identification device = {0, "GreenButton", "A-1"};
 	device_connected(device, context);
 
+	bool listenCommands = true;
+	std::thread commandGet(commandGetter, &listenCommands, context);
+
+
 	CarAccessoryModule::ButtonStatus status;
 	status.set_ispressed(true);
 
@@ -54,4 +64,6 @@ int main() {
 	std::cout << "Destroying context" << std::endl;
 	destroy(&context);
 	std::cout << "Context successfully destroyed" << std::endl;
+	listenCommands = false;
+	commandGet.join();
 }
