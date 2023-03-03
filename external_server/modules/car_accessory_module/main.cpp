@@ -15,7 +15,9 @@ void commandGetter(std::atomic<bool> *listenCommands, void *context) {
 				buffer command;
 				struct device_identification device;
 				commandsLeft = get_command(&command, &device, context);
-				std::cout << "Command from device " << device.device_name << std::endl;
+				auto cmd = CarAccessoryModule::ButtonCommand();
+				cmd.ParseFromArray(command.data, command.size);
+				std::cout << "Command from device " << device.device_name << " " << cmd.command() << std::endl;
 			} while(commandsLeft > 0);
 		} else {
 			std::cout << "Waiting again" << std::endl;
