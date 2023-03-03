@@ -120,7 +120,7 @@ int forward_error_message(const struct buffer error_msg, const struct device_ide
 	return 0;
 }
 
-int command_ack(const struct buffer command, const void *context) {
+int command_ack(const struct buffer command, const struct device_identification device, const void *context) {
 	printf("[Car Accessory Module][INFO]: Command was successfully delivered");
 	return 0;
 }
