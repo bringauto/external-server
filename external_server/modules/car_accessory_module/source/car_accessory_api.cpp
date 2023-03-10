@@ -60,13 +60,13 @@ void *init(struct config config_data) {
 }
 
 int destroy(void **context) {
-	if(context == nullptr) {
+	if(*context == nullptr) {
 		return -1;
 	}
-	auto con = (struct context *)context;
-	con->stopThread = true;
-	delete *context;
-	context = nullptr;
+	auto con = (struct context **)context;
+	(*con)->stopThread = true;
+    delete *con;
+	*con = nullptr;
 	return 0;
 }
 
