@@ -1,0 +1,33 @@
+{
+  "company_name": "BringAuto",
+  "car_name": "VirtualVehicle",
+  "mqtt_timeout": 30,
+  "timeout": 30,
+  "send_invalid_command": false,
+  "sleep_duration_after_connection_refused": 0.5,
+  "modules": {
+    "1": {
+      "lib_path": "/home/bringauto/modules/libmission_external_server.so",
+      "config": {
+        "company_name": "BringAuto",
+        "car_name": "VirtualVehicle"
+      }
+    },
+    "2": {
+      "lib_path": "/home/bringauto/modules/libio_external_server.so",
+      "config": {
+        "company_name": "BringAuto",
+        "car_name": "VirtualVehicle",
+        "api_url": "http://localhost:8080",
+        "api_key": "oNCNILeJgYkuzZRMhCKPKnXTlLqwqe"
+      }
+    },
+    "1000": {
+      "lib_path": "/home/bringauto/modules/libexample_external_server.so",
+      "config": {
+        "company_name": "BringAuto",
+        "car_name": "VirtualVehicle"
+      }
+    }
+  }
+}

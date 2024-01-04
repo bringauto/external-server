@@ -1,5 +1,11 @@
 import argparse
 import os.path
+import sys
+import threading
+
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
+
+import InternalProtocol_pb2 as internal_protocol
 
 
 def argparse_init() -> argparse.Namespace:
@@ -12,6 +18,9 @@ def argparse_init() -> argparse.Namespace:
         help="ip address of the MQTT broker",
     )
     parser.add_argument("-p", "--port", type=int, default=1883, help="port of the MQTT broker")
+    parser.add_argument(
+        "-c", "--config", type=str, default="./config/config.json", help="path to the config file"
+    )
     parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="tls authentication")
     tls = parser.add_argument_group("tls", description="if tls is used, set following arguments")
     tls.add_argument("--ca", type=str, help="path to ca certification")
@@ -22,3 +31,27 @@ def argparse_init() -> argparse.Namespace:
 
 def check_file_exists(path: str) -> bool:
     return os.path.isfile(path)
+
+
+def device_repr(device: internal_protocol.Device) -> str:
+    return f"Device {device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
+
+
+class SingletonMeta(type):
+    """
+    This is a thread-safe implementation of Singleton.
+    """
+
+    _instances = {}
+    _lock: threading.Lock = threading.Lock()
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
