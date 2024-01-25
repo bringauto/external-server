@@ -49,10 +49,16 @@ class ExternalServer:
                 config_modules[module_number], self._config.company_name, self._config.car_name
             )
             self._modules[int(module_number)].init()
+            
+            if not self._modules[int(module_number)].device_initialized():
+                self._logger.error(
+                    f"Module {module_number}: Error occurred in init function. Check the configuration file."
+                )
+                raise RuntimeError(f"Module {module_number}: Error occurred in init function. Check the configuration file.")
 
             if self._modules[int(module_number)].get_module_number() != int(module_number):
                 self._logger.error(
-                    "Module number returned from API does not match with module number in config"
+                    f"Module number {self._modules[int(module_number)].get_module_number()} returned from API does not match with module number {int(module_number)} in config"
                 )
                 raise RuntimeError(f"Module number returned from API does not match with module number in config {self._modules[int(module_number)].get_module_number()}/{int(module_number)}")
             self._modules_command_threads[int(module_number)] = CommandWaitingThread(
@@ -116,21 +122,22 @@ class ExternalServer:
         devices = received_msg.connect.devices
         for device in devices:
             if device.module not in self._modules:
-                self._logger.error(f"Module {device.module} not supported")
+                self._logger.warning(f"Module {device.module} not supported, cannot complete connect sequence with current configuration")
                 raise ConnectSequenceException()
 
             if (
                 self._modules[device.module].is_device_type_supported(device.deviceType)
                 == GeneralErrorCodes.NOT_OK
             ):
-                self._logger.error(
-                    f"Device type {device.deviceType} not supported by module {device.module}"
+                self._logger.warning(
+                    f"Device type {device.deviceType} not supported by module {device.module}, device will probably not work properly"
                 )
-                raise ConnectSequenceException()
 
             rc = self._connect_device(device)
             if rc != GeneralErrorCodes.OK:
-                raise ConnectSequenceException()
+                self._logger.warning(
+                    f"Failed to connect device with module number {device.module}, ignoring device"
+                )
 
         sent_msg = self._create_connect_response(external_protocol.ConnectResponse.Type.OK)
         self._mqtt_client.publish(sent_msg)
@@ -271,7 +278,7 @@ class ExternalServer:
                     raise CommandResponseTimeOutExc()
                 else:
                     self._logger.error(
-                        "Internal error: Received Event TimeoutOccurred withou TimeoutType"
+                        "Internal error: Received Event TimeoutOccurred without TimeoutType"
                     )
             elif event.event == EventType.COMMAND_AVAILABLE:
                 if isinstance(event.data, int):
@@ -284,7 +291,7 @@ class ExternalServer:
     def _handle_connect(self, received_msg_session_id: str) -> None:
         self._logger.warning("Received Connect message")
         if self._session_id == received_msg_session_id:
-            self._logger.error("Connected session have sent Connect message")
+            self._logger.error("Connected session has sent Connect message")
             CommunicationException()
         sent_msg = self._create_connect_response(
             external_protocol.ConnectResponse.Type.ALREADY_LOGGED
@@ -301,6 +308,12 @@ class ExternalServer:
 
         while (status := self._status_order_checker.get_status()) is not None:
             device = status.deviceStatus.device
+            
+            if (device.module not in self._modules):
+                self._logger.warning(
+                    f"Received status for device with unknown module number {device.module}"
+                )
+                continue
             if (
                 self._modules[device.module].is_device_type_supported(device.deviceType)
                 == GeneralErrorCodes.NOT_OK
@@ -425,12 +438,12 @@ class ExternalServer:
             self._logger.info(
                 f"Connected device unique identificator: {device.module}/{device.deviceType}/{device.deviceRole} named as {device.deviceName}"
             )
-            self._connected_devices.append(device)
         else:
             self._logger.error(
                 f"Device with unique identificator: {device.module}/{device.deviceType}/{device.deviceRole} "
                 f"could not be connected, because response from api: {rc}"
             )
+            self._connected_devices.append(device)
         return rc
 
     def _disconnect_device(
