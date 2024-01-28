@@ -36,8 +36,14 @@ class MqttClient:
         self._received_msgs: Queue[external_protocol.ExternalClient] = Queue()
         self._mqtt_client = mqtt.Client(
             client_id="".join(random.choices(string.ascii_uppercase + string.digits, k=20)),
-            protocol=mqtt.MQTTv5,
+            protocol=mqtt.MQTTv311,
+            reconnect_on_failure=True
         )
+        # TODO reason these values
+        self._mqtt_client.max_inflight_messages_set(20)
+        self._mqtt_client.max_queued_messages_set(20)
+        self._mqtt_client.reconnect_delay_set(min_delay=1, max_delay=15)
+
         self._event_queue = EventQueueSingleton()
         self._is_connected = False
 
@@ -68,7 +74,7 @@ class MqttClient:
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
 
-    def _on_connect(self, client, _userdata, _flags, _rc, _properties):
+    def _on_connect(self, client, _userdata, _flags, _rc):
         """
         Callback function for handling connection events.
 
@@ -81,9 +87,9 @@ class MqttClient:
         """
         self._is_connected = True
         self._logger.info("Server connected to MQTT broker")
-        client.subscribe(self._subscribe_topic, qos=0)
+        client.subscribe(self._subscribe_topic, qos=1)
 
-    def _on_disconnect(self, _client, _userdata, ret_code, _properties) -> None:
+    def _on_disconnect(self, _client, _userdata, ret_code) -> None:
         """
         Callback function for handling disconnection events.
 
@@ -122,7 +128,7 @@ class MqttClient:
         - ip_address (str): The IP address of the MQTT broker.
         - port (int): The port number of the MQTT broker.
         """
-        self._mqtt_client.connect(ip_address, port=port, keepalive=60, clean_start=True)
+        self._mqtt_client.connect(ip_address, port=port, keepalive=15)
 
     def start(self) -> None:
         """
@@ -144,7 +150,7 @@ class MqttClient:
         Args:
         - msg (external_protocol.ExternalServer): The message to publish.
         """
-        self._mqtt_client.publish(self._publish_topic, msg.SerializeToString(), qos=0)
+        self._mqtt_client.publish(self._publish_topic, msg.SerializeToString(), qos=1)
 
     def get(self, timeout: int | None = None) -> external_protocol.ExternalClient | None:
         """Returns message from MqttClient
