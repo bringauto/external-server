@@ -1,6 +1,6 @@
 {
-  "company_name": "BringAuto",
-  "car_name": "VirtualVehicle",
+  "company_name": "bringauto",
+  "car_name": "virtual-vehicle",
   "mqtt_timeout": 30,
   "timeout": 30,
   "send_invalid_command": false,
@@ -10,7 +10,11 @@
       "lib_path": "/home/bringauto/modules/libmission_external_server.so",
       "config": {
            "api_url": "http://http-api:8080",
-           "api_key": "StaticAccessKeyToBeUsedByDevelopersOnEtna"
+           "api_key": "StaticAccessKeyToBeUsedByDevelopersOnEtna",
+           "max_requests_threshold_count": "10",
+           "max_requests_threshold_period_ms": "5000",
+           "delay_after_threshold_reached_ms": "5000",
+           "retry_requests_delay_ms": "200"
       }
     },
     "2": {
