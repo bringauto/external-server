@@ -2,26 +2,33 @@ from __future__ import annotations
 
 from typing import Annotated, TypeVar, Mapping
 
-from pydantic import BaseModel, FilePath, StringConstraints, ValidationError, field_validator
+from pydantic import BaseModel, Field, FilePath, StringConstraints, ValidationError, field_validator
 
 T = TypeVar("T", bound=Mapping)
 
 
 class Config(BaseModel):
-    company_name: str
-    car_name: str
-    mqtt_timeout: int
-    timeout: int
+    company_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
+    car_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
+    mqtt_address: Annotated[str, StringConstraints(pattern=r"^((http|https)://)?([\w-]+\.)?+[\w-]+$")]
+    mqtt_port: int = Field(ge=0, le=65535)
+    mqtt_timeout: int = Field(ge=0)
+    timeout: int = Field(ge=0)
     send_invalid_command: bool
-    sleep_duration_after_connection_refused: float
+    sleep_duration_after_connection_refused: float = Field(ge=0)
     modules: dict[Annotated[str, StringConstraints(pattern=r"^\d+$")], ModuleConfig]
 
     @field_validator("modules")
     @classmethod
-    def _modules_validator(cls, value: T) -> T:
-        if not len(value):
+    def _modules_validator(cls, modules: T) -> T:
+        if not len(modules):
             raise ValueError("Modules must contain at least 1 module.")
-        return value
+        for module in modules.values():
+            if module.config.get("company_name") is not None:
+                raise ValueError("Module configs can not contain company_name.")
+            if module.config.get("car_name") is not None:
+                raise ValueError("Module configs can not contain car_name.")
+        return modules
 
 
 class ModuleConfig(BaseModel):
