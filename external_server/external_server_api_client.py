@@ -132,6 +132,17 @@ class ExternalServerApiClient:
         with self._lock:
             con = ct.c_void_p(self._context)
             return self._library.destroy(ct.pointer(con))
+        
+    def device_initialized(self) -> bool:
+        """
+        Checks if device is initialized.
+
+        Returns
+        -------
+        bool
+            True if device is initialized, False otherwise.
+        """
+        return self._context is not None
 
     def device_connected(self, device: internal_protocol.Device) -> int:
         """
