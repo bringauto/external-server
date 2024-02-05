@@ -26,7 +26,7 @@ def main() -> None:
         logger.error(f"Invalid config: {exc}")
         sys.exit(1)
 
-    server = ExternalServer(args.ip_address, args.port, config)
+    server = ExternalServer(config)
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
             logger.error(

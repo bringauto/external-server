@@ -17,8 +17,6 @@ Directory contains fake external server the communicates with external client, w
 
 ## Arguments
 
-- `-i or --ip-address <str>` = ip address of the module gateway, default = `127.0.0.1`
-- `-p or --port <int>` = port of the module gateway, default = `1883`
 - `-c or --config <str>` = path to the config file, default = `./config/config.json`
 - `--tls` = tls mqtt authentication
 
@@ -36,7 +34,9 @@ Prepare your shared library of module implementation (implementation of external
 
 ### Options in config file
 
- - company_name, car_name (required) - used for MQTT topics name, should be same as in module gateway
+ - company_name, car_name (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed
+ - mqtt_address (required) - IP address of the MQTT broker
+ - mqtt_port (required) - port of the MQTT broker
  - mqtt_timeout (in seconds) - timeout for getting message from MqttClient
  - timeout (in seconds) - Maximum time amount between Status and Command messages
  - send_invalid_command - sends command to Module gateway even if External server detects invalid command returned from external_server_api; affects only normal communication
@@ -49,8 +49,10 @@ Prepare your shared library of module implementation (implementation of external
 
  ```json
 {
-    "company_name": "BringAuto",
-    "car_name": "VirtualVehicle",
+    "company_name": "bringauto",
+    "car_name": "virtual_vehicle",
+    "mqtt_address": "127.0.0.1",
+    "mqtt_port": 1883,
     "mqtt_timeout": 30,
     "timeout": 30,
     "send_invalid_command": false,

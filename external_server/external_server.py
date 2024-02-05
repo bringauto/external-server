@@ -25,12 +25,10 @@ from external_server.event_queue import EventQueueSingleton, EventType
 
 
 class ExternalServer:
-    def __init__(self, ip_address: str, port: int, config: Config) -> None:
+    def __init__(self, config: Config) -> None:
         self._logger = logging.getLogger(self.__class__.__name__)
 
         self._config = config
-        self._ip_address = ip_address
-        self._port = port
         self._session_id = ""
 
         self._event_queue = EventQueueSingleton()
@@ -84,7 +82,7 @@ class ExternalServer:
         while True:
             try:
                 if not self._mqtt_client.is_connected:
-                    self._mqtt_client.connect(self._ip_address, self._port)
+                    self._mqtt_client.connect(self._config.mqtt_address, self._config.mqtt_port)
                     self._mqtt_client.start()
                 self._init_sequence()
                 self._normal_communication()
@@ -92,7 +90,7 @@ class ExternalServer:
                 self._logger.error("Connect sequence failed")
             except ConnectionRefusedError:
                 self._logger.error(
-                    f"Unable to connect to MQTT broker on {self._ip_address}:{self._port}, trying again"
+                    f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}, trying again"
                 )
                 time.sleep(self._config.sleep_duration_after_connection_refused)
             except ClientDisconnectedExc:  # if 30 seconds any message has not been received
