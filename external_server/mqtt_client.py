@@ -11,7 +11,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import ExternalProtocol_pb2 as external_protocol
 from external_server.event_queue import EventQueueSingleton, EventType
-
+import external_server.constants as constants
 
 class MqttClient:
     """
@@ -40,9 +40,7 @@ class MqttClient:
             reconnect_on_failure=True
         )
         # TODO reason these values
-        self._mqtt_client.max_inflight_messages_set(20)
-        self._mqtt_client.max_queued_messages_set(20)
-        self._mqtt_client.reconnect_delay_set(min_delay=1, max_delay=15)
+        self._mqtt_client.max_queued_messages_set(constants.MAX_QUEUED_MESSAGES)
 
         self._event_queue = EventQueueSingleton()
         self._is_connected = False
@@ -87,7 +85,7 @@ class MqttClient:
         """
         self._is_connected = True
         self._logger.info("Server connected to MQTT broker")
-        client.subscribe(self._subscribe_topic, qos=1)
+        client.subscribe(self._subscribe_topic, qos=constants.QOS)
 
     def _on_disconnect(self, _client, _userdata, ret_code) -> None:
         """
@@ -128,7 +126,7 @@ class MqttClient:
         - ip_address (str): The IP address of the MQTT broker.
         - port (int): The port number of the MQTT broker.
         """
-        self._mqtt_client.connect(ip_address, port=port, keepalive=15)
+        self._mqtt_client.connect(ip_address, port=port, keepalive=constants.KEEPALIVE)
 
     def start(self) -> None:
         """
@@ -150,7 +148,7 @@ class MqttClient:
         Args:
         - msg (external_protocol.ExternalServer): The message to publish.
         """
-        self._mqtt_client.publish(self._publish_topic, msg.SerializeToString(), qos=1)
+        self._mqtt_client.publish(self._publish_topic, msg.SerializeToString(), qos=constants.QOS)
 
     def get(self, timeout: int | None = None) -> external_protocol.ExternalClient | None:
         """Returns message from MqttClient
