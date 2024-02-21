@@ -41,6 +41,9 @@ Prepare your shared library of module implementation (implementation of external
  - timeout (in seconds) - Maximum time amount between Status and Command messages
  - send_invalid_command - sends command to Module gateway even if External server detects invalid command returned from external_server_api; affects only normal communication
  - sleep_duration_after_connection_refused - if connection to Module gateway was refused, External server will sleep for defined duration before next connection attempt is proceed
+ - log_files_directory (required) - path to a directory in which the logs will be stored. If left empty, the current working directory will be used
+ - log_files_to_keep (required) - number of log files that will be kept (can be 0)
+ - log_file_max_size_bytes (required) - max file size of a log in bytes (0 means unlimited)
  - modules (required) - supported modules specified by module number
     - lib_path (required) - path to module shared library
     - config (optional) - specification of config for module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function
@@ -57,6 +60,9 @@ Prepare your shared library of module implementation (implementation of external
     "timeout": 30,
     "send_invalid_command": false,
     "sleep_duration_after_connection_refused": 0.5,
+    "log_files_directory": "/path/to/logs/directory",
+    "log_files_to_keep": 5,
+    "log_file_max_size_bytes": 50000,
     "modules": {
         "2" : {
             "lib_path": "/path/to/module/library/with/number/2",

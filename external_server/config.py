@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, TypeVar, Mapping
 
-from pydantic import BaseModel, Field, FilePath, StringConstraints, ValidationError, field_validator
+from pydantic import BaseModel, Field, FilePath, StringConstraints, ValidationError, field_validator, DirectoryPath
 
 T = TypeVar("T", bound=Mapping)
 
@@ -16,6 +16,9 @@ class Config(BaseModel):
     timeout: int = Field(ge=0)
     send_invalid_command: bool
     sleep_duration_after_connection_refused: float = Field(ge=0)
+    log_files_directory: DirectoryPath
+    log_files_to_keep: int = Field(ge=0)
+    log_file_max_size_bytes: int = Field(ge=0)
     modules: dict[Annotated[str, StringConstraints(pattern=r"^\d+$")], ModuleConfig]
 
     @field_validator("modules")

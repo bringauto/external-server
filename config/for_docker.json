@@ -7,6 +7,9 @@
   "timeout": 30,
   "send_invalid_command": false,
   "sleep_duration_after_connection_refused": 0.5,
+  "log_files_directory": "",
+  "log_files_to_keep": 0,
+  "log_file_max_size_bytes": 0,
   "modules": {
     "1": {
       "lib_path": "/home/bringauto/modules/libmission_external_server.so",
