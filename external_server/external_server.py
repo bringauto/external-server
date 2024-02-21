@@ -90,7 +90,7 @@ class ExternalServer:
                 self._logger.error("Connect sequence failed")
             except ConnectionRefusedError:
                 self._logger.error(
-                    f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}"
+                    f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}, trying again"
                 )
                 time.sleep(self._config.sleep_duration_after_connection_refused)
             except ClientDisconnectedExc:  # if 30 seconds any message has not been received
