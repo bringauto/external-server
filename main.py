@@ -28,13 +28,20 @@ def main() -> None:
                 backupCount=config.log_files_to_keep - 1
             )
             file_handler.setFormatter(logging.Formatter(constants.LOG_FORMAT))
-
-    logging.basicConfig(
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(name)s: %(message)s",
+                datefmt="[%X]",
+                handlers=[RichHandler(), file_handler],
+            )
+    else:
+        logging.basicConfig(
         level=logging.INFO,
         format="%(name)s: %(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler(), file_handler],
+        handlers=[RichHandler()],
     )
+        
     logger = logging.getLogger("Main")
 
     server = ExternalServer(config)
