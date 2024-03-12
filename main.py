@@ -43,7 +43,7 @@ def main() -> None:
     )
         
     logger = logging.getLogger("Main")
-    logger.info(f"Loaded config:\n{config.model_dump_json(indent=4)}")
+    logger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 
     server = ExternalServer(config)
     if args.tls:
