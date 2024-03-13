@@ -7,3 +7,9 @@ KEEPALIVE = 15
 
 # Quality of Service used by Mqtt client
 QOS = 1
+
+# Log file name
+LOG_FILE_NAME = "external_server.log"
+
+# Log file format
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
