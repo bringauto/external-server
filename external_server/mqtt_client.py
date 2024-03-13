@@ -6,6 +6,7 @@ import sys
 import ssl
 
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -35,6 +36,7 @@ class MqttClient:
         self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
         self._received_msgs: Queue[external_protocol.ExternalClient] = Queue()
         self._mqtt_client = mqtt.Client(
+            callback_api_version=CallbackAPIVersion.VERSION1,
             client_id="".join(random.choices(string.ascii_uppercase + string.digits, k=20)),
             protocol=mqtt.MQTTv311,
             reconnect_on_failure=True
