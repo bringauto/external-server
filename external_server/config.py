@@ -1,28 +1,60 @@
 from __future__ import annotations
+import json
 
 from typing import Annotated, TypeVar, Mapping
 
-from pydantic import BaseModel, FilePath, StringConstraints, ValidationError, field_validator
+from pydantic import BaseModel, Field, FilePath, StringConstraints, ValidationError, field_validator, DirectoryPath
 
 T = TypeVar("T", bound=Mapping)
 
 
 class Config(BaseModel):
-    company_name: str
-    car_name: str
-    mqtt_timeout: int
-    timeout: int
+    company_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
+    car_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
+    mqtt_address: Annotated[str, StringConstraints(pattern=r"^((http|https)://)?([\w-]+\.)?+[\w-]+$")]
+    mqtt_port: int = Field(ge=0, le=65535)
+    mqtt_timeout: int = Field(ge=0)
+    timeout: int = Field(ge=0)
     send_invalid_command: bool
-    sleep_duration_after_connection_refused: float
+    sleep_duration_after_connection_refused: float = Field(ge=0)
+    log_files_directory: DirectoryPath
+    log_files_to_keep: int = Field(ge=0)
+    log_file_max_size_bytes: int = Field(ge=0)
     modules: dict[Annotated[str, StringConstraints(pattern=r"^\d+$")], ModuleConfig]
 
     @field_validator("modules")
     @classmethod
-    def _modules_validator(cls, value: T) -> T:
-        if not len(value):
+    def _modules_validator(cls, modules: T) -> T:
+        if not len(modules):
             raise ValueError("Modules must contain at least 1 module.")
-        return value
+        for module in modules.values():
+            if module.config.get("company_name") is not None:
+                raise ValueError("Module configs can not contain company_name.")
+            if module.config.get("car_name") is not None:
+                raise ValueError("Module configs can not contain car_name.")
+        return modules
+    
+    def get_config_dump_string(self) -> str:
+        """Returns a string representation of the config. Values need to be added explicitly."""
+        config_json: dict = {}
+        config_json["company_name"] = self.company_name
+        config_json["car_name"] = self.car_name
+        config_json["mqtt_address"] = self.mqtt_address
+        config_json["mqtt_port"] = self.mqtt_port
+        config_json["mqtt_timeout"] = self.mqtt_timeout
+        config_json["timeout"] = self.timeout
+        config_json["send_invalid_command"] = self.send_invalid_command
+        config_json["sleep_duration_after_connection_refused"] = self.sleep_duration_after_connection_refused
+        config_json["log_files_directory"] = str(self.log_files_directory)
+        config_json["log_files_to_keep"] = self.log_files_to_keep
+        config_json["log_file_max_size_bytes"] = self.log_file_max_size_bytes
+        
+        module_json = {}
+        for key, value in self.modules.items():
+            module_json[key] = {"lib_path": str(value.lib_path), "config": "HIDDEN"}
+        config_json["modules"] = module_json
 
+        return json.dumps(config_json, indent=4)
 
 class ModuleConfig(BaseModel):
     lib_path: FilePath

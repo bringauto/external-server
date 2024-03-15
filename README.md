@@ -17,8 +17,6 @@ Directory contains fake external server the communicates with external client, w
 
 ## Arguments
 
-- `-i or --ip-address <str>` = ip address of the module gateway, default = `127.0.0.1`
-- `-p or --port <int>` = port of the module gateway, default = `1883`
 - `-c or --config <str>` = path to the config file, default = `./config/config.json`
 - `--tls` = tls mqtt authentication
 
@@ -36,11 +34,16 @@ Prepare your shared library of module implementation (implementation of external
 
 ### Options in config file
 
- - company_name, car_name (required) - used for MQTT topics name, should be same as in module gateway
+ - company_name, car_name (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed
+ - mqtt_address (required) - IP address of the MQTT broker
+ - mqtt_port (required) - port of the MQTT broker
  - mqtt_timeout (in seconds) - timeout for getting message from MqttClient
  - timeout (in seconds) - Maximum time amount between Status and Command messages
  - send_invalid_command - sends command to Module gateway even if External server detects invalid command returned from external_server_api; affects only normal communication
  - sleep_duration_after_connection_refused - if connection to Module gateway was refused, External server will sleep for defined duration before next connection attempt is proceed
+ - log_files_directory (required) - path to a directory in which the logs will be stored. If left empty, the current working directory will be used
+ - log_files_to_keep (required) - number of log files that will be kept (can be 0)
+ - log_file_max_size_bytes (required) - max file size of a log in bytes (0 means unlimited)
  - modules (required) - supported modules specified by module number
     - lib_path (required) - path to module shared library
     - config (optional) - specification of config for module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function
@@ -49,12 +52,17 @@ Prepare your shared library of module implementation (implementation of external
 
  ```json
 {
-    "company_name": "BringAuto",
-    "car_name": "VirtualVehicle",
+    "company_name": "bringauto",
+    "car_name": "virtual_vehicle",
+    "mqtt_address": "127.0.0.1",
+    "mqtt_port": 1883,
     "mqtt_timeout": 30,
     "timeout": 30,
     "send_invalid_command": false,
     "sleep_duration_after_connection_refused": 0.5,
+    "log_files_directory": "/path/to/logs/directory",
+    "log_files_to_keep": 5,
+    "log_file_max_size_bytes": 50000,
     "modules": {
         "2" : {
             "lib_path": "/path/to/module/library/with/number/2",

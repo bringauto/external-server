@@ -1,9 +1,14 @@
 {
-  "company_name": "BringAuto",
-  "car_name": "VirtualVehicle",
+  "company_name": "bringauto",
+  "car_name": "virtual_vehicle",
+  "mqtt_address": "mosquitto",
+  "mqtt_port": 1883,
   "mqtt_timeout": 30,
   "timeout": 30,
   "send_invalid_command": false,
   "sleep_duration_after_connection_refused": 0.5,
+  "log_files_directory": "",
+  "log_files_to_keep": 0,
+  "log_file_max_size_bytes": 0,
   "modules": {}
 }

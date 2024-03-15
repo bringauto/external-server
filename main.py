@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import logging
+import logging.handlers
 import json
 import sys
 
@@ -8,25 +9,43 @@ from rich.logging import RichHandler
 from external_server.utils import argparse_init
 from external_server.external_server import ExternalServer
 from external_server.config import Config, load_config, InvalidConfigError
+from external_server import constants
 
 
 def main() -> None:
     """Main entry of external server"""
-    logging.basicConfig(
+    args = argparse_init()
+    try:
+        config = load_config(args.config)
+    except InvalidConfigError as exc:
+        print(f"Invalid config: {exc}")
+        sys.exit(1)
+
+    if (config.log_files_to_keep):
+            file_handler = logging.handlers.RotatingFileHandler(
+                filename=str(config.log_files_directory) + "/" + constants.LOG_FILE_NAME,
+                maxBytes=config.log_file_max_size_bytes,
+                backupCount=config.log_files_to_keep - 1
+            )
+            file_handler.setFormatter(logging.Formatter(constants.LOG_FORMAT))
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(name)s: %(message)s",
+                datefmt="[%X]",
+                handlers=[RichHandler(), file_handler],
+            )
+    else:
+        logging.basicConfig(
         level=logging.INFO,
         format="%(name)s: %(message)s",
         datefmt="[%X]",
         handlers=[RichHandler()],
     )
+        
     logger = logging.getLogger("Main")
-    args = argparse_init()
-    try:
-        config = load_config(args.config)
-    except InvalidConfigError as exc:
-        logger.error(f"Invalid config: {exc}")
-        sys.exit(1)
+    logger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 
-    server = ExternalServer(args.ip_address, args.port, config)
+    server = ExternalServer(config)
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
             logger.error(

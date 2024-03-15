@@ -11,14 +11,6 @@ import InternalProtocol_pb2 as internal_protocol
 def argparse_init() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-i",
-        "--ip-address",
-        type=str,
-        default="127.0.0.1",
-        help="ip address of the MQTT broker",
-    )
-    parser.add_argument("-p", "--port", type=int, default=1883, help="port of the MQTT broker")
-    parser.add_argument(
         "-c", "--config", type=str, default="./config/config.json", help="path to the config file"
     )
     parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="tls authentication")
