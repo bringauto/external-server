@@ -82,7 +82,7 @@ Prepare your shared library of module implementation (implementation of external
 After filling the config, you can run External server with this command:
 
 ```bash
-python3 main.py
+python3 external_server_main.py
 ```
 
 ## Unit tests
