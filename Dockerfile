@@ -41,7 +41,7 @@ COPY --from=cpp_builder /home/bringauto/modules /home/bringauto/modules
 COPY external_server /home/bringauto/external_server/external_server
 COPY config/for_docker.json /home/bringauto/config/for_docker.json
 COPY --chown=bringauto:bringauto lib /home/bringauto/external_server/lib
-COPY main.py /home/bringauto/external_server
+COPY external_server_main.py /home/bringauto/external_server
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
 
 RUN python3 -m pip install -r /home/bringauto/external_server/requirements.txt
