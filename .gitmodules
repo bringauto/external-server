@@ -1,12 +1,3 @@
 [submodule "lib/fleet-protocol"]
 	path = lib/fleet-protocol
 	url = https://github.com/bringauto/fleet-protocol.git
-[submodule "lib/io-module"]
-	path = lib/io-module
-	url = https://github.com/bringauto/io-module.git
-[submodule "lib/example-module"]
-	path = lib/example-module
-	url = https://github.com/bringauto/example-module.git
-[submodule "lib/mission-module"]
-	path = lib/mission-module
-	url = https://github.com/bringauto/mission-module.git
