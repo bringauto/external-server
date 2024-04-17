@@ -1,7 +1,7 @@
 FROM bringauto/cpp-build-environment:latest AS cpp_builder
 
-ARG MISSION_MODULE_VERSION=v1.2.3
-ARG IO_MODULE_VERSION=v1.2.3
+ARG MISSION_MODULE_VERSION=v1.2.4
+ARG IO_MODULE_VERSION=v1.2.4
 
 RUN mkdir /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
