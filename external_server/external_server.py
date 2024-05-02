@@ -101,6 +101,9 @@ class ExternalServer:
                 self._logger.error("Command response message has not been received in time")
             except CommunicationException:
                 pass
+            except Exception as e:
+                self._logger.error(f"Unexpected error occurred: {e}")
+                time.sleep(self._config.sleep_duration_after_connection_refused)
             finally:
                 self._clear_context()
 
@@ -114,7 +117,7 @@ class ExternalServer:
 
     def _init_seq_connect(self) -> None:
         self._logger.info("Expecting a connect message")
-        received_msg = self._mqtt_client.get()
+        received_msg = self._mqtt_client.get(timeout=self._config.mqtt_timeout)
         if received_msg == False:
             self._logger.error("Connect message has not been received")
             self._mqtt_client.stop()
@@ -235,7 +238,14 @@ class ExternalServer:
                     self._logger.info(f"Sending Command message, messageCounter: {command_counter}")
                     self._mqtt_client.publish(external_command)
                     self._command_checker.add_command(external_command.command, True)
-                    devices_with_no_command.remove(for_device)
+                    try:
+                        devices_with_no_command.remove(for_device)
+                    except ValueError:
+                        self._logger.error(
+                            f"Received command for unexpected device in connect sequence:"
+                            f"{for_device.module}/{for_device.deviceType}/{for_device.deviceRole} named as {for_device.deviceName}"
+                        )
+                        raise ConnectSequenceException()
 
         for device in devices_with_no_command + self._not_connected_devices:
             command_counter = self._command_checker.counter
