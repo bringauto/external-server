@@ -241,7 +241,10 @@ class ExternalServer:
                     try:
                         devices_with_no_command.remove(for_device)
                     except ValueError:
-                        self._logger.error("Received command for unexpected device in connect sequence")
+                        self._logger.error(
+                            f"Received command for unexpected device in connect sequence:
+                            {for_device.module}/{for_device.deviceType}/{for_device.deviceRole} named as {for_device.deviceName}"
+                        )
                         raise ConnectSequenceException()
 
         for device in devices_with_no_command + self._not_connected_devices:
