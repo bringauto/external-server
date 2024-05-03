@@ -1,5 +1,6 @@
 import ctypes as ct
 from enum import IntEnum
+from dataclasses import dataclass
 
 
 class TimeoutType(IntEnum):
@@ -92,3 +93,19 @@ class KeyValue(ct.Structure):
 # };
 class Config(ct.Structure):
     _fields_ = [("parameters", ct.POINTER(KeyValue)), ("size", ct.c_size_t)]
+
+
+@dataclass
+class DeviceIdentificationPython:
+    module: int
+    device_type: int
+    device_role: str
+    device_name: str
+    priority: int
+
+    def __eq__(self, other: "DeviceIdentificationPython"):
+        return (
+            self.module == other.module
+            and self.device_type == other.device_type
+            and self.device_role == other.device_role
+        )
