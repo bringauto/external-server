@@ -20,7 +20,7 @@ from external_server.utils import check_file_exists, device_repr
 from external_server.external_server_api_client import ExternalServerApiClient
 from external_server.command_waiting_thread import CommandWaitingThread
 from external_server.config import Config
-from external_server.structures import GeneralErrorCodes, DisconnectTypes, TimeoutType
+from external_server.structures import GeneralErrorCodes, DisconnectTypes, TimeoutType, DeviceIdentificationPython
 from external_server.event_queue import EventQueueSingleton, EventType
 
 
@@ -239,7 +239,7 @@ class ExternalServer:
                     self._mqtt_client.publish(external_command)
                     self._command_checker.add_command(external_command.command, True)
                     try:
-                        devices_with_no_command.remove(for_device)
+                        devices_with_no_command.remove(self._proto_to_python_device(for_device))
                     except ValueError:
                         self._logger.error(
                             f"Received command for unexpected device in connect sequence:"
@@ -249,6 +249,8 @@ class ExternalServer:
 
         for device in devices_with_no_command + self._not_connected_devices:
             command_counter = self._command_checker.counter
+            if type(device) is DeviceIdentificationPython:
+                device = self._python_to_proto_device(device)
             external_command = MessageCreator.create_external_command(
                 self._session_id, command_counter, device, None
             )
@@ -276,7 +278,7 @@ class ExternalServer:
                 received_msg.commandResponse.messageCounter
             )
             for command, returned_from_api in commands:
-                if returned_from_api and command.deviceCommand.device in self._connected_devices:
+                if returned_from_api and self._proto_to_python_device(command.deviceCommand.device) in self._connected_devices:
                     rc = self._modules[command.deviceCommand.device.module].command_ack(
                         command.deviceCommand.commandData, command.deviceCommand.device
                     )
@@ -379,6 +381,9 @@ class ExternalServer:
                 )
                 self._check_forward_status_rc(device.module, rc)
                 self._disconnect_device(DisconnectTypes.announced, device)
+                self._logger.warning(
+                    f"Status announces that device {device.deviceName} was disconnected"
+                )
 
             if len(status.errorMessage) > 0:
                 self._logger.error(
@@ -462,13 +467,15 @@ class ExternalServer:
         return MessageCreator.create_status_response(status.sessionId, status.messageCounter)
 
     def _connect_device(self, device: internal_protocol.Device) -> int:
+        # External server needs to ignore priority
+        device.priority = 0
         rc = self._modules[device.module].device_connected(device)
         self._adjust_connection_state_of_module_thread(device.module, True)
         if rc == GeneralErrorCodes.OK:
             self._logger.info(
                 f"Connected device unique identificator: {device.module}/{device.deviceType}/{device.deviceRole} named as {device.deviceName}"
             )
-            self._connected_devices.append(device)
+            self._connected_devices.append(self._proto_to_python_device(device))
         else:
             self._logger.error(
                 f"Device with unique identificator: {device.module}/{device.deviceType}/{device.deviceRole} "
@@ -479,8 +486,10 @@ class ExternalServer:
     def _disconnect_device(
         self, disconnect_types: DisconnectTypes, device: internal_protocol.Device
     ) -> None:
+        # External server needs to ignore priority
+        device.priority = 0
         try:
-            self._connected_devices.remove(device)
+            self._connected_devices.remove(self._proto_to_python_device(device))
         except ValueError:
             return
 
@@ -489,15 +498,7 @@ class ExternalServer:
         self._adjust_connection_state_of_module_thread(device.module, False)
 
     def _is_device_in_list(self, device: internal_protocol.Device, list) -> bool:
-        for list_device in list:
-            if (
-                list_device.module == device.module
-                and list_device.deviceType == device.deviceType
-                and list_device.deviceRole == device.deviceRole
-            ):  # External server do not care about deviceName and priority
-                return True
-
-        return False
+        return self._proto_to_python_device(device) in list
 
     def _adjust_connection_state_of_module_thread(self, device_module: int, connected: bool):
         for device in self._connected_devices:
@@ -532,6 +533,20 @@ class ExternalServer:
         if self._session_id == msg_session_id:
             self._session_checker.reset()
 
+    def _proto_to_python_device(self, device: internal_protocol.Device) -> DeviceIdentificationPython:
+        return DeviceIdentificationPython(
+            device.module, device.deviceType, device.deviceRole, device.deviceName, device.priority
+        )
+    
+    def _python_to_proto_device(self, device: DeviceIdentificationPython) -> internal_protocol.Device:
+        device_proto = internal_protocol.Device()
+        device_proto.module = device.module
+        device_proto.deviceType = device.device_type
+        device_proto.deviceRole = device.device_role
+        device_proto.deviceName = device.device_name
+        device_proto.priority = device.priority
+        return device_proto
+
     def _clear_context(self) -> None:
         self._mqtt_client.stop()
         self._command_checker.reset()
@@ -539,7 +554,7 @@ class ExternalServer:
         self._status_order_checker.reset()
 
         for device in self._connected_devices:
-            rc = self._modules[device.module].device_disconnected(DisconnectTypes.timeout, device)
+            rc = self._modules[device.module].device_disconnected(DisconnectTypes.timeout, self._python_to_proto_device(device))
             self._check_device_disconnected_rc(device.module, rc)
 
         for command_thread in self._modules_command_threads.values():
