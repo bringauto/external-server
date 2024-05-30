@@ -290,7 +290,9 @@ class ExternalServer:
             event = self._event_queue.get()
             if event.event == EventType.RECEIVED_MESSAGE:
                 received_msg = self._mqtt_client.get(timeout=None)
-                if received_msg is not None:
+                if received_msg == False:
+                    raise ConnectionRefusedError()
+                elif received_msg is not None:
                     if received_msg.HasField("connect"):
                         self._handle_connect(received_msg.connect.sessionId)
 
