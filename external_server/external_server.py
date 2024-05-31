@@ -118,7 +118,7 @@ class ExternalServer:
     def _init_seq_connect(self) -> None:
         self._logger.info("Expecting a connect message")
         received_msg = self._mqtt_client.get(timeout=self._config.mqtt_timeout)
-        if received_msg == False:
+        if received_msg == None or received_msg == False:
             self._logger.error("Connect message has not been received")
             self._mqtt_client.stop()
             raise ConnectSequenceException()
@@ -160,10 +160,10 @@ class ExternalServer:
         for iter in device_count:
             self._logger.info(f"Waiting for status message {iter + 1}/{len(device_count)}")
             status_msg = self._mqtt_client.get(timeout=self._config.mqtt_timeout)
-            if status_msg == False:
+            if status_msg == None or status_msg == False:
                 self._logger.error("Status message has not been received")
                 raise ConnectSequenceException()
-            if status_msg == None or not status_msg.HasField("status"):
+            if not status_msg.HasField("status"):
                 self._logger.error("Received message is not a status message")
                 raise ConnectSequenceException()
 
@@ -267,10 +267,10 @@ class ExternalServer:
         for iter in device_count:
             self._logger.info(f"Waiting for command response message {iter + 1}/{len(device_count)}")
             received_msg = self._mqtt_client.get(timeout=self._config.mqtt_timeout)
-            if received_msg == False:
+            if received_msg == None or received_msg == False:
                 self._logger.error("Command response message has not been received")
                 raise ConnectSequenceException()
-            if received_msg == None or not received_msg.HasField("commandResponse"):
+            if not received_msg.HasField("commandResponse"):
                 self._logger.error("Received message is not a command response message")
                 raise ConnectSequenceException()
             self._logger.info(f"Received Command response message")
@@ -290,7 +290,9 @@ class ExternalServer:
             event = self._event_queue.get()
             if event.event == EventType.RECEIVED_MESSAGE:
                 received_msg = self._mqtt_client.get(timeout=None)
-                if received_msg is not None:
+                if received_msg == False:
+                    raise CommunicationException()
+                elif received_msg is not None:
                     if received_msg.HasField("connect"):
                         self._handle_connect(received_msg.connect.sessionId)
 
