@@ -394,6 +394,9 @@ class ExternalServer:
 
             status_response = self._create_status_response(status)
             self._mqtt_client.publish(status_response)
+            if len(self._connected_devices) == 0:
+                    self._logger.warning("All devices have been disconnected, restarting server")
+                    raise CommunicationException()
 
     def _handle_command_response(self, command_response: external_protocol.CommandResponse) -> None:
         self._logger.info("Received command response")
