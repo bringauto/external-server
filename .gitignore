@@ -3,3 +3,5 @@ __pycache__
 _tmp
 .vscode
 .idea
+.venv
+.pytest_cache
