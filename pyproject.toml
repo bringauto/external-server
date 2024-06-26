@@ -1,3 +1,8 @@
 [project]
 name = "external_server"
 version = "1.1.9"
+
+
+[tool.setuptools.packages.find]
+include = ["external_server", "config", "docs"]
+exclude = ["old_tests"]

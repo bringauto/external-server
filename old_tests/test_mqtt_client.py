@@ -1,8 +1,9 @@
 import pytest
 from unittest.mock import MagicMock
 import sys
+import os
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
+# sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.mqtt_client import MqttClient
 import ExternalProtocol_pb2 as external_protocol

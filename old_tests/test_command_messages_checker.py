@@ -5,6 +5,8 @@ import sys
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import ExternalProtocol_pb2 as external_protocol
+
+
 from external_server.checker.command_messages_checker import CommandMessagesChecker
 
 

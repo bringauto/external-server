@@ -5,3 +5,5 @@ _tmp
 .idea
 .venv
 .pytest_cache
+external_server.egg-info
+*.pyc
