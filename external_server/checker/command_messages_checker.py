@@ -57,7 +57,7 @@ class CommandMessagesChecker(Checker):
         msg_counter : int
             number of command, which was acknowledged by received commandResponse
         """
-        command_list = list()
+        command_list: list[tuple[external_protocol.Command, bool]] = list()
         if self._commands.empty() or msg_counter != self._commands.queue[0][1]:
             self._received_acks.append(msg_counter)
             self._logger.warning(
