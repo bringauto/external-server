@@ -82,7 +82,29 @@ python3 external_server_main.py
 
 ## Unit tests
 
-Unit tests are covering classes in external_server/checker direcory. Tests are using pytest. With installed pytest run this:
+### New tests
+
+Before testing, install the package [in editable mode] by running the following in the root directory:
+
+```bash
+pip install [-e] .
+```
+
+In the root folder, run the following
+```bash
+python -m tests [-h] [PATH1] [PATH2] ...
+```
+
+Each PATH is specified relative to the `tests` folder. If no PATH is specified, all the tests will run. Otherwise
+- when PATH is a directory, the script will run all tests in this directory (and subdirectories),
+- when PATH is a Python file, the script will run all tests in the file.
+
+The `-h` flag makes the script display tests' coverage in an HTML format, for example in your web browser.
+
+
+
+### Old tests
+Unit tests cover classes in external_server/checker direcory. Tests are using pytest. With installed pytest run this:
 
 ```bash
 python -m pytest

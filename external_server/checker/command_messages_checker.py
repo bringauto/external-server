@@ -14,7 +14,7 @@ class CommandMessagesChecker(Checker):
 
     Checks for order of received Command responses and checks if duration between
     sending Command and receiving Command reponses do not exceeds timeout given in
-    constructor. Is also External server's memory of commands, which didn't have
+    constructor. Is also External Server's memory of commands, which didn't have
     received Command response yet.
     """
 

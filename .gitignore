@@ -6,4 +6,6 @@ _tmp
 .venv
 .pytest_cache
 external_server.egg-info
-*.pyc
+*.
+.env
+*.coverage
