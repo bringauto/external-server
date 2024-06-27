@@ -36,11 +36,11 @@ class ExternalServer:
         self._session_checker = SessionTimeoutChecker(self._config.mqtt_timeout)
         self._command_checker = CommandMessagesChecker(self._config.timeout)
         self._status_order_checker = OrderChecker(self._config.timeout)
-        self._connected_devices = list()
-        self._not_connected_devices = list()
+        self._connected_devices: list[internal_protocol.Device] = list()
+        self._not_connected_devices: list[internal_protocol.Device] = list()
         self._mqtt_client = MqttClient(self._config.company_name, self._config.car_name)
 
-        self._modules = dict()
+        self._modules: dict[int, ExternalServerApiClient] = dict()
         self._modules_command_threads = dict()
         config_modules = config.modules
         for module_number in config_modules:
@@ -48,7 +48,7 @@ class ExternalServer:
                 config_modules[module_number], self._config.company_name, self._config.car_name
             )
             self._modules[int(module_number)].init()
-            
+
             if not self._modules[int(module_number)].device_initialized():
                 self._logger.error(
                     f"Module {module_number}: Error occurred in init function. Check the configuration file."
@@ -208,7 +208,7 @@ class ExternalServer:
     def _init_seq_command(self) -> None:
         devices_with_no_command = self._connected_devices.copy()
         self._logger.info("Generating and sending commands to all devices")
-        
+
         for module in self._modules:
             module_commands = []
             rc = 0
@@ -342,7 +342,7 @@ class ExternalServer:
 
         while (status := self._status_order_checker.get_status()) is not None:
             device = status.deviceStatus.device
-            
+
             if (device.module not in self._modules):
                 self._logger.warning(
                     f"Received status for device with unknown module number {device.module}"
@@ -542,7 +542,7 @@ class ExternalServer:
         return DeviceIdentificationPython(
             device.module, device.deviceType, device.deviceRole, device.deviceName, device.priority
         )
-    
+
     def _python_to_proto_device(self, device: DeviceIdentificationPython) -> internal_protocol.Device:
         device_proto = internal_protocol.Device()
         device_proto.module = device.module

@@ -2,8 +2,8 @@ import unittest
 import sys
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
 
+from ExternalProtocol_pb2 import Command
 from external_server.checker.command_messages_checker import CommandMessagesChecker
 
 
@@ -23,9 +23,9 @@ class Test_Popped_Commands_From_Checker_With_Stored_Commands(unittest.TestCase):
     def test_are_in_the_order_they_were_received(self):
         checker = CommandMessagesChecker(CHECKER_TIMEOUT)
 
-        cmd_1 = external_protocol.Command()
-        cmd_2 = external_protocol.Command()
-        cmd_3 = external_protocol.Command()
+        cmd_1 = Command()
+        cmd_2 = Command()
+        cmd_3 = Command()
 
         checker.add_command(cmd_2, returned_from_api=False)
         checker.add_command(cmd_1, returned_from_api=False)
