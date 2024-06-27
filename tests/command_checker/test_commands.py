@@ -65,7 +65,7 @@ class Test_Pop_Command(unittest.TestCase):
 
 
 
-class Test_Exceeding_Timeout_For_Command(unittest.TestCase):
+class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
         self.checker = CommandMessagesChecker(CHECKER_TIMEOUT)
@@ -82,6 +82,31 @@ class Test_Exceeding_Timeout_For_Command(unittest.TestCase):
         self.assertTrue(self.checker.timeout.is_set())
         self.checker.reset()
         self.assertFalse(self.checker.timeout.is_set())
+
+    def test_timeout_is_not_set_when_command_is_acknowledged(self):
+        self.assertFalse(self.checker.timeout.is_set())
+        time.sleep(CHECKER_TIMEOUT/2)
+        self.checker.acknowledge_and_pop_commands(msg_counter=0)
+        time.sleep(CHECKER_TIMEOUT/2)
+        self.assertFalse(self.checker.timeout.is_set())
+
+    def test_timeout_is_not_set_when_all_commands_are_acknowledged(self):
+        self.checker.add_command(Command(), False)
+        self.assertFalse(self.checker.timeout.is_set())
+        time.sleep(CHECKER_TIMEOUT/2)
+        self.checker.acknowledge_and_pop_commands(msg_counter=0)
+        self.checker.acknowledge_and_pop_commands(msg_counter=1)
+        time.sleep(CHECKER_TIMEOUT/2 + 0.1)
+        self.assertFalse(self.checker.timeout.is_set())
+
+    def test_timeout_is_set_when_any_command_is_not_acknowledged(self):
+        self.checker.add_command(Command(), False)
+        self.assertFalse(self.checker.timeout.is_set())
+        time.sleep(CHECKER_TIMEOUT/2)
+        self.checker.acknowledge_and_pop_commands(msg_counter=0)
+        time.sleep(CHECKER_TIMEOUT/2 + 0.1)
+        self.assertTrue(self.checker.timeout.is_set())
+
 
 
 if __name__=="__main__":  # pragma: no cover
