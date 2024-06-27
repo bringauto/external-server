@@ -9,6 +9,10 @@ from external_server.checker.checker import Checker
 from external_server.structures import TimeoutType
 
 
+ReturnedFromAPIFlag = bool
+ExternalCommand = tuple[external_protocol.Command, ReturnedFromAPIFlag]
+
+
 class CommandMessagesChecker(Checker):
     """Checker for all Command messages
 
@@ -21,9 +25,9 @@ class CommandMessagesChecker(Checker):
     def __init__(self, timeout: int) -> None:
         super().__init__(TimeoutType.COMMAND_TIMEOUT)
         self._timeout = timeout
-        self._commands: Queue[
-            tuple[external_protocol.Command, int, bool, threading.Timer]
-        ] = Queue()
+        self._commands: Queue[tuple[external_protocol.Command, int, bool, threading.Timer]] = (
+            Queue()
+        )
         self._received_acks: list[int] = []
         self._counter = 0
 
@@ -31,7 +35,7 @@ class CommandMessagesChecker(Checker):
     def counter(self) -> int:
         return self._counter
 
-    def acknowledge_and_pop_commands(self, msg_counter: int) -> list[tuple[external_protocol.Command, bool]]:
+    def acknowledge_and_pop_commands(self, msg_counter: int) -> list[ExternalCommand]:
         """Pops commands from checker
 
         Returns list of Command messages, which have been acknowledged with Command
@@ -47,7 +51,7 @@ class CommandMessagesChecker(Checker):
         msg_counter : int
             number of command, which was acknowledged by received commandResponse
         """
-        command_list: list[tuple[external_protocol.Command, bool]] = list()
+        command_list: list[ExternalCommand] = list()
         if self._commands.empty() or msg_counter != self._commands.queue[0][1]:
             self._received_acks.append(msg_counter)
             self._logger.warning(
@@ -77,7 +81,9 @@ class CommandMessagesChecker(Checker):
 
         return command_list
 
-    def add_command(self, command: external_protocol.Command, returned_from_api: bool) -> None:
+    def add_command(
+        self, command: external_protocol.Command, returned_from_api: ReturnedFromAPIFlag
+    ) -> None:
         """Adds command to checker
 
         Adds given command to this checker. Starts timeout for Command response. Set
@@ -96,7 +102,6 @@ class CommandMessagesChecker(Checker):
             self._stop_timer(timer)
         self._received_acks.clear()
         self.timeout.clear()
-
 
     def _stop_timer(self, timer: threading.Timer) -> None:
         timer.cancel()
