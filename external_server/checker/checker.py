@@ -19,7 +19,7 @@ class Checker:
         """
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        self.time_out = threading.Event()
+        self.timeout = threading.Event()  # to be removed?
         self._event_queue = EventQueueSingleton()
         self._timeout_type = timeout_type
 
@@ -28,3 +28,4 @@ class Checker:
         Puts the TIMEOUT_OCCURRED event to event queue.
         """
         self._event_queue.add_event(event_type=EventType.TIMEOUT_OCCURRED, data=self._timeout_type)
+        self.timeout.set()

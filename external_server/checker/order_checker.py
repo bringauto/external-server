@@ -71,5 +71,5 @@ class OrderChecker(Checker):
             self._pop_timer()
         self._received_statuses.queue.clear()
         self._checked_statuses.queue.clear()
-        self.time_out.clear()
+        self.timeout.clear()
         self._counter = 1

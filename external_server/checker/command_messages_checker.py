@@ -31,25 +31,15 @@ class CommandMessagesChecker(Checker):
     def counter(self) -> int:
         return self._counter
 
-    def add_command(self, command: external_protocol.Command, returned_from_api: bool) -> None:
-        """Adds command to checker
-
-        Adds given command to this checker. Starts timeout for Command response. Set
-        the returned_from_api to True if command was returned by get_command API
-        function. Should be called when command is sent to Module gateway.
-        """
-        timer = threading.Timer(self._timeout, self._timeout_occurred)
-        timer.start()
-        self._commands.put((command, self._counter, returned_from_api, timer))
-        self._counter += 1
-
-    def pop_commands(self, msg_counter: int) -> list[tuple[external_protocol.Command, bool]]:
+    def acknowledge_and_pop_commands(self, msg_counter: int) -> list[tuple[external_protocol.Command, bool]]:
         """Pops commands from checker
 
         Returns list of Command messages, which have been acknowledged with Command
         responses in correct order. With every command the returned_from_api flag is
         also returned. Can return empty list if received Command responses in wrong
-        order. Stops the timer for acknowledged commands. Should be called when Command
+        order.
+
+        Stops the timer for acknowledged commands. Should be called when Command
         response from Module gateway is received.
 
         Parameters
@@ -87,9 +77,17 @@ class CommandMessagesChecker(Checker):
 
         return command_list
 
-    def _stop_timer(self, timer: threading.Timer) -> None:
-        timer.cancel()
-        timer.join()
+    def add_command(self, command: external_protocol.Command, returned_from_api: bool) -> None:
+        """Adds command to checker
+
+        Adds given command to this checker. Starts timeout for Command response. Set
+        the returned_from_api to True if command was returned by get_command API
+        function. Should be called when command is sent to Module gateway.
+        """
+        timer = threading.Timer(self._timeout, self._timeout_occurred)
+        timer.start()
+        self._commands.put((command, self._counter, returned_from_api, timer))
+        self._counter += 1
 
     def reset(self) -> None:
         """Stops all timers and clears command memory"""
@@ -97,4 +95,9 @@ class CommandMessagesChecker(Checker):
             _, _, _, timer = self._commands.get()
             self._stop_timer(timer)
         self._received_acks.clear()
-        self.time_out.clear()
+        self.timeout.clear()
+
+
+    def _stop_timer(self, timer: threading.Timer) -> None:
+        timer.cancel()
+        timer.join()

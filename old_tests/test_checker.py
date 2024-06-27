@@ -20,4 +20,4 @@ class TestChecker:
         exc = Exception("Timeout occurred")
         checker = Checker(exc)
         checker._set_time_out()
-        assert checker.time_out.is_set()
+        assert checker.timeout.is_set()

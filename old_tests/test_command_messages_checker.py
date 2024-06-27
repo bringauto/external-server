@@ -21,7 +21,7 @@ class TestCommandMessagesChecker:
     # Pop a command when there are no commands
     def test_no_added_commands(self):
         checker = CommandMessagesChecker(TestException(), self.TIMEOUT)
-        result = checker.pop_commands(0)
+        result = checker.acknowledge_and_pop_commands(0)
         assert len(result) == 0
 
     # Add a command to the checker and pop it in correct order
@@ -29,7 +29,7 @@ class TestCommandMessagesChecker:
         checker = CommandMessagesChecker(TestException(), self.TIMEOUT)
         command = external_protocol.Command()
         checker.add_command(command, False)
-        result = checker.pop_commands(0)
+        result = checker.acknowledge_and_pop_commands(0)
         assert len(result) == 1
         assert result[0][0] == command
         assert result[0][1] == False
@@ -42,12 +42,12 @@ class TestCommandMessagesChecker:
         checker.add_command(command1, False)
         checker.add_command(command2, True)
 
-        result = checker.pop_commands(0)
+        result = checker.acknowledge_and_pop_commands(0)
         assert len(result) == 1
         assert result[0][0] == command1
         assert result[0][1] == False
 
-        result = checker.pop_commands(1)
+        result = checker.acknowledge_and_pop_commands(1)
         assert len(result) == 1
         assert result[0][0] == command2
         assert result[0][1] == True
@@ -60,10 +60,10 @@ class TestCommandMessagesChecker:
         checker.add_command(command1, False)
         checker.add_command(command2, True)
 
-        result = checker.pop_commands(1)
+        result = checker.acknowledge_and_pop_commands(1)
         assert len(result) == 0
 
-        result = checker.pop_commands(0)
+        result = checker.acknowledge_and_pop_commands(0)
         assert len(result) == 2
         assert result[0][0] == command1
         assert result[0][1] == False

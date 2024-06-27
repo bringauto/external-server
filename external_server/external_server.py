@@ -274,7 +274,7 @@ class ExternalServer:
                 self._logger.error("Received message is not a command response message")
                 raise ConnectSequenceException()
             self._logger.info(f"Received Command response message")
-            commands = self._command_checker.pop_commands(
+            commands = self._command_checker.acknowledge_and_pop_commands(
                 received_msg.commandResponse.messageCounter
             )
             for command, returned_from_api in commands:
@@ -405,7 +405,7 @@ class ExternalServer:
         device_not_connected = (
             command_response.type == external_protocol.CommandResponse.Type.DEVICE_NOT_CONNECTED
         )
-        commands = self._command_checker.pop_commands(command_response.messageCounter)
+        commands = self._command_checker.acknowledge_and_pop_commands(command_response.messageCounter)
         for command, _ in commands:
             rc = self._modules[command.deviceCommand.device.module].command_ack(
                 command.deviceCommand.commandData, command.deviceCommand.device
@@ -448,7 +448,7 @@ class ExternalServer:
                 self._mqtt_client.publish(external_command)
             else:
                 self._logger.warning("The Command will not be sent")
-                self._command_checker.pop_commands(external_command.command.messageCounter)
+                self._command_checker.acknowledge_and_pop_commands(external_command.command.messageCounter)
         else:
             self._mqtt_client.publish(external_command)
 

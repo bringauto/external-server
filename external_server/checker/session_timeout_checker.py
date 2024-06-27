@@ -28,7 +28,7 @@ class SessionTimeoutChecker(Checker):
             if self._timer.is_alive():
                 self._timer.cancel()
                 self._timer.join()
-            self.time_out.clear()
+            self.timeout.clear()
             self._timer_running = False
 
     def reset(self) -> None:
