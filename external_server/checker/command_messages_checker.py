@@ -31,10 +31,6 @@ class CommandMessagesChecker(Checker):
         self._received_acks: list[int] = []
         self._counter = 0
 
-    @property
-    def counter(self) -> int:
-        return self._counter
-
     def acknowledge_and_pop_commands(self, msg_counter: int) -> list[ExternalCommand]:
         """Pops commands from checker
 

@@ -5,6 +5,9 @@ from external_server.structures import TimeoutType
 from external_server.event_queue import EventQueueSingleton, EventType
 
 
+_DEFAULT_COUNTER_VALUE = 0
+
+
 class Checker:
     """
     A class that provides a mechanism to check for a timeout in a threaded operation.
@@ -22,6 +25,11 @@ class Checker:
         self.timeout = threading.Event()  # to be removed?
         self._event_queue = EventQueueSingleton()
         self._timeout_type = timeout_type
+        self._counter = _DEFAULT_COUNTER_VALUE
+
+    @property
+    def counter(self) -> int:
+        return self._counter
 
     def _timeout_occurred(self) -> None:
         """
