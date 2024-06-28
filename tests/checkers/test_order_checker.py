@@ -5,11 +5,11 @@ import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import Status
-from external_server.checker.order_checker import StatusOrderChecker
+from ExternalProtocol_pb2 import Status  # type: ignore
+from external_server.checker.status_order_checker import StatusOrderChecker
 
 
-logging.getLogger("OrderChecker").setLevel(logging.CRITICAL)
+logging.getLogger(StatusOrderChecker.__name__).setLevel(logging.CRITICAL)
 ORDER_CHECKER_TIMEOUT = 0.05
 
 
@@ -46,7 +46,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         status = Status(messageCounter=self.checker.counter)
         self.checker.check(status)
         self.checker.check(status)
-        self.assertEqual(self.checker.counter, init_counter+1)
+        self.assertEqual(self.checker.counter, init_counter + 1)
         self.assertFalse(self.checker.timeout.is_set())
         self.assertEqual(self.checker.get_status(), status)
         self.assertIsNone(self.checker.get_status())
@@ -57,7 +57,9 @@ class Test_Checking_Multiple_Statuses(unittest.TestCase):
     def setUp(self):
         self.checker = StatusOrderChecker(ORDER_CHECKER_TIMEOUT)
 
-    def test_in_any_order_eventually_not_skipping_any_counter_value_yields_statuses_in_correct_order(self):
+    def test_in_any_order_eventually_not_skipping_any_counter_value_yields_statuses_in_correct_order(
+        self,
+    ):
         self.checker.check(Status(messageCounter=3))
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=2))
@@ -71,7 +73,9 @@ class Test_Checking_Multiple_Statuses(unittest.TestCase):
         self.assertEqual(gotten_statuses[3].messageCounter, 4)
         self.assertEqual(gotten_statuses[4].messageCounter, 5)
 
-    def test_skipping_counter_value_prevents_any_following_calls_to_get_status_from_returning_any_message(self):
+    def test_skipping_counter_value_prevents_any_following_calls_to_get_status_from_returning_any_message(
+        self,
+    ):
         self.checker.check(Status(messageCounter=1))
         # message counter value 2 is skipped
         self.checker.check(Status(messageCounter=3))
@@ -93,19 +97,25 @@ class Test_Timeout(unittest.TestCase):
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
         self.assertFalse(self.checker.timeout.is_set())
 
-    def test_single_message_with_greater_counter_value_than_checkers_counter_does_cause_timeout(self):
+    def test_single_message_with_greater_counter_value_than_checkers_counter_does_cause_timeout(
+        self,
+    ):
         self.checker.check(Status(messageCounter=2))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
         self.assertTrue(self.checker.timeout.is_set())
 
-    def test_multiple_messages_with_any_counter_values_skipped_lead_to_timeout_if_missing_val_not_delivered(self):
+    def test_multiple_messages_with_any_counter_values_skipped_lead_to_timeout_if_missing_val_not_delivered(
+        self,
+    ):
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=2))
         self.checker.check(Status(messageCounter=4))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
         self.assertTrue(self.checker.timeout.is_set())
 
-    def test_multiple_messages_with_only_incorrect_order_of_vals_but_no_value_skipped_do_not_lead_to_timeout(self):
+    def test_multiple_messages_with_only_incorrect_order_of_vals_but_no_value_skipped_do_not_lead_to_timeout(
+        self,
+    ):
         self.checker.check(Status(messageCounter=2))
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=4))

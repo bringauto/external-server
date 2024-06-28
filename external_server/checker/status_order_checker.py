@@ -9,7 +9,9 @@ from external_server.checker.checker import Checker as _Checker
 from external_server.structures import TimeoutType
 
 
-QueuedStatus = tuple[int, external_protocol.Status]
+CounterValue = int
+QueuedStatus = tuple[CounterValue, external_protocol.Status]
+QueuedTimer = tuple[CounterValue, threading.Timer]
 
 
 class StatusOrderChecker(_Checker):
@@ -23,7 +25,7 @@ class StatusOrderChecker(_Checker):
         self._timeout = timeout
         self._counter = 1
         self._received_statuses: PriorityQueue[QueuedStatus] = PriorityQueue()
-        self._missing_statuses: PriorityQueue[tuple[int, threading.Timer]] = PriorityQueue()
+        self._missing_statuses: PriorityQueue[QueuedTimer] = PriorityQueue()
         self._checked_statuses: Queue[external_protocol.Status] = Queue()
 
     @property
@@ -31,7 +33,7 @@ class StatusOrderChecker(_Checker):
         return self._checked_statuses
 
     @property
-    def missing_statuses(self) -> PriorityQueue[tuple[int, threading.Timer]]:
+    def missing_statuses(self) -> PriorityQueue[QueuedTimer]:
         return self._missing_statuses
 
     @property
@@ -39,7 +41,7 @@ class StatusOrderChecker(_Checker):
         return self._received_statuses
 
     @property
-    def missing_status_counter_vals(self) -> list[int]:
+    def missing_status_counter_vals(self) -> list[CounterValue]:
         return [status_counter for status_counter, _ in self._missing_statuses.queue]
 
     def check(self, status_msg: external_protocol.Status) -> None:
