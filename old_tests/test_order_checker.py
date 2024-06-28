@@ -16,7 +16,7 @@ def order_checker():
     return order_checker
 
 
-def test_check_status_message_with_counter_equal_to_current_counter(order_checker):
+def test_check_status_message_with_counter_equal_to_current_counter(order_checker: OrderChecker):
     status_msg = external_protocol.Status()
     status_msg.messageCounter = order_checker.counter
 
@@ -27,10 +27,10 @@ def test_check_status_message_with_counter_equal_to_current_counter(order_checke
     assert not order_checker.checked_statuses.empty()
     assert order_checker.checked_statuses.get() == status_msg
     assert order_checker.counter == 2
-    assert not order_checker.time_out.is_set()
+    assert not order_checker.timeout.is_set()
 
 
-def test_reset_order_checker_instance(order_checker):
+def test_reset_order_checker_instance(order_checker: OrderChecker):
     status1 = external_protocol.Status()
     status1.messageCounter = 1
     order_checker.check(status1)
@@ -44,11 +44,11 @@ def test_reset_order_checker_instance(order_checker):
     assert order_checker.received_statuses.empty()
     assert order_checker.missing_statuses.empty()
     assert order_checker.checked_statuses.empty()
-    assert not order_checker.time_out.is_set()
+    assert not order_checker.timeout.is_set()
     assert order_checker.counter == 1
 
 
-def test_message_less_counter_than_current_counter(order_checker):
+def test_message_less_counter_than_current_counter(order_checker: OrderChecker):
     status_msg = external_protocol.Status()
     status_msg.messageCounter = 0
 
@@ -57,11 +57,11 @@ def test_message_less_counter_than_current_counter(order_checker):
     assert order_checker.missing_statuses.empty()
     assert order_checker.checked_statuses.empty()
     assert not order_checker.received_statuses.empty()
-    assert not order_checker.time_out.is_set()
+    assert not order_checker.timeout.is_set()
     assert order_checker.counter == 1
 
 
-def test_message_greater_counter_than_current_counter(order_checker):
+def test_message_greater_counter_than_current_counter(order_checker: OrderChecker):
     status_msg = external_protocol.Status()
     status_msg.messageCounter = 2
 
@@ -71,10 +71,10 @@ def test_message_greater_counter_than_current_counter(order_checker):
     assert order_checker.missing_statuses.queue[0][0] == 1
     assert order_checker.checked_statuses.empty()
     assert order_checker.counter == 1
-    assert not order_checker.time_out.is_set()
+    assert not order_checker.timeout.is_set()
 
 
-def test_check_status_with_missing_messages(order_checker):
+def test_check_status_with_missing_messages(order_checker: OrderChecker):
     status_msg = external_protocol.Status()
     status_msg.messageCounter = order_checker.counter
 
@@ -91,11 +91,11 @@ def test_check_status_with_missing_messages(order_checker):
     assert order_checker.missing_statuses.empty()
     assert order_checker.received_statuses.empty()
     assert order_checker.checked_statuses.empty()
-    assert not order_checker.time_out.is_set()
+    assert not order_checker.timeout.is_set()
     assert order_checker.counter == 1
 
 
-def test_multiple_status_messages_out_of_order(order_checker):
+def test_multiple_status_messages_out_of_order(order_checker: OrderChecker):
     status_msg1 = external_protocol.Status()
     status_msg1.messageCounter = 3
 
@@ -115,7 +115,7 @@ def test_multiple_status_messages_out_of_order(order_checker):
 
 
 # Receive status messages in sequential order
-def test_receive_status_messages_sequential_order(order_checker):
+def test_receive_status_messages_sequential_order(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=1)
     status2 = external_protocol.Status(messageCounter=2)
     status3 = external_protocol.Status(messageCounter=3)
@@ -131,7 +131,7 @@ def test_receive_status_messages_sequential_order(order_checker):
 
 
 # Receive status messages out of order, but eventually receive all messages
-def test_receive_status_messages_out_of_order_but_received_all(order_checker):
+def test_receive_status_messages_out_of_order_but_received_all(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=1)
     status2 = external_protocol.Status(messageCounter=2)
     status3 = external_protocol.Status(messageCounter=3)
@@ -147,7 +147,7 @@ def test_receive_status_messages_out_of_order_but_received_all(order_checker):
 
 
 # Receive status messages out of order and not received all
-def test_receive_status_messages_out_of_order_not_received_all(order_checker):
+def test_receive_status_messages_out_of_order_not_received_all(order_checker: OrderChecker):
     status2 = external_protocol.Status(messageCounter=2)
     status3 = external_protocol.Status(messageCounter=3)
 
@@ -158,7 +158,7 @@ def test_receive_status_messages_out_of_order_not_received_all(order_checker):
 
 
 # Reset the checker after receiving all messages
-def test_reset_checker(order_checker):
+def test_reset_checker(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=1)
     status2 = external_protocol.Status(messageCounter=2)
     status3 = external_protocol.Status(messageCounter=3)
@@ -173,7 +173,7 @@ def test_reset_checker(order_checker):
 
 
 # Receive status messages with counter starting from a number different than 1
-def test_receive_status_messages_starting_from_different_number_than_1(order_checker):
+def test_receive_status_messages_starting_from_different_number_than_1(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=2)
     status2 = external_protocol.Status(messageCounter=3)
     status3 = external_protocol.Status(messageCounter=4)
@@ -186,7 +186,7 @@ def test_receive_status_messages_starting_from_different_number_than_1(order_che
 
 
 # Check statuses in wrong order and waiting for Checker timeout
-def test_wait_for_timeout(order_checker):
+def test_wait_for_timeout(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=1)
     status3 = external_protocol.Status(messageCounter=3)
 
@@ -199,7 +199,7 @@ def test_wait_for_timeout(order_checker):
 
 
 # Check statuses in wrong order, reset the OrderChecker and waiting for Checker timeout
-def test_wait_for_timeout_after_reset(order_checker):
+def test_wait_for_timeout_after_reset(order_checker: OrderChecker):
     status1 = external_protocol.Status(messageCounter=1)
     status3 = external_protocol.Status(messageCounter=3)
 

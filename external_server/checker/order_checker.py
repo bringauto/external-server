@@ -18,7 +18,7 @@ class OrderChecker(_Checker):
         self._received_statuses: PriorityQueue[
             tuple[int, external_protocol.Status]
         ] = PriorityQueue()
-        self._skipped_status_counter_vals: PriorityQueue[tuple[int, threading.Timer]] = PriorityQueue()
+        self._missing_statuses: PriorityQueue[tuple[int, threading.Timer]] = PriorityQueue()
         self._checked_statuses: Queue[external_protocol.Status] = Queue()
 
     @property
@@ -26,9 +26,16 @@ class OrderChecker(_Checker):
         return self._checked_statuses
 
     @property
-    def skipped_status_counter_vals(self) -> list[int]:
-        return [status_counter for status_counter, _ in self._skipped_status_counter_vals.queue]
+    def missing_statuses(self) -> PriorityQueue[tuple[int, threading.Timer]]:
+        return self._missing_statuses
 
+    @property
+    def received_statuses(self) -> PriorityQueue[tuple[int, external_protocol.Status]]:
+        return self._received_statuses
+
+    @property
+    def missing_status_counter_vals(self) -> list[int]:
+        return [status_counter for status_counter, _ in self._missing_statuses.queue]
 
     def check(self, status_msg: external_protocol.Status) -> None:
         status_counter = status_msg.messageCounter
@@ -39,23 +46,23 @@ class OrderChecker(_Checker):
 
         for missing_counter in range(self._counter, status_counter + 1):
             if (
-                self._skipped_status_counter_vals.empty()
+                self._missing_statuses.empty()
                 or missing_counter
-                > self._skipped_status_counter_vals.queue[self._skipped_status_counter_vals.qsize() - 1][0]
+                > self._missing_statuses.queue[self._missing_statuses.qsize() - 1][0]
             ):
                 timer = threading.Timer(self._timeout, self._timeout_occurred)
                 timer.start()
-                self._skipped_status_counter_vals.put((missing_counter, timer))
+                self._missing_statuses.put((missing_counter, timer))
                 self._logger.warning(f"Status message with counter {missing_counter} is missing")
 
     def _remove_missing_status(self):
-        if self._skipped_status_counter_vals.empty():
+        if self._missing_statuses.empty():
             self._add_checked_status()
             return
         while (
             not self._received_statuses.empty()
             and self._counter == self._received_statuses.queue[0][0]
-            and self._counter == self._skipped_status_counter_vals.queue[0][0]
+            and self._counter == self._missing_statuses.queue[0][0]
         ):
             self._pop_timer()
             self._add_checked_status()
@@ -69,7 +76,7 @@ class OrderChecker(_Checker):
         )
 
     def _pop_timer(self) -> None:
-        _, timer = self._skipped_status_counter_vals.get()
+        _, timer = self._missing_statuses.get()
         timer.cancel()
         timer.join()
 
@@ -77,7 +84,7 @@ class OrderChecker(_Checker):
         return self._checked_statuses.get_nowait() if not self._checked_statuses.empty() else None
 
     def reset(self) -> None:
-        while not self._skipped_status_counter_vals.empty():
+        while not self._missing_statuses.empty():
             self._pop_timer()
         self._received_statuses.queue.clear()
         self._checked_statuses.queue.clear()
