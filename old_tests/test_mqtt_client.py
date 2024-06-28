@@ -14,12 +14,12 @@ def mqtt_client():
     return MqttClient("company_name", "car_name")
 
 
-def test_init(mqtt_client):
+def test_init(mqtt_client: MqttClient):
     assert mqtt_client.publish_topic == "company_name/car_name/external_server"
     assert mqtt_client.is_connected is False
 
 
-def test_set_tls_with_non_existing_certificates(mqtt_client):
+def test_set_tls_with_non_existing_certificates(mqtt_client: MqttClient):
     ca_certs = "ca.crt"
     certfile = "client.crt"
     keyfile = "client.key"
@@ -28,16 +28,16 @@ def test_set_tls_with_non_existing_certificates(mqtt_client):
         mqtt_client.set_tls(ca_certs, certfile, keyfile)
 
 
-def test_init_connect(mqtt_client):
-    mqtt_client.mqtt_client.connect = MagicMock()
+def test_init_connect(mqtt_client: MqttClient):
+    mqtt_client._mqtt_client.connect = MagicMock()
 
     mqtt_client.init()
     mqtt_client.connect("127.0.0.1", 1883)
 
-    mqtt_client.mqtt_client.connect.assert_called_once()
+    mqtt_client._mqtt_client.connect.assert_called_once()
 
 
-def test_connect_to_non_existent_broker_fixed_fixed(mqtt_client):
+def test_connect_to_non_existent_broker_fixed_fixed(mqtt_client: MqttClient):
     import socket
 
     with pytest.raises(socket.gaierror):

@@ -10,7 +10,7 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
+import ExternalProtocol_pb2 as external_protocol  # type: ignore
 from external_server.event_queue import EventQueueSingleton, EventType
 import external_server.constants as constants
 
@@ -46,6 +46,10 @@ class MqttClient:
 
         self._event_queue = EventQueueSingleton()
         self._is_connected = False
+
+    @property
+    def publish_topic(self) -> str:
+        return self._publish_topic
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """
