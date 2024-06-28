@@ -9,7 +9,7 @@ from external_server.checker.checker import Checker as _Checker
 from external_server.structures import TimeoutType
 
 
-class OrderChecker(_Checker):
+class StatusOrderChecker(_Checker):
 
     def __init__(self, timeout: int) -> None:
         super().__init__(TimeoutType.MESSAGE_TIMEOUT)

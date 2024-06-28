@@ -6,7 +6,7 @@ import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status
-from external_server.checker.order_checker import OrderChecker
+from external_server.checker.order_checker import StatusOrderChecker
 
 
 logging.getLogger("OrderChecker").setLevel(logging.CRITICAL)
@@ -16,7 +16,7 @@ ORDER_CHECKER_TIMEOUT = 0.05
 class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
-        self.checker = OrderChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusOrderChecker(ORDER_CHECKER_TIMEOUT)
 
     def test_checker_accepts_status_with_counter_matching_checkers_counter(self):
         init_counter = self.checker.counter
@@ -55,7 +55,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 class Test_Checking_Multiple_Statuses(unittest.TestCase):
 
     def setUp(self):
-        self.checker = OrderChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusOrderChecker(ORDER_CHECKER_TIMEOUT)
 
     def test_in_any_order_eventually_not_skipping_any_counter_value_yields_statuses_in_correct_order(self):
         self.checker.check(Status(messageCounter=3))
@@ -86,7 +86,7 @@ class Test_Checking_Multiple_Statuses(unittest.TestCase):
 class Test_Timeout(unittest.TestCase):
 
     def setUp(self):
-        self.checker = OrderChecker(timeout=ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusOrderChecker(timeout=ORDER_CHECKER_TIMEOUT)
 
     def test_single_message_with_correct_counter_value_does_not_cause_timeout(self):
         self.checker.check(Status(messageCounter=1))
@@ -117,7 +117,7 @@ class Test_Timeout(unittest.TestCase):
 class Test_Resetting_Checker(unittest.TestCase):
 
     def setUp(self):
-        self.checker = OrderChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusOrderChecker(ORDER_CHECKER_TIMEOUT)
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=2))
         self.checker.check(Status(messageCounter=3))

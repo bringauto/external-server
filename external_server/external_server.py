@@ -6,7 +6,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import ExternalProtocol_pb2 as external_protocol
 import InternalProtocol_pb2 as internal_protocol
-from external_server.checker import CommandMessagesChecker, SessionTimeoutChecker, OrderChecker
+from external_server.checker import CommandMessagesChecker, SessionTimeoutChecker, StatusOrderChecker
 from external_server.exceptions import (
     ConnectSequenceException,
     CommunicationException,
@@ -35,7 +35,7 @@ class ExternalServer:
 
         self._session_checker = SessionTimeoutChecker(self._config.mqtt_timeout)
         self._command_checker = CommandMessagesChecker(self._config.timeout)
-        self._status_order_checker = OrderChecker(self._config.timeout)
+        self._status_order_checker = StatusOrderChecker(self._config.timeout)
         self._connected_devices: list[internal_protocol.Device] = list()
         self._not_connected_devices: list[internal_protocol.Device] = list()
         self._mqtt_client = MqttClient(self._config.company_name, self._config.car_name)

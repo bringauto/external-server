@@ -1,11 +1,11 @@
 __all__ = (
     "CommandMessagesChecker",
     "Checker",
-    "OrderChecker",
+    "StatusOrderChecker",
     "SessionTimeoutChecker",
 )
 
 from .command_messages_checker import CommandMessagesChecker
 from .checker import Checker
-from .order_checker import OrderChecker
+from .order_checker import StatusOrderChecker
 from .session_timeout_checker import SessionTimeoutChecker
