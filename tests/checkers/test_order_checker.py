@@ -10,7 +10,7 @@ from external_server.checker.order_checker import OrderChecker
 
 
 logging.getLogger("OrderChecker").setLevel(logging.CRITICAL)
-ORDER_CHECKER_TIMEOUT = 0.15
+ORDER_CHECKER_TIMEOUT = 0.05
 
 
 class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
@@ -37,10 +37,19 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
     def test_checker_does_not_accept_status_with_counter_less_than_checkers_counter(self):
         init_counter = self.checker.counter
         self.checker.check(Status(messageCounter=self.checker.counter - 1))
-        # checker stores missing counter values
         self.assertEqual(self.checker.missing_status_counter_vals, [])
         self.assertEqual(self.checker.counter, init_counter)
         self.assertFalse(self.checker.timeout.is_set())
+
+    def test_checking_status_multiple_times_adds_it_to_checkers_queue_only_once(self):
+        init_counter = self.checker.counter
+        status = Status(messageCounter=self.checker.counter)
+        self.checker.check(status)
+        self.checker.check(status)
+        self.assertEqual(self.checker.counter, init_counter+1)
+        self.assertFalse(self.checker.timeout.is_set())
+        self.assertEqual(self.checker.get_status(), status)
+        self.assertIsNone(self.checker.get_status())
 
 
 class Test_Checking_Multiple_Statuses(unittest.TestCase):
