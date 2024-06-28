@@ -4,7 +4,7 @@ import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
+import ExternalProtocol_pb2 as external_protocol  # type: ignore
 from external_server.checker.checker import Checker
 from external_server.structures import TimeoutType
 

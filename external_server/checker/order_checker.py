@@ -4,13 +4,16 @@ import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
+import ExternalProtocol_pb2 as external_protocol  # type: ignore
 from external_server.checker.checker import Checker as _Checker
 from external_server.structures import TimeoutType
 
 
+QueuedStatus = tuple[int, external_protocol.Status]
+
+
 class StatusOrderChecker(_Checker):
-    """ Stores and checks the order of received Statuses in a queue.
+    """Stores and checks the order of received Statuses in a queue.
 
     Ensures that all Statuses can be retrieved only after checking in all the previous Statuses.
     """
@@ -19,9 +22,7 @@ class StatusOrderChecker(_Checker):
         super().__init__(TimeoutType.MESSAGE_TIMEOUT)
         self._timeout = timeout
         self._counter = 1
-        self._received_statuses: PriorityQueue[
-            tuple[int, external_protocol.Status]
-        ] = PriorityQueue()
+        self._received_statuses: PriorityQueue[QueuedStatus] = PriorityQueue()
         self._missing_statuses: PriorityQueue[tuple[int, threading.Timer]] = PriorityQueue()
         self._checked_statuses: Queue[external_protocol.Status] = Queue()
 
@@ -34,7 +35,7 @@ class StatusOrderChecker(_Checker):
         return self._missing_statuses
 
     @property
-    def received_statuses(self) -> PriorityQueue[tuple[int, external_protocol.Status]]:
+    def received_statuses(self) -> PriorityQueue[QueuedStatus]:
         return self._received_statuses
 
     @property

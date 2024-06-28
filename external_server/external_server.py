@@ -4,8 +4,8 @@ import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
-import InternalProtocol_pb2 as internal_protocol
+import ExternalProtocol_pb2 as external_protocol   # type: ignore
+import InternalProtocol_pb2 as internal_protocol   # type: ignore
 from external_server.checker import CommandMessagesChecker, SessionTimeoutChecker, StatusOrderChecker
 from external_server.exceptions import (
     ConnectSequenceException,
