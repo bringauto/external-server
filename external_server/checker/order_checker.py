@@ -10,6 +10,10 @@ from external_server.structures import TimeoutType
 
 
 class StatusOrderChecker(_Checker):
+    """ Stores and checks the order of received Statuses in a queue.
+
+    Ensures that all Statuses can be retrieved only after checking in all the previous Statuses.
+    """
 
     def __init__(self, timeout: int) -> None:
         super().__init__(TimeoutType.MESSAGE_TIMEOUT)
