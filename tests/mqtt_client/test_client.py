@@ -4,8 +4,8 @@ import time
 import concurrent.futures
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-
 from external_server.mqtt_client import MqttClient
+from utils import MQTTBrokerTest  # type: ignore
 
 
 TEST_IP_ADDRESS = "127.0.0.1"
@@ -35,6 +35,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
         self.client = MqttClient("some_company", "test_car")
+        self.test_broker = MQTTBrokerTest(start=True)
 
     def test_client_is_not_initially_connected(self):
         self.assertFalse(self.client.is_connected)
@@ -44,13 +45,12 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
         self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
         self.assertFalse(self.client.is_connected)
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(self.client.start)
+            executor.submit(self.client.start)
             time.sleep(0.01)
             self.assertTrue(self.client.is_connected)
-            future.result()
 
     def tearDown(self) -> None:
-        pass
+        self.test_broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover
