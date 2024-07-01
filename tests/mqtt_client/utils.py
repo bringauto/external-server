@@ -27,7 +27,7 @@ class MQTTBrokerTest:
     def host(self):
         return self._DEFAULT_HOST
 
-    def next_published_message(self, topic: str) -> _MQTTMessage:
+    def next_published_msg(self, topic: str) -> _MQTTMessage:
         return subscribe.simple(topic, hostname=self._DEFAULT_HOST, port=self._port)
 
     def start(self):
