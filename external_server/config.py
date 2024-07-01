@@ -33,7 +33,7 @@ class Config(BaseModel):
             if module.config.get("car_name") is not None:
                 raise ValueError("Module configs can not contain car_name.")
         return modules
-    
+
     def get_config_dump_string(self) -> str:
         """Returns a string representation of the config. Values need to be added explicitly."""
         config_json: dict = {}
@@ -48,7 +48,7 @@ class Config(BaseModel):
         config_json["log_files_directory"] = str(self.log_files_directory)
         config_json["log_files_to_keep"] = self.log_files_to_keep
         config_json["log_file_max_size_bytes"] = self.log_file_max_size_bytes
-        
+
         module_json = {}
         for key, value in self.modules.items():
             module_json[key] = {"lib_path": str(value.lib_path), "config": "HIDDEN"}

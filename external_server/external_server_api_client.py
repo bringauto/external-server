@@ -54,6 +54,14 @@ class ExternalServerApiClient:
         self._context = None
         self._lock = threading.Lock()
 
+    @property
+    def library(self):
+        return self._library
+
+    @property
+    def context(self):
+        return self._context
+
     def init(self) -> None:
         """
         Initializes the library and sets the context.
@@ -132,7 +140,7 @@ class ExternalServerApiClient:
         with self._lock:
             con = ct.c_void_p(self._context)
             return self._library.destroy(ct.pointer(con))
-        
+
     def device_initialized(self) -> bool:
         """
         Checks if device is initialized.
