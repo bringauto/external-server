@@ -1,9 +1,9 @@
-from contextlib import AbstractContextManager
 import unittest
 import sys
 import time
 import concurrent.futures
 import socket
+sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.mqtt_client import MqttClient
@@ -14,14 +14,12 @@ from InternalProtocol_pb2 import (  # type: ignore
     DeviceStatus,
 )
 from ExternalProtocol_pb2 import (  # type: ignore
-    Command,
     CommandResponse,
-    Connect,
     ConnectResponse,
     Status,
-    StatusResponse,
+    StatusResponse
 )
-from utils import MQTTBrokerTest  # type: ignore
+from tests.mqtt_client.utils import MQTTBrokerTest  # type: ignore
 
 
 TEST_IP_ADDRESS = "127.0.0.1"
@@ -75,6 +73,14 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
             executor.submit(self.client.start)
             time.sleep(0.01)
             self.assertTrue(self.client.is_connected)
+
+    def test_stopped_client_is_marked_as_disconnected(self) -> None:
+        self.assertFalse(self.client.is_connected)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.submit(self.client.start)
+            time.sleep(0.02)
+            self.client.stop()
+            self.assertFalse(self.client.is_connected)
 
     def tearDown(self) -> None:
         self.test_broker.stop()

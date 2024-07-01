@@ -12,7 +12,6 @@ import paho.mqtt.subscribe as subscribe  # type: ignore
 DEFAULT_PORT = 1883
 
 
-
 class MQTTBrokerTest:
 
     _DEFAULT_HOST = "127.0.0.1"
