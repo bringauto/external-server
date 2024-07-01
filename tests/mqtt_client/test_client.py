@@ -2,9 +2,15 @@ import unittest
 import sys
 import time
 import concurrent.futures
+import socket
+import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.mqtt_client import MqttClient
+from ExternalProtocol_pb2 import (  # type: ignore
+    ExternalServer as ExternalServerMessage,
+    ConnectResponse as ConnectResponse
+)
 from utils import MQTTBrokerTest  # type: ignore
 
 
@@ -31,23 +37,45 @@ class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
+class Test_Failing_Client_Connection(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.client = MqttClient("some_company", "test_car")
+
+    def test_client_is_not_initially_connected(self):
+        self.assertFalse(self.client.is_connected)
+
+    def test_connecting_to_nonexistent_broker_raises_socket_gaiaerror(self) -> None:
+        self.client.init()
+        with self.assertRaises(socket.gaierror):
+            self.client.connect(ip_address="nonexistent_ip", port=TEST_PORT)
+
+
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
         self.client = MqttClient("some_company", "test_car")
         self.test_broker = MQTTBrokerTest(start=True)
-
-    def test_client_is_not_initially_connected(self):
-        self.assertFalse(self.client.is_connected)
-
-    def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
         self.client.init()
         self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
+
+    def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
         self.assertFalse(self.client.is_connected)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.submit(self.client.start)
             time.sleep(0.01)
             self.assertTrue(self.client.is_connected)
+
+    def test_publishing_connect_response(self):
+        msg = ExternalServerMessage()
+        msg.connectResponse.sessionId = "some-session-id"
+        msg.connectResponse.type = ConnectResponse.OK
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            pub_msg_future = executor.submit(self.test_broker.next_published_message, self.client.publish_topic)
+            time.sleep(0.05)
+            self.client.publish(msg)
+            pub_msg = pub_msg_future.result().payload
+            self.assertEqual(msg.SerializeToString(), pub_msg)
 
     def tearDown(self) -> None:
         self.test_broker.stop()
