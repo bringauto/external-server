@@ -80,15 +80,34 @@ After filling the config, you can run External server with this command:
 python3 external_server_main.py
 ```
 
+# Testing
+
 ## Unit tests
 
-### New tests
+### Necessary steps before testing
 
-Before testing, install the package [in editable mode] by running the following in the root directory:
+#### Install the external server package
 
+Install the package [in editable mode] by running the following in the root directory:
 ```bash
 pip install [-e] .
 ```
+
+#### Install the shared library
+
+to be able to run tests for the External server API client, you need to compile a shared library for the [Example Module](https://github.com/bringauto/example-module/). To be able to do so, you need to have
+- the CMakelib installed (see [here](https://github.com/cmakelib/cmakelib)) and the `CMLIB_DIR` environment variable set to the directory and exported (see the instructions in the CMakelib README),
+- the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
+
+Run the following in the `tests/utils/example-module` directory.
+```bash
+mkdir _build && cd _build
+cmake .. -DCMLIB_DIR=<github-url-to-cmakelib-repository-root-dir>
+make
+```
+
+
+### Running the tests
 
 In the root folder, run the following
 ```bash
@@ -102,15 +121,7 @@ Each PATH is specified relative to the `tests` folder. If no PATH is specified, 
 The `-h` flag makes the script display tests' coverage in an HTML format, for example in your web browser.
 
 
-
-### Old tests
-Unit tests cover classes in external_server/checker direcory. Tests are using pytest. With installed pytest run this:
-
-```bash
-python -m pytest
-```
-
-## Docker
+# Docker
 The External server is ready to use with docker. You can build docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
  - module 3 - IO module
 
