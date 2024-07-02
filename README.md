@@ -88,9 +88,9 @@ python3 external_server_main.py
 
 #### Install the external server package
 
-Install the package [in editable mode] by running the following in the root directory:
+Install the package in editable mode by running the following in the root directory:
 ```bash
-pip install [-e] .
+pip install -e .
 ```
 
 #### Install the shared library
