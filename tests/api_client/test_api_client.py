@@ -4,6 +4,7 @@ import os
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.external_server_api_client import ExternalServerApiClient
+from InternalProtocol_pb2 import Device
 from external_server.config import ModuleConfig
 
 
@@ -21,7 +22,7 @@ class Test_Module_Config_Validation(unittest.TestCase):
             self.module_config = ModuleConfig(lib_path="invalid_path", config={})
 
 
-class Test_API_Client(unittest.TestCase):
+class Test_API_Client_Loading_Shared_Library(unittest.TestCase):
 
     def setUp(self):
         self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
@@ -40,6 +41,29 @@ class Test_API_Client(unittest.TestCase):
         client.init()
         self.assertIsNotNone(client.library)
         self.assertIsNotNone(client.context)
+
+
+class Test_API_Client_Device_Connection(unittest.TestCase):
+
+    def setUp(self):
+        self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
+        self.client = ExternalServerApiClient(
+            module_config=self.module_config, company_name="BringAuto", car_name="Car1"
+        )
+        self.device = Device(
+            module=Device.EXAMPLE_MODULE, deviceType=2, deviceRole="role", deviceName="name"
+        )
+
+    def test_device_connected_with_valid_device_object_and_get_successful_result(self):
+        self.client.init()
+        code = self.client.device_connected(self.device)
+        self.assertEqual(code, 0)
+
+    def test_device_disconnected_with_valid_device_object_and_get_successful_result(self):
+        self.client.init()
+        self.client.device_connected(self.device)
+        code = self.client.device_disconnected(self.device)
+        self.assertEqual(code, 0)
 
 
 if __name__ == "__main__":  # pragma: no cover
