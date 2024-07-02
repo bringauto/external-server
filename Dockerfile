@@ -22,9 +22,9 @@ RUN wget -O CMakeLists.txt https://github.com/bringauto/io-module/raw/"$IO_MODUL
     wget -O cmake/Dependencies.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/cmake/Dependencies.cmake
 
 WORKDIR /home/bringauto/mission-module/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 WORKDIR /home/bringauto/io-module/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 
 
 
