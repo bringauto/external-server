@@ -11,18 +11,18 @@ RUN mkdir /home/bringauto/mission-module && \
     mkdir /home/bringauto/io-module && \
     mkdir /home/bringauto/io-module/cmake && \
     cd /home/bringauto/mission-module && \
-    wget -O CMakeLists.txt https://github.com/bringauto/mission-module/raw/$MISSION_MODULE_VERSION/CMakeLists.txt && \
-    wget -O CMLibStorage.cmake https://github.com/bringauto/mission-module/raw/$MISSION_MODULE_VERSION/CMLibStorage.cmake && \
-    wget -O cmake/Dependencies.cmake https://github.com/bringauto/mission-module/raw/$MISSION_MODULE_VERSION/cmake/Dependencies.cmake && \
+    wget -O CMakeLists.txt https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/CMakeLists.txt && \
+    wget -O CMLibStorage.cmake https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/CMLibStorage.cmake && \
+    wget -O cmake/Dependencies.cmake https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/cmake/Dependencies.cmake && \
     cd /home/bringauto/io-module && \
-    wget -O CMakeLists.txt https://github.com/bringauto/io-module/raw/$IO_MODULE_VERSION/CMakeLists.txt && \
-    wget -O CMLibStorage.cmake https://github.com/bringauto/io-module/raw/$IO_MODULE_VERSION/CMLibStorage.cmake && \
-    wget -O cmake/Dependencies.cmake https://github.com/bringauto/io-module/raw/$IO_MODULE_VERSION/cmake/Dependencies.cmake
+    wget -O CMakeLists.txt https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/CMakeLists.txt && \
+    wget -O CMLibStorage.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/CMLibStorage.cmake && \
+    wget -O cmake/Dependencies.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/cmake/Dependencies.cmake
 
-    WORKDIR /home/bringauto/mission-module/build
-    RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
-    WORKDIR /home/bringauto/io-module/build
-    RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
+WORKDIR /home/bringauto/mission-module/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
+WORKDIR /home/bringauto/io-module/build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES=ON
 
 
 
