@@ -41,7 +41,7 @@ class ExternalServer:
         self._mqtt_client = MqttClient(self._config.company_name, self._config.car_name)
 
         self._modules: dict[int, ExternalServerApiClient] = dict()
-        self._modules_command_threads = dict()
+        self._modules_command_threads: dict[int, CommandWaitingThread] = dict()
         config_modules = config.modules
         for module_number in config_modules:
             self._modules[int(module_number)] = ExternalServerApiClient(

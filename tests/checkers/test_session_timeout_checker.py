@@ -14,7 +14,7 @@ class Test_Setting_Timeout(unittest.TestCase):
     def test_started_checker_does_set_timeout(self):
         checker = SessionTimeoutChecker(_CHECKER_TIMEOUT)
         checker.start()
-        time.sleep(_CHECKER_TIMEOUT)
+        time.sleep(_CHECKER_TIMEOUT+0.001)
         self.assertTrue(checker.timeout.is_set())
 
     def test_starting_checker_again_has_no_effect(self):

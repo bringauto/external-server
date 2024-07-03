@@ -3,7 +3,15 @@ import json
 
 from typing import Annotated, TypeVar, Mapping
 
-from pydantic import BaseModel, Field, FilePath, StringConstraints, ValidationError, field_validator, DirectoryPath
+from pydantic import (
+    BaseModel,
+    DirectoryPath,
+    field_validator,
+    Field,
+    FilePath,
+    StringConstraints,
+    ValidationError,
+)
 
 T = TypeVar("T", bound=Mapping)
 
@@ -55,6 +63,7 @@ class Config(BaseModel):
         config_json["modules"] = module_json
 
         return json.dumps(config_json, indent=4)
+
 
 class ModuleConfig(BaseModel):
     lib_path: FilePath

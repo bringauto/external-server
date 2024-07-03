@@ -63,21 +63,15 @@ class ExternalServerApiClient:
         return self._context
 
     def init(self) -> None:
-        """
-        Initializes the library and sets the context.
-        """
+        """Initializes the library and sets the context."""
         if not check_file_exists(self._lib_path):
             raise FileNotFoundError(self._lib_path)
-
         self._library = ct.cdll.LoadLibrary(self._lib_path)
         self._type_all_function()
-
         self._set_context()
 
     def _set_context(self):
-        """
-        Sets the context based on the module configuration.
-        """
+        """Sets the context based on the module configuration."""
         if self._config is not None and len(self._config):
             key_value_array = (KeyValue * len(self._config))()
 
