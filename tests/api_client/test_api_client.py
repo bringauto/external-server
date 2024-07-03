@@ -6,6 +6,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from external_server.external_server_api_client import ExternalServerApiClient
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.config import ModuleConfig
+from external_server.structures import DisconnectTypes
 
 
 EXAMPLE_MODULE_SO_LIB_PATH = \
@@ -51,7 +52,7 @@ class Test_API_Client_Device_Connection(unittest.TestCase):
             module_config=self.module_config, company_name="BringAuto", car_name="Car1"
         )
         self.device = Device(
-            module=Device.EXAMPLE_MODULE, deviceType=2, deviceRole="role", deviceName="name"
+        module=Device.EXAMPLE_MODULE, deviceType=2, deviceRole="testing", deviceName="TestDevice", priority=1
         )
 
     def test_device_connected_with_valid_device_object_and_get_successful_result(self):
@@ -62,7 +63,7 @@ class Test_API_Client_Device_Connection(unittest.TestCase):
     def test_device_disconnected_with_valid_device_object_and_get_successful_result(self):
         self.client.init()
         self.client.device_connected(self.device)
-        code = self.client.device_disconnected(self.device)
+        code = self.client.device_disconnected(DisconnectTypes.announced, self.device)
         self.assertEqual(code, 0)
 
 
