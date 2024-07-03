@@ -41,7 +41,7 @@ def main() -> None:
         datefmt="[%X]",
         handlers=[RichHandler()],
     )
-        
+
     logger = logging.getLogger("Main")
     logger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 

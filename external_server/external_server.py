@@ -55,14 +55,18 @@ class ExternalServer:
                 )
                 raise RuntimeError(f"Module {module_number}: Error occurred in init function. Check the configuration file.")
 
-            if self._modules[int(module_number)].get_module_number() != int(module_number):
-                self._logger.error(
-                    f"Module number {self._modules[int(module_number)].get_module_number()} returned from API does not match with module number {int(module_number)} in config"
-                )
-                raise RuntimeError(f"Module number returned from API does not match with module number in config {self._modules[int(module_number)].get_module_number()}/{int(module_number)}")
+            real_mod_number = self._modules[int(module_number)].get_module_number()
+            if real_mod_number != int(module_number):
+                msg = f"Module number {real_mod_number} returned from API does not match module number {int(module_number)} in config."
+                self._logger.error(msg)
+                raise RuntimeError(msg)
             self._modules_command_threads[int(module_number)] = CommandWaitingThread(
                 self._modules[int(module_number)]
             )
+
+    @property
+    def connected_devices(self) -> list[internal_protocol.Device]:
+        return self._connected_devices.copy()
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to mqtt client"
