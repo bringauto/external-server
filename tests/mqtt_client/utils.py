@@ -31,7 +31,7 @@ class MQTTBrokerTest:
 
     def start(self):
         assert self.broker_process is None
-        root_dir = os.path.dirname(_external_server.DIR)
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(_external_server.__file__)))
         mqtt_broker_script = os.path.join(root_dir, "lib/mqtt-testing/interoperability/startbroker.py")
         self.broker_process = subprocess.Popen(["python", mqtt_broker_script, f"--port={self._port}"])
         assert isinstance(self.broker_process, subprocess.Popen)

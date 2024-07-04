@@ -42,31 +42,33 @@ class ExternalServer:
 
         self._modules: dict[int, ExternalServerApiClient] = dict()
         self._modules_command_threads: dict[int, CommandWaitingThread] = dict()
-        config_modules = config.modules
-        for module_number in config_modules:
+        for module_number, module in config.modules.items():
             self._modules[int(module_number)] = ExternalServerApiClient(
-                config_modules[module_number], self._config.company_name, self._config.car_name
+                module, self._config.company_name, self._config.car_name
             )
             self._modules[int(module_number)].init()
-
             if not self._modules[int(module_number)].device_initialized():
                 self._logger.error(
                     f"Module {module_number}: Error occurred in init function. Check the configuration file."
                 )
                 raise RuntimeError(f"Module {module_number}: Error occurred in init function. Check the configuration file.")
-
-            real_mod_number = self._modules[int(module_number)].get_module_number()
-            if real_mod_number != int(module_number):
-                msg = f"Module number {real_mod_number} returned from API does not match module number {int(module_number)} in config."
-                self._logger.error(msg)
-                raise RuntimeError(msg)
-            self._modules_command_threads[int(module_number)] = CommandWaitingThread(
-                self._modules[int(module_number)]
-            )
+            self._check_module_number_from_config_is_module_id(module_number)
 
     @property
     def connected_devices(self) -> list[internal_protocol.Device]:
         return self._connected_devices.copy()
+
+    @property
+    def modules(self) -> dict[int, ExternalServerApiClient]:
+        return self._modules.copy()
+
+    @property
+    def mqtt_client(self) -> MqttClient:
+        return self._mqtt_client
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to mqtt client"
@@ -590,3 +592,14 @@ class ExternalServer:
     def stop(self) -> None:
         self._clear_modules()
         self._logger.info("Server stopped by keyboard interrupt")
+
+
+    def _check_module_number_from_config_is_module_id(self, module_key: str) -> None:
+        real_mod_number = self._modules[int(module_key)].get_module_number()
+        if real_mod_number != int(module_key):
+            msg = f"Module number {real_mod_number} returned from API does not match module number {int(module_key)} in config."
+            self._logger.error(msg)
+            raise RuntimeError(msg)
+        self._modules_command_threads[int(module_key)] = CommandWaitingThread(
+            self._modules[int(module_key)]
+        )
