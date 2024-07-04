@@ -51,6 +51,10 @@ class MqttClient:
     def publish_topic(self) -> str:
         return self._publish_topic
 
+    @property
+    def subscribe_topic(self) -> str:
+        return self._subscribe_topic
+
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """
         Set the TLS configuration for the MQTT client.

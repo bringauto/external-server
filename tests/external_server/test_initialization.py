@@ -1,25 +1,24 @@
 import unittest
 import sys
-import os
+import time
 sys.path.append(".")
 
-import pydantic
 from pydantic import FilePath
 
 from external_server.config import Config, ModuleConfig
 from external_server.external_server import ExternalServer
-from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
+from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 
 
 ES_CONFIG_WITHOUT_MODULES = {
     "company_name": "bring_auto",
     "car_name": "car_1",
     "mqtt_address": "127.0.0.1",
-    "mqtt_port": 1884,
-    "mqtt_timeout": 4,
+    "mqtt_port": 1883,
+    "mqtt_timeout": 2,
     "timeout": 5,
     "send_invalid_command": False,
-    "sleep_duration_after_connection_refused": 7,
+    "mqtt_client_connection_retry_period": 2,
     "log_files_directory": ".",
     "log_files_to_keep": 5,
     "log_file_max_size_bytes": 100000
@@ -46,8 +45,7 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.es = ExternalServer(config=self.config)
 
-
-class Test_External_Server_Initialization(unittest.TestCase):
+class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def setUp(self) -> None:
         example_module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
@@ -69,6 +67,29 @@ class Test_External_Server_Initialization(unittest.TestCase):
 
     def test_session_id_is_empty(self):
         self.assertEqual(self.es.session_id, "")
+
+
+class Test_External_Server_Start(unittest.TestCase):
+
+    def setUp(self) -> None:
+        example_module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.config = Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.es = ExternalServer(config=self.config)
+        self.mqttbroker = MQTTBrokerTest(start=True)
+        time.sleep(0.02)
+
+    def test_external_server_starting_and_stopping(self):
+        assert self.mqttbroker.is_running
+        self.es.start()
+        self.assertTrue(self.es.mqtt_client.is_connected)
+        time.sleep(0.5)
+        self.mqttbroker.publish_message(
+            topic="bring_auto/car_1/external_server",
+            payload: str=self.es.session_id
+        )
+        time.sleep(0.5)
+        self.es.stop()
+        self.assertFalse(self.es.mqtt_client.is_connected)
 
 
 if __name__ == "__main__":  # pragma: no cover

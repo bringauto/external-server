@@ -16,10 +16,12 @@ from InternalProtocol_pb2 import (  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
     CommandResponse,
     ConnectResponse,
+    Connect,
     Status,
-    StatusResponse
+    StatusResponse,
+    ExternalClient
 )
-from tests.mqtt_client.utils import MQTTBrokerTest  # type: ignore
+from tests.utils import MQTTBrokerTest  # type: ignore
 
 
 TEST_IP_ADDRESS = "127.0.0.1"
@@ -155,6 +157,43 @@ class Test_Publishing_Message(unittest.TestCase):
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
 
     def tearDown(self) -> None:
+        self.broker.stop()
+
+
+class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.client = MqttClient("some_company", "test_car")
+        self.broker = MQTTBrokerTest(start=True)
+        self.client.init()
+        self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
+        self.device = Device(
+                module = Device.MISSION_MODULE,
+                deviceType = 4,
+                deviceName = "AutonomyDevice",
+                deviceRole = "autonomy-device",
+                priority=1
+            )
+
+    def test_mqtt_client_receives_connect_message(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            msg = ExternalClient(
+                connect=Connect(
+                    sessionId="some_session_id",
+                    company="some_company",
+                    vehicleName="test_car",
+                    devices=[self.device]
+                )
+            )
+            ex.submit(self.client.start)
+            rec_msg = ex.submit(self.client.get, timeout=1)
+            time.sleep(0.5)
+            self.broker.publish_message(topic=self.client.subscribe_topic, payload=msg.SerializeToString())
+            rec_msg = rec_msg.result()
+            self.assertEqual(msg, rec_msg)
+
+    def tearDown(self) -> None:
+        time.sleep(0.5)
         self.broker.stop()
 
 

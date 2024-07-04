@@ -98,7 +98,7 @@ class ExternalServer:
                 self._logger.error(
                     f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}, trying again"
                 )
-                time.sleep(self._config.sleep_duration_after_connection_refused)
+                time.sleep(self._config.mqtt_client_connection_retry_period)
             except ClientDisconnectedExc:  # if 30 seconds any message has not been received
                 self._logger.error("Client timed out")
             except StatusTimeOutExc:
@@ -109,7 +109,7 @@ class ExternalServer:
                 pass
             except Exception as e:
                 self._logger.error(f"Unexpected error occurred: {e}")
-                time.sleep(self._config.sleep_duration_after_connection_refused)
+                time.sleep(self._config.mqtt_client_connection_retry_period)
             finally:
                 self._clear_context()
 

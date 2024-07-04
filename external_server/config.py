@@ -24,7 +24,7 @@ class Config(BaseModel):
     mqtt_timeout: int = Field(ge=0)
     timeout: int = Field(ge=0)
     send_invalid_command: bool
-    sleep_duration_after_connection_refused: float = Field(ge=0)
+    mqtt_client_connection_retry_period: float = Field(ge=0)
     log_files_directory: DirectoryPath
     log_files_to_keep: int = Field(ge=0)
     log_file_max_size_bytes: int = Field(ge=0)
@@ -52,7 +52,7 @@ class Config(BaseModel):
         config_json["mqtt_timeout"] = self.mqtt_timeout
         config_json["timeout"] = self.timeout
         config_json["send_invalid_command"] = self.send_invalid_command
-        config_json["sleep_duration_after_connection_refused"] = self.sleep_duration_after_connection_refused
+        config_json["sleep_duration_after_connection_refused"] = self.mqtt_client_connection_retry_period
         config_json["log_files_directory"] = str(self.log_files_directory)
         config_json["log_files_to_keep"] = self.log_files_to_keep
         config_json["log_file_max_size_bytes"] = self.log_file_max_size_bytes
