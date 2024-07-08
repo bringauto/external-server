@@ -85,7 +85,7 @@ class Test_External_Server_Start(unittest.TestCase):
         time.sleep(0.5)
         self.mqttbroker.publish_message(
             topic="bring_auto/car_1/external_server",
-            payload: str=self.es.session_id
+            payload=self.es.session_id
         )
         time.sleep(0.5)
         self.es.stop()
