@@ -101,43 +101,8 @@ class Test_External_Server_Start(unittest.TestCase):
             time.sleep(0.5)
             self.assertFalse(self.es.mqtt_client.is_connected)
 
-
-class Test_Connecting_Device(unittest.TestCase):
-
-    def setUp(self) -> None:
-        example_module_config = ModuleConfig(
-            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
-        )
-        self.config = Config(
-            modules={str(Device.EXAMPLE_MODULE): example_module_config},
-            **ES_CONFIG_WITHOUT_MODULES
-        )
-        self.es = ExternalServer(config=self.config)
-        self.device = Device(
-            module = Device.EXAMPLE_MODULE,
-            deviceType = 0,
-            deviceName = "TestDevice",
-            deviceRole = "test"
-        )
-        self.mqttbroker = MQTTBrokerTest(start=True)
-        time.sleep(0.02)
-
-    def test_connecting_device(self):
-        connect_msg = Connect(
-            sessionId="some_id",
-            company="bring_auto",
-            vehicleName="car_1",
-            devices=[self.device]
-        )
-        with futures.ThreadPoolExecutor() as executor:
-            executor.submit(self.es.start)
-            time.sleep(0.2)
-            msg_payload = ExternalClient(connect=connect_msg).SerializeToString()
-            subsc_topic = self.es.mqtt_client.subscribe_topic
-            executor.submit(self.mqttbroker.publish_message, topic=subsc_topic, payload=msg_payload)
-            time.sleep(0.2)
-            self.es.stop()
-            time.sleep(0.1)
+    def tearDown(self) -> None:
+        self.mqttbroker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover

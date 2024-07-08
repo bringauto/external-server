@@ -10,7 +10,7 @@ from pydantic import (
     Field,
     FilePath,
     StringConstraints,
-    ValidationError,
+    ValidationError
 )
 
 T = TypeVar("T", bound=Mapping)
