@@ -9,9 +9,7 @@ import InternalProtocol_pb2 as internal_protocol  # type: ignore
 
 
 class MessageCreator:
-    """
-    A class responsible for creating different types of messages for an external server.
-    """
+    """A class responsible for creating messages sent by the external server."""
 
     @staticmethod
     def create_connect_response(
