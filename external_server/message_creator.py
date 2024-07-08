@@ -1,9 +1,3 @@
-import sys
-
-from external_server.structures import Buffer
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
 import ExternalProtocol_pb2 as external_protocol
 import InternalProtocol_pb2 as internal_protocol
 

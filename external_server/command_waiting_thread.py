@@ -1,9 +1,6 @@
 import threading
 from queue import Queue, Empty
 import logging
-import sys
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import InternalProtocol_pb2 as internal_protocol
 from external_server.structures import GeneralErrorCodes, EsErrorCodes

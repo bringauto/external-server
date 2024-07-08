@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 import logging
 import logging.handlers
-import json
 import sys
+import os
 
 from rich.logging import RichHandler
 
+dir_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(dir_path, "./lib/fleet-protocol/protobuf/compiled/python"))
+
 from external_server.utils import argparse_init
 from external_server.external_server import ExternalServer
-from external_server.config import Config, load_config, InvalidConfigError
+from external_server.config import load_config, InvalidConfigError
 from external_server import constants
 
 

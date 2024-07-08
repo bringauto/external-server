@@ -1,9 +1,6 @@
 import argparse
 import os.path
-import sys
 import threading
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import InternalProtocol_pb2 as internal_protocol
 

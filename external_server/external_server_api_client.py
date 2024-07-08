@@ -1,10 +1,6 @@
 import ctypes as ct
 import threading
-import sys
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-import ExternalProtocol_pb2 as external_protocol
 import InternalProtocol_pb2 as internal_protocol
 from external_server.utils import check_file_exists
 from external_server.structures import (
