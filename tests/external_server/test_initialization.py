@@ -1,10 +1,13 @@
 import unittest
 import sys
+import concurrent.futures as futures
 import time
 sys.path.append(".")
 
 from pydantic import FilePath
 
+from InternalProtocol_pb2 import Device
+from ExternalProtocol_pb2 import Connect, ExternalClient
 from external_server.config import Config, ModuleConfig
 from external_server.external_server import ExternalServer
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
@@ -28,7 +31,9 @@ ES_CONFIG_WITHOUT_MODULES = {
 class Test_Creating_External_Server_Instance(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.example_module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.example_module_config = ModuleConfig(
+            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
+        )
 
     def test_module_dict_key_in_config_equal_to_the_module_id_is_accepted(self):
         correct_id = "1000"
@@ -44,6 +49,7 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
         )
         with self.assertRaises(RuntimeError):
             self.es = ExternalServer(config=self.config)
+
 
 class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
@@ -72,24 +78,66 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 class Test_External_Server_Start(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        example_module_config = ModuleConfig(
+            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
+        )
         self.config = Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)
         self.es = ExternalServer(config=self.config)
+        self.device = Device(
+            module = Device.EXAMPLE_MODULE,
+            deviceType = 0,
+            deviceName = "TestDevice",
+            deviceRole = "test"
+        )
         self.mqttbroker = MQTTBrokerTest(start=True)
         time.sleep(0.02)
 
     def test_external_server_starting_and_stopping(self):
-        assert self.mqttbroker.is_running
-        self.es.start()
-        self.assertTrue(self.es.mqtt_client.is_connected)
-        time.sleep(0.5)
-        self.mqttbroker.publish_message(
-            topic="bring_auto/car_1/external_server",
-            payload=self.es.session_id
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es.start)
+            time.sleep(0.1)
+            self.assertTrue(self.es.mqtt_client.is_connected)
+            self.es.stop()
+            time.sleep(0.5)
+            self.assertFalse(self.es.mqtt_client.is_connected)
+
+
+class Test_Connecting_Device(unittest.TestCase):
+
+    def setUp(self) -> None:
+        example_module_config = ModuleConfig(
+            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        time.sleep(0.5)
-        self.es.stop()
-        self.assertFalse(self.es.mqtt_client.is_connected)
+        self.config = Config(
+            modules={str(Device.EXAMPLE_MODULE): example_module_config},
+            **ES_CONFIG_WITHOUT_MODULES
+        )
+        self.es = ExternalServer(config=self.config)
+        self.device = Device(
+            module = Device.EXAMPLE_MODULE,
+            deviceType = 0,
+            deviceName = "TestDevice",
+            deviceRole = "test"
+        )
+        self.mqttbroker = MQTTBrokerTest(start=True)
+        time.sleep(0.02)
+
+    def test_connecting_device(self):
+        connect_msg = Connect(
+            sessionId="some_id",
+            company="bring_auto",
+            vehicleName="car_1",
+            devices=[self.device]
+        )
+        with futures.ThreadPoolExecutor() as executor:
+            executor.submit(self.es.start)
+            time.sleep(0.2)
+            msg_payload = ExternalClient(connect=connect_msg).SerializeToString()
+            subsc_topic = self.es.mqtt_client.subscribe_topic
+            executor.submit(self.mqttbroker.publish_message, topic=subsc_topic, payload=msg_payload)
+            time.sleep(0.2)
+            self.es.stop()
+            time.sleep(0.1)
 
 
 if __name__ == "__main__":  # pragma: no cover

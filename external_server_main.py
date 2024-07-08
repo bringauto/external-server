@@ -57,7 +57,7 @@ def main() -> None:
     try:
         server.start()
     except KeyboardInterrupt:
-        server.stop()
+        server.stop(reason="keyboard interrupt")
 
 
 if __name__ == "__main__":

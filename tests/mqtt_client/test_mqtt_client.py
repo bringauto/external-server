@@ -56,7 +56,7 @@ class Test_Failing_Client_Connection(unittest.TestCase):
         self.assertFalse(self.client.is_connected)
 
     def test_connecting_to_nonexistent_broker_raises_socket_gaiaerror(self) -> None:
-        self.client.init()
+        self.client.set_up_callbacks()
         with self.assertRaises(socket.gaierror):
             self.client.connect(ip_address="nonexistent_ip", port=TEST_PORT)
 
@@ -66,7 +66,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
     def setUp(self) -> None:
         self.client = MqttClient("some_company", "test_car")
         self.test_broker = MQTTBrokerTest(start=True)
-        self.client.init()
+        self.client.set_up_callbacks()
         self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
 
     def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
@@ -93,15 +93,15 @@ class Test_Publishing_Message(unittest.TestCase):
     def setUp(self) -> None:
         self.client = MqttClient("some_company", "test_car")
         self.broker = MQTTBrokerTest(start=True)
-        self.client.init()
+        self.client.set_up_callbacks()
         self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
         self.device = Device(
-                module = Device.MISSION_MODULE,
-                deviceType = 4,
-                deviceName = "AutonomyDevice",
-                deviceRole = "autonomy-device",
-                priority=1
-            )
+            module = Device.MISSION_MODULE,
+            deviceType = 4,
+            deviceName = "AutonomyDevice",
+            deviceRole = "autonomy-device",
+            priority=1
+        )
 
     def test_device_connect_message(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -165,7 +165,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
     def setUp(self) -> None:
         self.client = MqttClient("some_company", "test_car")
         self.broker = MQTTBrokerTest(start=True)
-        self.client.init()
+        self.client.set_up_callbacks()
         self.client.connect(ip_address=TEST_IP_ADDRESS, port=TEST_PORT)
         self.device = Device(
                 module = Device.MISSION_MODULE,

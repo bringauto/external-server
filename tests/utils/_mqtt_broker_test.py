@@ -21,10 +21,6 @@ class MQTTBrokerTest:
             self.start()
 
     @property
-    def host(self):
-        return self._DEFAULT_HOST
-
-    @property
     def is_running(self) -> bool:
         return self.broker_process is not None
 

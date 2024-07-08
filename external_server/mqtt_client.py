@@ -74,13 +74,11 @@ class MqttClient:
             )
             self._mqtt_client.tls_insecure_set(False)
 
-    def init(self) -> None:
-        """
-        Initialize the MQTT client.
-        """
+    def set_up_callbacks(self) -> None:
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
+
 
     def _on_connect(self, client, _userdata, _flags, _rc):
         """

@@ -14,7 +14,7 @@ from external_server.exceptions import (
     ClientDisconnectedExc,
     CommandResponseTimeOutExc,
 )
-from external_server.message_creator import MessageCreator
+from external_server.server_message_creator import MessageCreator
 from external_server.mqtt_client import MqttClient
 from external_server.utils import check_file_exists, device_repr
 from external_server.external_server_api_client import ExternalServerApiClient
@@ -39,6 +39,7 @@ class ExternalServer:
         self._connected_devices: list[internal_protocol.Device] = list()
         self._not_connected_devices: list[internal_protocol.Device] = list()
         self._mqtt_client = MqttClient(self._config.company_name, self._config.car_name)
+        self._running = False
 
         self._modules: dict[int, ExternalServerApiClient] = dict()
         self._modules_command_threads: dict[int, CommandWaitingThread] = dict()
@@ -81,16 +82,17 @@ class ExternalServer:
         self._mqtt_client.set_tls(ca_certs, certfile, keyfile)
 
     def start(self) -> None:
-        self._mqtt_client.init()
+        self._mqtt_client.set_up_callbacks()
         for module_number in self._modules:
             self._modules_command_threads[module_number].start()
 
-        while True:
+        self._running = True
+        while self._running:
             try:
                 if not self._mqtt_client.is_connected:
                     self._mqtt_client.connect(self._config.mqtt_address, self._config.mqtt_port)
                     self._mqtt_client.start()
-                self._init_sequence()
+                self._run_init_sequence()
                 self._normal_communication()
             except ConnectSequenceException:
                 self._logger.error("Connect sequence failed")
@@ -113,7 +115,7 @@ class ExternalServer:
             finally:
                 self._clear_context()
 
-    def _init_sequence(self) -> None:
+    def _run_init_sequence(self) -> None:
         self._logger.info("Starting the connect sequence")
         self._init_seq_connect()
         self._init_seq_status()
@@ -124,9 +126,8 @@ class ExternalServer:
     def _init_seq_connect(self) -> None:
         self._logger.info("Expecting a connect message")
         received_msg = self._mqtt_client.get(timeout=self._config.mqtt_timeout)
-        if received_msg == None or received_msg == False:
+        if received_msg is None or received_msg == False:
             self._logger.error("Connect message has not been received")
-            self._mqtt_client.stop()
             raise ConnectSequenceException()
         if not received_msg.HasField("connect"):
             self._logger.error("Received message is not a connect message")
@@ -589,10 +590,17 @@ class ExternalServer:
 
         self._modules.clear()
 
-    def stop(self) -> None:
-        self._clear_modules()
-        self._logger.info("Server stopped by keyboard interrupt")
+    def stop(self, reason: str = "") -> None:
+        """Stop the external server communication
 
+        Stop the MQTT client event loop. Clear the modules.
+        """
+        self._running = False
+        self._mqtt_client.stop()
+        self._clear_modules()
+        if reason:
+            reason = f" ({reason})"
+        self._logger.info(f"External server stopped{reason}.")
 
     def _check_module_number_from_config_is_module_id(self, module_key: str) -> None:
         real_mod_number = self._modules[int(module_key)].get_module_number()
