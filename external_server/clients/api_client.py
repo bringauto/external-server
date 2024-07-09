@@ -4,10 +4,11 @@ import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol
-import InternalProtocol_pb2 as internal_protocol
+from InternalProtocol_pb2 import (  # type: ignore
+    Device as _Device,
+)
 from external_server.utils import check_file_exists
-from external_server.structures import (
+from external_server.models.structures import (
     Config,
     KeyValue,
     Buffer,
@@ -32,7 +33,6 @@ class ExternalServerApiClient:
     and is_device_type_supported.
 
     """
-
     def __init__(self, module_config: ModuleConfig, company_name: str, car_name: str) -> None:
         """Initializes API Wrapper for Module
 
@@ -146,13 +146,13 @@ class ExternalServerApiClient:
         """
         return self._context is not None
 
-    def device_connected(self, device: internal_protocol.Device) -> int:
+    def device_connected(self, device: _Device) -> int:
         """
         Handles device connection by creating the device identification and calling the library function.
 
         Parameters
         ----------
-        device: internal_protocol.Device
+        device: Device
             The device object.
 
         Returns
@@ -164,9 +164,7 @@ class ExternalServerApiClient:
         with self._lock:
             return self._library.device_connected(device_identification, self._context)
 
-    def device_disconnected(
-        self, disconnect_types: DisconnectTypes, device: internal_protocol.Device
-    ) -> int:
+    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> int:
         """
         Handles device disconnection by creating the device identification and calling the library function.
 
@@ -175,7 +173,7 @@ class ExternalServerApiClient:
         disconnect_types: DisconnectTypes
             Type of disconnection
 
-        device: internal_protocol.Device
+        device: Device
             The device object.
 
         Returns
@@ -189,15 +187,13 @@ class ExternalServerApiClient:
                 disconnect_types, device_identification, self._context
             )
 
-    def _create_device_identification(
-        self, device: internal_protocol.Device
-    ) -> DeviceIdentification:
+    def _create_device_identification(self, device: _Device) -> DeviceIdentification:
         """
         Creates a DeviceIdentification structure based on the provided device object.
 
         Parameters
         ----------
-        device: internal_protocol.Device
+        device: Device
             The device object.
 
         Returns
@@ -218,8 +214,8 @@ class ExternalServerApiClient:
             priority=device.priority,
         )
 
-    def _create_protobuf_device(self, device_id: DeviceIdentification) -> internal_protocol.Device:
-        device = internal_protocol.Device()
+    def _create_protobuf_device(self, device_id: DeviceIdentification) -> _Device:
+        device = _Device()
         device.module = device_id.module
         device.priority = device_id.priority
         device.deviceType = device_id.device_type
@@ -239,14 +235,14 @@ class ExternalServerApiClient:
 
         return device
 
-    def forward_status(self, device: internal_protocol.Device, status_bytes: bytes) -> int:
+    def forward_status(self, device: _Device, status_bytes: bytes) -> int:
         """
         Forwards a status update by creating the device identification and status buffer,
         and calling the library function.
 
         Parameters
         ----------
-        device: internal_protocol.Device
+        device: Device
             The device object.
 
         status_bytes: bytes
@@ -262,14 +258,14 @@ class ExternalServerApiClient:
         with self._lock:
             return self._library.forward_status(status_buffer, device_identification, self._context)
 
-    def forward_error_message(self, device: internal_protocol.Device, error_bytes: bytes) -> int:
+    def forward_error_message(self, device: _Device, error_bytes: bytes) -> int:
         """
         Forwards an error message by creating the device identification and status buffer,
         and calling the library function.
 
         Parameters
         ----------
-        device: internal_protocol.Device
+        device: Device
             The device object.
 
         error_bytes: bytes
@@ -303,7 +299,7 @@ class ExternalServerApiClient:
         """
         return self._library.wait_for_command(timeout, self._context)
 
-    def pop_command(self) -> [bytes, internal_protocol.Device, int]:
+    def pop_command(self) -> [bytes, _Device, int]:
         """
         Gets a command from the library by creating the device identification and calling the library function.
 
@@ -312,7 +308,7 @@ class ExternalServerApiClient:
         bytes
             Command bytes returned from API.
 
-        internal_protocol.Device
+        _Device
             Device, for which the command is intended.
 
         int
@@ -337,7 +333,7 @@ class ExternalServerApiClient:
 
         return command_bytes, device, rc
 
-    def command_ack(self, command_data: bytes, device: internal_protocol.Device) -> int:
+    def command_ack(self, command_data: bytes, device: _Device) -> int:
         """Calls command_ack function from API"""
         device_id = self._create_device_identification(device)
         with self._lock:

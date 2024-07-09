@@ -1,17 +1,22 @@
-import threading
-from queue import PriorityQueue, Queue
+from threading import Timer as _Timer
+from queue import (
+    PriorityQueue as _PriorityQueue,
+    Queue as _Queue
+)
 import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import ExternalProtocol_pb2 as external_protocol  # type: ignore
-from external_server.checker.checker import Checker as _Checker
-from external_server.structures import TimeoutType
+from ExternalProtocol_pb2 import (  # type: ignore
+    Status as _Status
+)
+from external_server.checkers.checker import Checker as _Checker
+from external_server.models.structures import TimeoutType as _TimeoutType
 
 
 CounterValue = int
-QueuedStatus = tuple[CounterValue, external_protocol.Status]
-QueuedTimer = tuple[CounterValue, threading.Timer]
+QueuedStatus = tuple[CounterValue, _Status]
+QueuedTimer = tuple[CounterValue, _Timer]
 
 
 class StatusOrderChecker(_Checker):
@@ -21,30 +26,30 @@ class StatusOrderChecker(_Checker):
     """
 
     def __init__(self, timeout: int) -> None:
-        super().__init__(TimeoutType.MESSAGE_TIMEOUT)
+        super().__init__(_TimeoutType.MESSAGE_TIMEOUT)
         self._timeout = timeout
         self._counter = 1
-        self._received_statuses: PriorityQueue[QueuedStatus] = PriorityQueue()
-        self._missing_statuses: PriorityQueue[QueuedTimer] = PriorityQueue()
-        self._checked_statuses: Queue[external_protocol.Status] = Queue()
+        self._received_statuses: _PriorityQueue[QueuedStatus] = _PriorityQueue()
+        self._missing_statuses: _PriorityQueue[QueuedTimer] = _PriorityQueue()
+        self._checked_statuses: _Queue[_Status] = _Queue()
 
     @property
-    def checked_statuses(self) -> Queue[external_protocol.Status]:
+    def checked_statuses(self) -> _Queue[_Status]:
         return self._checked_statuses
 
     @property
-    def missing_statuses(self) -> PriorityQueue[QueuedTimer]:
+    def missing_statuses(self) -> _PriorityQueue[QueuedTimer]:
         return self._missing_statuses
 
     @property
-    def received_statuses(self) -> PriorityQueue[QueuedStatus]:
+    def received_statuses(self) -> _PriorityQueue[QueuedStatus]:
         return self._received_statuses
 
     @property
     def missing_status_counter_vals(self) -> list[CounterValue]:
         return [status_counter for status_counter, _ in self._missing_statuses.queue]
 
-    def check(self, status_msg: external_protocol.Status) -> None:
+    def check(self, status_msg: _Status) -> None:
         status_counter = status_msg.messageCounter
         self._received_statuses.put((status_counter, status_msg))
         if status_counter == self._counter:
@@ -57,7 +62,7 @@ class StatusOrderChecker(_Checker):
                 or missing_counter
                 > self._missing_statuses.queue[self._missing_statuses.qsize() - 1][0]
             ):
-                timer = threading.Timer(self._timeout, self._timeout_occurred)
+                timer = _Timer(self._timeout, self._timeout_occurred)
                 timer.start()
                 self._missing_statuses.put((missing_counter, timer))
                 self._logger.warning(f"Status message with counter {missing_counter} is missing")
@@ -87,7 +92,7 @@ class StatusOrderChecker(_Checker):
         timer.cancel()
         timer.join()
 
-    def get_status(self) -> external_protocol.Status | None:
+    def get_status(self) -> _Status | None:
         return self._checked_statuses.get_nowait() if not self._checked_statuses.empty() else None
 
     def reset(self) -> None:

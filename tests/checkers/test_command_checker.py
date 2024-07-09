@@ -6,7 +6,7 @@ import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Command
-from external_server.checker.command_messages_checker import CommandMessagesChecker
+from external_server.checkers.command_checker import CommandChecker
 
 
 CHECKER_TIMEOUT = 0.15
@@ -16,7 +16,7 @@ logging.getLogger("CommandMessagesChecker").setLevel(logging.CRITICAL)
 class Test_No_Commands_Stored_By_Checker(unittest.TestCase):
 
     def test_pop_commands_yields_empty_list_of_commands(self):
-        checker = CommandMessagesChecker(CHECKER_TIMEOUT)
+        checker = CommandChecker(CHECKER_TIMEOUT)
         cmd = checker.acknowledge_and_pop_commands(msg_counter=0)
         self.assertEqual(len(cmd), 0)
 
@@ -24,7 +24,7 @@ class Test_No_Commands_Stored_By_Checker(unittest.TestCase):
 class Test_Pop_Command(unittest.TestCase):
 
     def setUp(self):
-        self.checker = CommandMessagesChecker(CHECKER_TIMEOUT)
+        self.checker = CommandChecker(CHECKER_TIMEOUT)
         self.cmd_1 = Command()
         self.cmd_2 = Command()
         self.cmd_3 = Command()
@@ -74,7 +74,7 @@ class Test_Pop_Command(unittest.TestCase):
 class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
-        self.checker = CommandMessagesChecker(CHECKER_TIMEOUT)
+        self.checker = CommandChecker(CHECKER_TIMEOUT)
         command = Command()
         self.checker.add_command(command, False)
 

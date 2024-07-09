@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 import logging
 import logging.handlers
-import json
 import sys
 
 from rich.logging import RichHandler
 
 from external_server.utils import argparse_init
-from external_server.external_server import ExternalServer
-from external_server.config import Config, load_config, InvalidConfigError
-from external_server import constants
+from external_server.server import ExternalServer
+from external_server.config import load_config, InvalidConfigError
+
+
+_LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+_LOG_FILE_NAME = "external_server.log"
 
 
 def main() -> None:
@@ -23,11 +25,11 @@ def main() -> None:
 
     if (config.log_files_to_keep):
             file_handler = logging.handlers.RotatingFileHandler(
-                filename=str(config.log_files_directory) + "/" + constants.LOG_FILE_NAME,
+                filename=str(config.log_files_directory) + "/" + _LOG_FILE_NAME,
                 maxBytes=config.log_file_max_size_bytes,
                 backupCount=config.log_files_to_keep - 1
             )
-            file_handler.setFormatter(logging.Formatter(constants.LOG_FORMAT))
+            file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
             logging.basicConfig(
                 level=logging.INFO,
                 format="%(name)s: %(message)s",

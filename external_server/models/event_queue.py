@@ -1,9 +1,28 @@
-import queue
+from queue import Queue as _Queue
+import threading
 from typing import Any
-from dataclasses import dataclass
+import dataclasses
 from enum import Enum, auto
 
-from external_server.utils import SingletonMeta
+
+class SingletonMeta(type):
+    """
+    This is a thread-safe implementation of Singleton.
+    """
+
+    _instances: dict = dict()
+    _lock: threading.Lock = threading.Lock()
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
 
 
 class EventType(Enum):
@@ -13,7 +32,7 @@ class EventType(Enum):
     TIMEOUT_OCCURRED = auto()  # data = TimeoutType
 
 
-@dataclass(slots=True)
+@dataclasses.dataclass(slots=True)
 class Event:
     event: EventType
     data: Any | None = None
@@ -23,7 +42,7 @@ class EventQueueSingleton(metaclass=SingletonMeta):
     __slots__ = "_queue"
 
     def __init__(self) -> None:
-        self._queue = queue.Queue()
+        self._queue: _Queue[Any] = _Queue()
 
     def add_event(self, event_type: EventType, data: Any | None = None) -> None:
         self._queue.put(Event(event=event_type, data=data))

@@ -3,7 +3,7 @@ import time
 import sys
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from external_server.checker.session_timeout_checker import SessionTimeoutChecker
+from external_server.checkers.session_timeout_checker import SessionTimeoutChecker
 
 
 _CHECKER_TIMEOUT = 0.05

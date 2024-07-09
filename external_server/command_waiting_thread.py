@@ -2,13 +2,12 @@ import threading
 from queue import Queue, Empty
 import logging
 import sys
-
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-import InternalProtocol_pb2 as internal_protocol
-from external_server.structures import GeneralErrorCodes, EsErrorCodes
-from external_server.external_server_api_client import ExternalServerApiClient
-from external_server.event_queue import EventQueueSingleton, EventType
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from external_server.models.structures import GeneralErrorCodes, EsErrorCodes
+from external_server.clients.api_client import ExternalServerApiClient
+from external_server.models.event_queue import EventQueueSingleton, EventType
 
 
 class CommandWaitingThread:
@@ -22,14 +21,14 @@ class CommandWaitingThread:
         self._api_client = api_client
         self._event_queue = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
-        self._commands: Queue[tuple[bytes, internal_protocol.Device]] = Queue()
+        self._commands: Queue[tuple[bytes, _Device]] = Queue()
         self._connection_established = False
         self._commands_lock = threading.Lock()
         self._connection_established_lock = threading.Lock()
         self._continue_thread = True
 
     @property
-    def connection_established(self):
+    def connection_established(self) -> bool:
         with self._connection_established_lock:
             return self._connection_established
 
@@ -51,14 +50,13 @@ class CommandWaitingThread:
         if self._waiting_thread.is_alive():
             self._waiting_thread.join()
 
-    def pop_command(self) -> tuple[internal_protocol.Device, bytes] | None:
+    def pop_command(self) -> tuple[bytes, _Device] | None:
         """Returns available command if currently available, else returns None."""
         try:
             with self._commands_lock:
                 command = self._commands.get(block=False)
         except Empty:
             return None
-
         return command
 
     def _save_available_commands(self) -> None:

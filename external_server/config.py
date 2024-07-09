@@ -13,13 +13,20 @@ from pydantic import (
     ValidationError
 )
 
+
 T = TypeVar("T", bound=Mapping)
 
 
+_COMPANY_NAME_PATTERN = r"^[a-z0-9_]*$"
+_CAR_NAME_PATTERN = r"^[a-z0-9_]*$"
+_MQTT_ADDRESS_PATTERN = r"^((http|https)://)?([\w-]+\.)?+[\w-]+$"
+_MODULE_ID_PATTERN = r"^\d+$"
+
+
 class Config(BaseModel):
-    company_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
-    car_name: Annotated[str, StringConstraints(pattern=r"^[a-z0-9_]*$")]
-    mqtt_address: Annotated[str, StringConstraints(pattern=r"^((http|https)://)?([\w-]+\.)?+[\w-]+$")]
+    company_name: Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
+    car_name: Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
+    mqtt_address: Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
     mqtt_port: int = Field(ge=0, le=65535)
     mqtt_timeout: int = Field(ge=0)
     timeout: int = Field(ge=0)
@@ -28,7 +35,7 @@ class Config(BaseModel):
     log_files_directory: DirectoryPath
     log_files_to_keep: int = Field(ge=0)
     log_file_max_size_bytes: int = Field(ge=0)
-    modules: dict[Annotated[str, StringConstraints(pattern=r"^\d+$")], ModuleConfig]
+    modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN )], ModuleConfig]
 
     @field_validator("modules")
     @classmethod

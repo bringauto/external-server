@@ -6,10 +6,10 @@ sys.path.append(".")
 
 from pydantic import FilePath
 
-from InternalProtocol_pb2 import Device, DeviceStatus
-from ExternalProtocol_pb2 import Connect, ExternalClient, Status
+from InternalProtocol_pb2 import Device  # type: ignore
+from ExternalProtocol_pb2 import Connect, ExternalClient  # type: ignore
 from external_server.config import Config, ModuleConfig
-from external_server.external_server import ExternalServer
+from external_server.server import ExternalServer
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 
 
@@ -31,22 +31,28 @@ ES_CONFIG_WITHOUT_MODULES = {
 class Test_Connecting_Device(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = ModuleConfig(
-            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
-        )
-        self.config = Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
         self.es = ExternalServer(config=self.config)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.mqttbroker = MQTTBrokerTest(start=True)
-        self.connect_msg_payload = ExternalClient(
+        time.sleep(0.02)
+
+    def test_connect_message_without_first_status_does_not_connect_device(self):
+        self.connect_payload = ExternalClient(
             connect=Connect(
                 sessionId="some_id", company="ba", vehicleName="car1", devices=[self.device]
             )
         ).SerializeToString()
-        time.sleep(0.02)
-
-    def test_nothing(self):
-        pass
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es.start)
+            time.sleep(0.2)
+            subsc_topic = self.es.mqtt_client.subscribe_topic
+            ex.submit(self.mqttbroker.publish_message, topic=subsc_topic, payload=self.connect_payload)
+            time.sleep(0.2)
+            print(self.es.connected_devices)
+            ex.submit(self.es.stop)
+            # self.assertFalse(self.device in self.es.connected_devices)
 
     # def test_connecting_device(self):
     #     status_msg = Status(

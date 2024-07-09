@@ -1,6 +1,9 @@
+from __future__ import annotations
 import ctypes as ct
 from enum import IntEnum
-from dataclasses import dataclass
+import dataclasses
+
+from InternalProtocol_pb2 import Device as _Device
 
 
 class TimeoutType(IntEnum):
@@ -95,17 +98,38 @@ class Config(ct.Structure):
     _fields_ = [("parameters", ct.POINTER(KeyValue)), ("size", ct.c_size_t)]
 
 
-@dataclass
-class DeviceIdentificationPython:
-    module: int
-    device_type: int
-    device_role: str
-    device_name: str
+@dataclasses.dataclass(frozen=True)
+class DevicePy:
+    module_id: int
+    type: int
+    role: str
+    name: str
     priority: int
 
-    def __eq__(self, other: "DeviceIdentificationPython"):
+    def __eq__(self, other: object):
+        if not isinstance(other, DevicePy):
+            raise NotImplementedError
         return (
-            self.module == other.module
-            and self.device_type == other.device_type
-            and self.device_role == other.device_role
+            self.module_id == other.module_id
+            and self.type == other.type
+            and self.role == other.role
+        )
+
+    def to_device(self) -> _Device:
+        return _Device(
+            module=self.module_id,
+            deviceType=self.type,
+            deviceRole=self.role,
+            deviceName=self.name,
+            priority=self.priority,
+        )
+
+    @staticmethod
+    def from_device(device: _Device) -> DevicePy:
+        return DevicePy(
+            module_id=device.module,
+            type=device.deviceType,
+            role=device.deviceRole,
+            name=device.deviceName,
+            priority=device.priority,
         )

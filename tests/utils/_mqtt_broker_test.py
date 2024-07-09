@@ -46,6 +46,7 @@ class MQTTBrokerTest:
         assert isinstance(self.broker_process, subprocess.Popen)
 
     def stop(self):
+        """Stop the broker process to stop all communication and free up the port."""
         if self.broker_process:
             self.broker_process.terminate()
             self.broker_process.wait()

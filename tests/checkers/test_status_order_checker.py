@@ -6,7 +6,7 @@ import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status  # type: ignore
-from external_server.checker.status_order_checker import StatusOrderChecker
+from external_server.checkers.status_order_checker import StatusOrderChecker
 
 
 logging.getLogger(StatusOrderChecker.__name__).setLevel(logging.CRITICAL)

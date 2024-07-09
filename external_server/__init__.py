@@ -4,5 +4,5 @@ __all__ = (
 )
 
 from .utils import argparse_init
-from .external_server import ExternalServer
+from .server import ExternalServer
 

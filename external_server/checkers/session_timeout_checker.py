@@ -1,10 +1,10 @@
-import threading
+from threading import Timer as _Timer
 
-from external_server.checker.checker import Checker
-from external_server.structures import TimeoutType
+from external_server.checkers.checker import Checker as _Checker
+from external_server.models.structures import TimeoutType as _TimeoutType
 
 
-class SessionTimeoutChecker(Checker):
+class SessionTimeoutChecker(_Checker):
     """Checks if connected session did not timed out
 
     Messages can come from not connected session and connected session would have never
@@ -13,13 +13,13 @@ class SessionTimeoutChecker(Checker):
     """
 
     def __init__(self, timeout: int) -> None:
-        super().__init__(TimeoutType.SESSION_TIMEOUT)
+        super().__init__(_TimeoutType.SESSION_TIMEOUT)
         self._timeout = timeout
-        self._timer: threading.Timer | None = None
+        self._timer: _Timer | None = None
         self._timer_running = False
 
     def start(self) -> None:
-        self._timer = threading.Timer(self._timeout, self._timeout_occurred)
+        self._timer = _Timer (self._timeout, self._timeout_occurred)
         self._timer.start()
         self._timer_running = True
 
