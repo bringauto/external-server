@@ -3,9 +3,11 @@ import sys
 import time
 import concurrent.futures
 import socket
+import os
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
+import external_server
 from external_server.clients.mqtt_client import MQTTClient
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
@@ -26,6 +28,9 @@ from tests.utils import MQTTBrokerTest  # type: ignore
 
 TEST_IP_ADDRESS = "127.0.0.1"
 TEST_PORT = 1883
+
+
+# BROKER_SCRIPT_PATH = os.path.join(external_server.PATH, "lib/mqtt-testing/interoperability/startbroker.py")
 
 
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):

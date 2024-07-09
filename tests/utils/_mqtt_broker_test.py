@@ -7,16 +7,18 @@ import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
 
 
-DEFAULT_PORT = 1883
+_EXTERNAL_SERVER_PATH = _external_server.PATH
 
 
 class MQTTBrokerTest:
 
     _DEFAULT_HOST = "127.0.0.1"
+    _DEFAULT_PORT = 1883
 
-    def __init__(self, start: bool = False, port: int = DEFAULT_PORT):
+    def __init__(self, start: bool = False, port: int = _DEFAULT_PORT):
         self.broker_process = None
         self._port = port
+        self._script_path = os.path.join(_EXTERNAL_SERVER_PATH, "lib/mqtt-testing/interoperability/startbroker.py")
         if start:
             self.start()
 
@@ -28,21 +30,12 @@ class MQTTBrokerTest:
         return subscribe.simple(topic, hostname=self._DEFAULT_HOST, port=self._port)
 
     def publish_message(self, topic: str, payload: str) -> None:
-        publish.single(
-            topic, payload=payload, hostname=self._DEFAULT_HOST, port=self._port
-        )
+        publish.single(topic, payload, hostname=self._DEFAULT_HOST, port=self._port)
 
     def start(self):
         assert self.broker_process is None
-        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(_external_server.__file__)))
-        mqtt_broker_script = os.path.join(root_dir, "lib/mqtt-testing/interoperability/startbroker.py")
-        self.broker_process = subprocess.Popen(
-            [
-                "python",
-                mqtt_broker_script,
-                f"--port={self._port}"
-            ]
-        )
+        broker_script = self._script_path
+        self.broker_process = subprocess.Popen(["python", broker_script, f"--port={self._port}"])
         assert isinstance(self.broker_process, subprocess.Popen)
 
     def stop(self):
@@ -50,3 +43,4 @@ class MQTTBrokerTest:
         if self.broker_process:
             self.broker_process.terminate()
             self.broker_process.wait()
+            self.broker_process = None
