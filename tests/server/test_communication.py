@@ -95,7 +95,16 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             self.assertEqual(expected_resp.SerializeToString(), response.result().payload)
 
     def test_from_supported_device_of_unsupported_module_makes_server_to_send_conn_response(self):
-        device = _Device(module=151654, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        device = _Device(module=1516, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
+        with self.executor as ex:
+            response = ex.submit(self.broker.get_message, self.es.mqtt_client.publish_topic)
+            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            expected_resp = _ExternalServer(connectResponse=_ConnectResponse(sessionId="some_id"))
+            self.assertEqual(expected_resp.SerializeToString(), response.result().payload)
+
+    def test_from_unsupported_device_of_supported_module_makes_server_to_send_conn_response(self):
+        device = _Device(module=100, deviceType=154, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_message, self.es.mqtt_client.publish_topic)
