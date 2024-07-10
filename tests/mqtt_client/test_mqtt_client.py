@@ -111,7 +111,7 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_device_connect_message(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             msg = DeviceConnect(device=self.device)
-            pub_msg = executor.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = executor.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
@@ -119,7 +119,7 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_connect_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = ConnectResponse(sessionId="some-session-id", type=ConnectResponse.OK)
-            pub_msg = ex.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
@@ -132,7 +132,7 @@ class Test_Publishing_Message(unittest.TestCase):
                 messageCounter=4,
                 deviceStatus=DeviceStatus(device=self.device, statusData=b"working"),
             )
-            pub_msg = ex.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
@@ -140,7 +140,7 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_status_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = StatusResponse(sessionId="some-session-id", messageCounter=4, type=StatusResponse.OK)
-            pub_msg = ex.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
@@ -148,7 +148,7 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_device_command(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = DeviceCommand(device=self.device, commandData=b"some-command")
-            pub_msg = ex.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
@@ -156,7 +156,7 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_command_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = CommandResponse(sessionId="some-session-id", type=CommandResponse.OK)
-            pub_msg = ex.submit(self.broker.next_published_msg, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
             self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)

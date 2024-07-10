@@ -17,7 +17,6 @@ class CommandWaitingThread:
         self._logger = logging.getLogger(
             f"{self.__class__.__name__}({api_client.get_module_number()})"
         )
-
         self._api_client = api_client
         self._event_queue = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
@@ -63,10 +62,9 @@ class CommandWaitingThread:
         remaining_commands = 1
         while remaining_commands > 0:
             command, device, remaining_commands = self._api_client.pop_command()
-
             if remaining_commands < 0:
                 self._logger.error(
-                    f"Error occured in pop_command function in API, rc: {remaining_commands}"
+                    f"Error occured in pop_command function in API. Return code: {remaining_commands}"
                 )
             else:
                 with self._commands_lock:

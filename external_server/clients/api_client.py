@@ -16,6 +16,7 @@ from external_server.models.structures import (
     DisconnectTypes,
 )
 from external_server.config import ModuleConfig
+from external_server.models.structures import GeneralErrorCodes as _GeneralErrorCodes
 
 
 class ExternalServerApiClient:
@@ -307,10 +308,8 @@ class ExternalServerApiClient:
         -------
         bytes
             Command bytes returned from API.
-
-        _Device
+        Device
             Device, for which the command is intended.
-
         int
             Return value of API function.
         """
@@ -346,5 +345,6 @@ class ExternalServerApiClient:
     def get_module_number(self) -> int:
         return self._library.get_module_number()
 
-    def is_device_type_supported(self, device_type: int) -> int:
-        return self._library.is_device_type_supported(ct.c_uint(device_type))
+    def is_device_type_supported(self, device_type: int) -> bool:
+        code = self._library.is_device_type_supported(ct.c_uint(device_type))
+        return code == _GeneralErrorCodes.OK

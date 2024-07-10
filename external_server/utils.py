@@ -1,15 +1,31 @@
 import argparse
+from typing import Optional
 import os.path
 import sys
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from InternalProtocol_pb2 import (  # type: ignore
+    Device as _Device,
+    DeviceCommand as _DeviceCommand,
+    DeviceStatus as _DeviceStatus,
+)
+from ExternalProtocol_pb2 import (  # type: ignore
+    CommandResponse as _CommandResponse,
+    Connect as _Connect,
+    Status as _Status,
+    ExternalClient as _ExternalClient,
+)
 
 
 def argparse_init() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-c", "--config", type=str, default="./config/config.json", help="path to the config file"
+        "-c",
+        "--config",
+        type=str,
+        default="./config/config.json",
+        help="path to the config file",
     )
     parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="tls authentication")
     tls = parser.add_argument_group("tls", description="if tls is used, set following arguments")
@@ -26,3 +42,32 @@ def check_file_exists(path: str) -> bool:
 def device_repr(device: _Device) -> str:
     return f"Device {device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
 
+
+def connect_msg(session_id: str, company: str, car: str, devices: list[_Device]) -> _ExternalClient:
+    return _ExternalClient(
+        connect=_Connect(sessionId=session_id, company=company, vehicleName=car, devices=devices)
+    )
+
+
+def command_response(session_id: str, counter: int, type: _CommandResponse.Type) -> _ExternalClient:
+    return _ExternalClient(
+        commandResponse=_CommandResponse(sessionId=session_id, type=type, messageCounter=counter)
+    )
+
+
+def status(
+    session_id: str,
+    state: _Status.DeviceState,
+    counter: int,
+    status: _DeviceStatus,
+    error_message: Optional[bytes] = None,
+) -> _ExternalClient:
+    return _ExternalClient(
+        status=_Status(
+            sessionId=session_id,
+            deviceState=state,
+            messageCounter=counter,
+            deviceStatus=status,
+            errorMessage=error_message,
+        )
+    )

@@ -26,7 +26,7 @@ class MQTTBrokerTest:
     def is_running(self) -> bool:
         return self.broker_process is not None
 
-    def next_published_msg(self, topic: str) -> _MQTTMessage:
+    def get_message(self, topic: str) -> _MQTTMessage:
         return subscribe.simple(topic, hostname=self._DEFAULT_HOST, port=self._port)
 
     def publish_message(self, topic: str, payload: str) -> None:
