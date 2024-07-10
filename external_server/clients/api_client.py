@@ -277,6 +277,7 @@ class ExternalServerApiClient:
         int
             The result of the library function call.
         """
+        assert isinstance(error_bytes, bytes)
         device_identification = self._create_device_identification(device)
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         with self._lock:

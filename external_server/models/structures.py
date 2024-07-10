@@ -107,13 +107,20 @@ class DevicePy:
     priority: int
 
     def __eq__(self, other: object):
-        if not isinstance(other, DevicePy):
+        if isinstance(other, DevicePy):
+            return (
+                self.module_id == other.module_id
+                and self.type == other.type
+                and self.role == other.role
+            )
+        elif isinstance(other, _Device):
+            return (
+                self.module_id == other.module
+                and self.type == other.deviceType
+                and self.role == other.deviceRole
+            )
+        else:
             raise NotImplementedError
-        return (
-            self.module_id == other.module_id
-            and self.type == other.type
-            and self.role == other.role
-        )
 
     def to_device(self) -> _Device:
         return _Device(

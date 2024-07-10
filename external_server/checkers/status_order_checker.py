@@ -50,6 +50,7 @@ class StatusOrderChecker(_Checker):
         return [status_counter for status_counter, _ in self._missing_statuses.queue]
 
     def check(self, status_msg: _Status) -> None:
+        assert isinstance(status_msg, _Status)
         status_counter = status_msg.messageCounter
         self._received_statuses.put((status_counter, status_msg))
         if status_counter == self._counter:

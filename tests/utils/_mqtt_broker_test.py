@@ -33,7 +33,6 @@ class MQTTBrokerTest:
         publish.single(topic, payload, hostname=self._DEFAULT_HOST, port=self._port)
 
     def start(self):
-        assert self.broker_process is None
         broker_script = self._script_path
         self.broker_process = subprocess.Popen(["python", broker_script, f"--port={self._port}"])
         assert isinstance(self.broker_process, subprocess.Popen)

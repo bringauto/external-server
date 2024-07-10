@@ -62,12 +62,12 @@ def status(
     status: _DeviceStatus,
     error_message: Optional[bytes] = None,
 ) -> _ExternalClient:
-    return _ExternalClient(
-        status=_Status(
-            sessionId=session_id,
-            deviceState=state,
-            messageCounter=counter,
-            deviceStatus=status,
-            errorMessage=error_message,
-        )
+
+    status=_Status(
+        sessionId=session_id,
+        deviceState=state,
+        messageCounter=counter,
+        deviceStatus=status,
+        errorMessage=error_message,
     )
+    return _ExternalClient(status=status)
