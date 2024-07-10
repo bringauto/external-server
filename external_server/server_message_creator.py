@@ -68,7 +68,7 @@ def external_command(
     command = _Command()
     command.sessionId = session_id
     command.messageCounter = counter
-    command.deviceCommand.CopyFrom(_DeviceCommand(device=device, command_data=data))
+    command.deviceCommand.CopyFrom(_DeviceCommand(device=device, commandData=data))
     sent_msg = _ExternalServerMsg()
     sent_msg.command.CopyFrom(command)
     return sent_msg

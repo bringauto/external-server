@@ -203,4 +203,4 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(buffer=True)

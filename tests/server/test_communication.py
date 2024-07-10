@@ -22,12 +22,13 @@ from external_server.server import ExternalServer
 from external_server.models.structures import DevicePy as DevicePy
 from external_server.utils import connect_msg, status  # type: ignore
 from external_server.server_message_creator import (
+    external_command as _external_command,
     status_response as _status_response,
 )
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
-logging.getLogger("ExternalServer").setLevel(logging.CRITICAL)
+# logging.getLogger("ExternalServer").setLevel(logging.CRITICAL)
 
 
 ES_CONFIG_WITHOUT_MODULES = {
@@ -131,7 +132,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.2)
 
-    def test_makes_server_to_send_status_response_to_the_device(self):
+    def test_makes_server_to_send_status_response_and_command_to_the_device(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         connect_payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         status_payload = status(
@@ -143,13 +144,24 @@ class Test_Receiving_First_Status(unittest.TestCase):
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload.SerializeToString())
             # the next thread will wait for the broker receiving the status response
-            response = ex.submit(self.broker.get_message, self.es.mqtt_client.publish_topic)
+            response = ex.submit(
+                self.broker.get_message,
+                self.es.mqtt_client.publish_topic,
+                number_of_messages = 2
+            )
             ex.submit(publish_from_ext_client, self.es, self.broker, status_payload.SerializeToString())
-            self.assertEqual(response.result().payload, _status_response("some_id", 0).SerializeToString())
+            self.assertEqual(
+                response.result()[0].payload,
+                _status_response("some_id", 0).SerializeToString()
+            )
+            self.assertEqual(
+                response.result()[1].payload,
+                _external_command("some_id", 0, device).SerializeToString()
+            )
 
     def tearDown(self) -> None:
         self.broker.stop()
 
 
-if __name__ == "__main__":  # pragma: no s
-    unittest.main()
+if __name__ == "__main__":  # pragma: no cover
+    unittest.main(buffer=True)

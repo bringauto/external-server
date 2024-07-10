@@ -459,14 +459,6 @@ class ExternalServer:
         if not msg.HasField("status"):
             self._logger.error("Received message is not a status message")
             raise ConnectSequenceException
-        try:
-            msg.status.deviceState
-        except:
-            msg.status.deviceState = _Status.CONNECTING
-        try:
-            msg.status.messageCounter
-        except:
-            msg.status.messageCounter = 0
         return msg.status
 
     def _check_device_is_in_connecting_state(self, device_status: _Status) -> None:
@@ -518,6 +510,7 @@ class ExternalServer:
                     cmd = _external_command(
                         self._session_id, command_counter, target_device, command
                     )
+                    print("Cmd: ", cmd)
                     self._logger.info(f"Sending Command message, messageCounter: {command_counter}")
                     self._mqtt_client.publish(cmd)
                     self._command_checker.add_command(cmd.command, True)

@@ -51,12 +51,15 @@ class CommandWaitingThread:
 
     def pop_command(self) -> tuple[bytes, _Device] | None:
         """Returns available command if currently available, else returns None."""
-        try:
-            with self._commands_lock:
-                command = self._commands.get(block=False)
-        except Empty:
+        if self._commands.empty():
             return None
-        return command
+        else:
+            try:
+                with self._commands_lock:
+                    command = self._commands.get(block=False)
+            except Empty:
+                return None
+            return command
 
     def _save_available_commands(self) -> None:
         remaining_commands = 1

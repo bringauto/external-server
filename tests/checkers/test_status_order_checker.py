@@ -152,4 +152,4 @@ class Test_Resetting_Checker(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(buffer=True)

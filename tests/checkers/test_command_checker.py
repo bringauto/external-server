@@ -115,4 +115,4 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(buffer=True)

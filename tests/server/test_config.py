@@ -143,4 +143,4 @@ class Test_Config_Validation(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(buffer=True)

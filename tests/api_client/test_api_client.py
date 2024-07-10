@@ -66,4 +66,4 @@ class Test_API_Client_Device_Connection(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(buffer=True)
