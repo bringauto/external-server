@@ -112,7 +112,6 @@ class ExternalServer:
         self._mqtt_client.set_up_callbacks()
         for module_number in self._modules:
             self._modules_command_threads[module_number].start()
-
         self._running = True
         while self._running:
             try:
@@ -426,7 +425,10 @@ class ExternalServer:
                 raise ConnectSequenceException
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             ExternalServer.warn_if_device_not_in_list(
-                self._connected_devices, device, self._logger, msg="Received status from not connected device."
+                self._connected_devices,
+                device,
+                self._logger,
+                msg="Received status from not connected device."
             )
             ExternalServer.check_connecting_state(status_obj.deviceState, self._logger)
             self._status_order_checker.check(status_obj)
@@ -467,7 +469,7 @@ class ExternalServer:
                     )
                 elif not self.is_device_in_list(target_device, no_cmd_devices):
                     self._logger.warning(
-                        f"Command returned from module {module}'s API is intended for not connected device, command won't be sent"
+                        f"Returned command returned from module {module}'s API for not connected device, command won't be sent"
                     )
                 else:
                     command_counter = self._command_checker.counter
@@ -508,7 +510,7 @@ class ExternalServer:
                 self._logger.error("Command response message has not been received")
                 raise ConnectSequenceException()
             if not received_msg.HasField("commandResponse"):
-                self._logger.error("Received message is not a command response message")
+                self._logger.error(f"Received message is not a command response message. Message: {received_msg}")
                 raise ConnectSequenceException()
             self._logger.info(f"Received Command response message")
             commands = self._command_checker.acknowledge_and_pop_commands(

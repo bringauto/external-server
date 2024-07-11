@@ -64,7 +64,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         self.assertEqual(self.es.connected_devices, [])
 
     def test_external_server_initially_has_mqtt_client_disconnected(self):
-        self.assertFalse(self.es.mqtt_client.is_connected_to_broker)
+        self.assertFalse(self.es.mqtt_client.is_connected)
 
     def test_external_server_has_modules_created(self):
         self.assertEqual(len(self.es.modules), 1)
@@ -98,10 +98,10 @@ class Test_External_Server_Start(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es.start)
             time.sleep(0.2)
-            self.assertTrue(self.es.mqtt_client.is_connected_to_broker)
-            self.es.stop()
-            time.sleep(0.2)
-            self.assertFalse(self.es.mqtt_client.is_connected_to_broker)
+            self.assertTrue(self.es.mqtt_client.is_connected)
+            ex.submit(self.es.stop)
+            time.sleep(1)
+            self.assertFalse(self.es.mqtt_client.is_connected)
 
     def tearDown(self) -> None:
         self.mqttbroker.stop()

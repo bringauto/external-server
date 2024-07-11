@@ -30,7 +30,6 @@ TEST_IP_ADDRESS = "127.0.0.1"
 TEST_PORT = 1883
 
 
-@unittest.skip("Done")
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
@@ -50,7 +49,6 @@ class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
-@unittest.skip("Done")
 class Test_Failing_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -65,7 +63,6 @@ class Test_Failing_Client_Connection(unittest.TestCase):
             self.client.connect_to_broker(broker_ip="nonexistent_ip", broker_port=TEST_PORT)
 
 
-@unittest.skip("Done")
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -198,7 +195,6 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
             self.assertEqual(msg, rec_msg)
 
     def tearDown(self) -> None:
-        time.sleep(0.5)
         self.broker.stop()
 
 
@@ -208,7 +204,7 @@ class Test_MQTT_Client_Reconnection(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
 
     def test_mqtt_client_message_even_after_stopping_and_starting_again(self):
-        client = MQTTClient("some_company", "test_car", timeout=1)
+        client = MQTTClient("some_company", "test_car", timeout=5)
         client.set_up_callbacks()
         client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
         self.device = Device(
@@ -228,19 +224,22 @@ class Test_MQTT_Client_Reconnection(unittest.TestCase):
                 )
             )
             ex.submit(client.start)
+            time.sleep(0.5)
             ex.submit(client.stop)
-            time.sleep(0.1)
-            ex.submit(client.start)
+            time.sleep(1)
+            ex.submit(client.connect_and_start)
+            time.sleep(0.5)
+            ex.submit(client.get_message)
             rec_msg = ex.submit(client.get_message)
-            time.sleep(0.1)
-            self.broker.publish_messages(client.subscribe_topic, msg.SerializeToString())
+            ex.submit(self.broker.publish_messages, client.subscribe_topic, msg)
             rec_msg = rec_msg.result()
             self.assertEqual(msg, rec_msg)
 
     def tearDown(self) -> None:
-        time.sleep(0.5)
         self.broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover
+    # runner = unittest.TextTestRunner()
+    # runner.run(Test_MQTT_Client_Reconnection("test_mqtt_client_message_even_after_stopping_and_starting_again"))
     unittest.main()

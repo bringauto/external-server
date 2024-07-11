@@ -5,6 +5,7 @@ import external_server as _external_server
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
+from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
 
 
 _EXTERNAL_SERVER_PATH = _external_server.PATH
@@ -40,13 +41,19 @@ class MQTTBrokerTest:
             return result
 
     def publish_messages(self, topic: str, *payload: str) -> None:
-        if len(payload) == 0:
+        payload_list = []
+        for p in payload:
+            if isinstance(p, Ex):
+                payload_list.append(p.SerializeToString())
+            else:
+                payload_list.append(p)
+        if len(payload_list) == 0:
             return
-        elif len(payload) == 1:
-            publish.single(topic, payload[0], hostname=self._DEFAULT_HOST, port=self._port)
+        elif len(payload_list) == 1:
+            publish.single(topic, payload_list[0], hostname=self._DEFAULT_HOST, port=self._port)
         else:
             try:
-                payload_list = [(topic, p) for p in payload]
+                payload_list = [(topic, p) for p in payload_list]
                 publish.multiple(payload_list, hostname=self._DEFAULT_HOST, port=self._port)
             except Exception as e:
                 print(e)
