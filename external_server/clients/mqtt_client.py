@@ -1,6 +1,7 @@
 import logging
 import random
 import string
+from functools import partial
 from queue import Queue, Empty
 import sys
 import ssl
@@ -35,21 +36,19 @@ class MQTTClient:
         self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = mqtt.Client(
-            callback_api_version=CallbackAPIVersion.VERSION1,
+            callback_api_version=CallbackAPIVersion.VERSION2,
             client_id=MQTTClient.generate_client_id(),
             protocol=mqtt.MQTTv311,
             reconnect_on_failure=True
         )
         # TODO reason these values
         self._mqtt_client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
-
         self._event_queue = EventQueueSingleton()
-        self._is_connected = False
         self._timeout = timeout
 
     @property
-    def is_connected_to_broker(self) -> bool:
-        return self._is_connected
+    def is_connected(self) -> bool:
+        return self._mqtt_client.is_connected()
 
     @property
     def publish_topic(self) -> str:
@@ -127,10 +126,9 @@ class MQTTClient:
     def stop(self) -> None:
         """Stop the MQTT client's event loop."""
         self._mqtt_client.loop_stop()
-        self._is_connected = False
+        # self._mqtt_client.disconnect()
 
-
-    def _on_connect(self, client, _userdata, _flags, _rc):
+    def _on_connect(self, client: mqtt.Client, _userdata, _flags, _rc, properties):
         """
         Callback function for handling connection events.
 
@@ -141,7 +139,6 @@ class MQTTClient:
         - _rc (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        self._is_connected = True
         self._logger.info("Server connected to MQTT broker")
         client.subscribe(self._subscribe_topic, qos=_QOS)
 
@@ -155,9 +152,7 @@ class MQTTClient:
         - ret_code (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        self._is_connected = False
         self._logger.info("Server disconnected from MQTT broker")
-
         self._received_msgs.put(False)
         self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
 

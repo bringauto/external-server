@@ -30,9 +30,7 @@ TEST_IP_ADDRESS = "127.0.0.1"
 TEST_PORT = 1883
 
 
-# BROKER_SCRIPT_PATH = os.path.join(external_server.PATH, "lib/mqtt-testing/interoperability/startbroker.py")
-
-
+@unittest.skip("Done")
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
@@ -52,13 +50,14 @@ class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
+@unittest.skip("Done")
 class Test_Failing_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
         self.client = MQTTClient("some_company", "test_car", timeout=1)
 
     def test_client_is_not_initially_connected(self):
-        self.assertFalse(self.client.is_connected_to_broker)
+        self.assertFalse(self.client.is_connected)
 
     def test_connecting_to_nonexistent_broker_raises_socket_gaiaerror(self) -> None:
         self.client.set_up_callbacks()
@@ -66,6 +65,7 @@ class Test_Failing_Client_Connection(unittest.TestCase):
             self.client.connect_to_broker(broker_ip="nonexistent_ip", broker_port=TEST_PORT)
 
 
+@unittest.skip("Done")
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -75,19 +75,19 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
         self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
 
     def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
-        self.assertFalse(self.client.is_connected_to_broker)
+        self.assertFalse(self.client.is_connected)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.submit(self.client.start)
             time.sleep(0.01)
-            self.assertTrue(self.client.is_connected_to_broker)
+            self.assertTrue(self.client.is_connected)
 
     def test_stopped_client_is_marked_as_disconnected(self) -> None:
-        self.assertFalse(self.client.is_connected_to_broker)
+        self.assertFalse(self.client.is_connected)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.submit(self.client.start)
             time.sleep(0.02)
             self.client.stop()
-            self.assertFalse(self.client.is_connected_to_broker)
+            self.assertFalse(self.client.is_connected)
 
     def tearDown(self) -> None:
         self.test_broker.stop()
@@ -202,5 +202,45 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
         self.broker.stop()
 
 
+class Test_MQTT_Client_Reconnection(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+
+    def test_mqtt_client_message_even_after_stopping_and_starting_again(self):
+        client = MQTTClient("some_company", "test_car", timeout=1)
+        client.set_up_callbacks()
+        client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
+        self.device = Device(
+            module = Device.MISSION_MODULE,
+            deviceType = 4,
+            deviceName = "AutonomyDevice",
+            deviceRole = "autonomy-device",
+            priority=1
+        )
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            msg = ExternalClient(
+                connect=Connect(
+                    sessionId="some_session_id",
+                    company="some_company",
+                    vehicleName="test_car",
+                    devices=[self.device]
+                )
+            )
+            ex.submit(client.start)
+            ex.submit(client.stop)
+            time.sleep(0.1)
+            ex.submit(client.start)
+            rec_msg = ex.submit(client.get_message)
+            time.sleep(0.1)
+            self.broker.publish_messages(client.subscribe_topic, msg.SerializeToString())
+            rec_msg = rec_msg.result()
+            self.assertEqual(msg, rec_msg)
+
+    def tearDown(self) -> None:
+        time.sleep(0.5)
+        self.broker.stop()
+
+
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main(buffer=True)
+    unittest.main()

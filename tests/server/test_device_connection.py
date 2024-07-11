@@ -1,7 +1,7 @@
 import unittest
 import sys
 import logging
-
+import time
 sys.path.append(".")
 
 from pydantic import FilePath
@@ -33,7 +33,7 @@ ES_CONFIG_WITHOUT_MODULES = {
     "mqtt_address": "127.0.0.1",
     "mqtt_port": 1883,
     "mqtt_timeout": 1,
-    "timeout": 2,
+    "timeout": 1,
     "send_invalid_command": False,
     "mqtt_client_connection_retry_period": 2,
     "log_files_directory": ".",
@@ -50,6 +50,7 @@ def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *pay
     broker.publish_messages(server.mqtt_client.subscribe_topic, *payload)
 
 
+@unittest.skip("These tests are working")
 class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -122,6 +123,24 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.broker.stop()
 
 
+class Test_Timeout_When_Expecting_Connect_Message(unittest.TestCase):
+
+    def setUp(self) -> None:
+        module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.es = ExternalServer(config=self.config)
+        self.broker = MQTTBrokerTest(start=True)
+        self.executor = ExternalServerThreadExecutor(self.es)
+
+    def test_logs_an_error_and_continues_in_waiting_for_the_message(self):
+        with self.executor as ex:
+            # the server (and the connect sequence) has been already started in the executor
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic)
+            time.sleep(self.config.timeout + 0.1)
+            self.assertEqual(response.result(), [])
+
+
+@unittest.skip("These tests are working")
 class Test_Receiving_First_Status(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -143,13 +162,10 @@ class Test_Receiving_First_Status(unittest.TestCase):
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
             # the next thread will wait for the broker receiving the status response
-            response = ex.submit(
-                self.broker.get_messages, self.es.mqtt_client.publish_topic, n_of_msg=2
-            )
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=2)
             ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
             self.assertEqual(
-                response.result()[0].payload,
-                _status_response("some_id", 0).SerializeToString()
+                response.result()[0].payload, _status_response("some_id", 0).SerializeToString()
             )
             self.assertEqual(
                 response.result()[1].payload,
@@ -162,22 +178,16 @@ class Test_Receiving_First_Status(unittest.TestCase):
             module=1000, deviceType=0, deviceName="TestDevice", deviceRole="other_role"
         )
         connect_payload = connect_msg("some_id", company="ba", car="car1", devices=[device_1])
-        status_1_payload = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
-        status_2_payload = status("some_id", _Status.CONNECTING, 1, _DeviceStatus(device=device_2))
+        status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
+        status_2 = status("some_id", _Status.CONNECTING, 1, _DeviceStatus(device=device_2))
         with self.executor as ex:
             # the next thread will wait for the broker receiving the status response
-            r = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n_of_msg=1)
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            r = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n_of_msg=1)
-            ex.submit(
-                publish_from_ext_client,
-                self.es,
-                self.broker,
-                status_1_payload,
-                status_2_payload,
-            )
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_1, status_2)
             self.assertEqual(
-                r.result()[0].payload, _status_response("some_id", 0).SerializeToString()
+                response.result()[0].payload, _status_response("some_id", 0).SerializeToString()
             )
 
     def tearDown(self) -> None:

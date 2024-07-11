@@ -26,11 +26,15 @@ class MQTTBrokerTest:
     def is_running(self) -> bool:
         return self.broker_process is not None
 
-    def get_messages(self, topic: str, n_of_msg: int = 1) -> list[_MQTTMessage]:
+    def get_messages(self, topic: str, n: int = 1) -> list[_MQTTMessage]:
+        """Return messages from the broker on the given topic.
+
+        `n` is the number of messages to wait for and return.
+        """
         result = subscribe.simple(
-            topic, hostname=self._DEFAULT_HOST, port=self._port, msg_count=n_of_msg
+            topic, hostname=self._DEFAULT_HOST, port=self._port, msg_count=n
         )
-        if n_of_msg == 1:
+        if n == 1:
             return [result]
         else:
             return result

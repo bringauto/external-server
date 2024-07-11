@@ -3,7 +3,6 @@ import time
 import sys
 from logging import Logger as _Logger
 from typing import Optional
-
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -117,7 +116,8 @@ class ExternalServer:
         self._running = True
         while self._running:
             try:
-                if not self._mqtt_client.is_connected_to_broker:
+                if not self._mqtt_client.is_connected:
+                    self._logger.info("Connecting to MQTT broker")
                     self._mqtt_client.connect_to_broker(
                         self._config.mqtt_address, self._config.mqtt_port
                     )
@@ -407,7 +407,7 @@ class ExternalServer:
         """
         msg = self.get_connect_message(self._mqtt_client, self._logger)
         if msg is None:
-            raise ConnectSequenceException()
+            raise ConnectSequenceException("Connect message has not been received.")
         else:
             self._handle_connect_message(msg)
 
@@ -418,9 +418,7 @@ class ExternalServer:
 
         Send response to each status message.
         """
-        conn_devices = self._connected_devices.copy()
         n_devices = self.n_of_all_devices
-
         for k in range(n_devices):
             self._logger.info(f"Waiting for status message {k + 1} out of {n_devices}.")
             status_obj = ExternalServer.get_status(self._mqtt_client, self._logger)
@@ -428,7 +426,7 @@ class ExternalServer:
                 raise ConnectSequenceException
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             ExternalServer.warn_if_device_not_in_list(
-                conn_devices, device, self._logger, msg="Received status from not connected device."
+                self._connected_devices, device, self._logger, msg="Received status from not connected device."
             )
             ExternalServer.check_connecting_state(status_obj.deviceState, self._logger)
             self._status_order_checker.check(status_obj)
@@ -593,7 +591,6 @@ class ExternalServer:
             self._event_queue.clear()
             self._logger.info("Connect sequence has finished succesfully")
         except Exception as e:
-            self._logger.error(f"Connect sequence failed: {e}")
             raise ConnectSequenceException
 
     @staticmethod
