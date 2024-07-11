@@ -36,26 +36,26 @@ TEST_PORT = 1883
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
-        client = MQTTClient("some_company", "test_car")
+        client = MQTTClient("some_company", "test_car", timeout=1)
         self.assertTrue(client.publish_topic.startswith("some_company/test_car"))
 
     def test_empty_company_name_is_allowed(self):
-        client = MQTTClient(company_name="", car_name="test_car")
+        client = MQTTClient(company_name="", car_name="test_car", timeout=1)
         self.assertTrue(client.publish_topic.startswith("/test_car"))
 
     def test_empty_car_name_is_allowed(self):
-        client = MQTTClient(company_name="some_company", car_name="")
+        client = MQTTClient(company_name="some_company", car_name="", timeout=1)
         self.assertTrue(client.publish_topic.startswith("some_company/"))
 
     def test_both_names_empty_is_allowed(self):
-        client = MQTTClient(company_name="", car_name="")
+        client = MQTTClient(company_name="", car_name="", timeout=1)
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
 class Test_Failing_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car")
+        self.client = MQTTClient("some_company", "test_car", timeout=1)
 
     def test_client_is_not_initially_connected(self):
         self.assertFalse(self.client.is_connected_to_broker)
@@ -69,7 +69,7 @@ class Test_Failing_Client_Connection(unittest.TestCase):
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car")
+        self.client = MQTTClient("some_company", "test_car", timeout=1)
         self.test_broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
         self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
@@ -96,7 +96,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 class Test_Publishing_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car")
+        self.client = MQTTClient("some_company", "test_car", timeout=1)
         self.broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
         self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
@@ -168,7 +168,7 @@ class Test_Publishing_Message(unittest.TestCase):
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car")
+        self.client = MQTTClient("some_company", "test_car", timeout=1)
         self.broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
         self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
@@ -191,7 +191,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
                 )
             )
             ex.submit(self.client.start)
-            rec_msg = ex.submit(self.client.get_message, timeout=1)
+            rec_msg = ex.submit(self.client.get_message)
             time.sleep(0.5)
             self.broker.publish_message(topic=self.client.subscribe_topic, payload=msg.SerializeToString())
             rec_msg = rec_msg.result()

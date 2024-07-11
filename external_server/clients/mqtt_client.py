@@ -29,7 +29,7 @@ _QOS = 1
 class MQTTClient:
     """Class representing an MQTT client."""
 
-    def __init__(self, company_name: str, car_name: str) -> None:
+    def __init__(self, company_name: str, car_name: str, timeout: float) -> None:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._publish_topic = f"{company_name}/{car_name}/external_server"
         self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
@@ -45,6 +45,7 @@ class MQTTClient:
 
         self._event_queue = EventQueueSingleton()
         self._is_connected = False
+        self._timeout = timeout
 
     @property
     def is_connected_to_broker(self) -> bool:
@@ -64,16 +65,31 @@ class MQTTClient:
     def subscribe_topic(self) -> str:
         return self._subscribe_topic
 
+    @property
+    def timeout(self) -> Optional[float]:
+        return self._timeout
+
     def connect_to_broker(self, broker_ip: str, broker_port: int) -> None:
         self._mqtt_client.connect(broker_ip, port=broker_port, keepalive=_KEEPALIVE)
 
-    def get_message(self, timeout: Optional[int] = None) -> _ExternalClientMsg | None:
+    def block_and_get_message(self) -> _ExternalClientMsg | None:
         """Returns message from MQTTClient.
 
-        If `timeout` is None, function blocks until message is available.
+        Function blocks until message is available.
         """
         try:
-            return self._received_msgs.get(block=True, timeout=timeout)
+            return self._received_msgs.get(block=True)
+        except Empty:
+            return None
+
+    def get_message(self) -> _ExternalClientMsg | None:
+        """Returns message from MQTTClient.
+
+        Function blocks until message is available or until timeout is reached - in the latter
+        case function returns `None`.
+        """
+        try:
+            return self._received_msgs.get(block=True, timeout=self._timeout)
         except Empty:
             return None
 

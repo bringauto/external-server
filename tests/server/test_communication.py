@@ -9,8 +9,7 @@ from pydantic import FilePath
 
 from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
-    DeviceCommand as _DeviceCommand,
-    DeviceStatus as _DeviceStatus,
+    DeviceStatus as _DeviceStatus
 )
 from ExternalProtocol_pb2 import (  # type: ignore
     ConnectResponse as _ConnectResponse,
@@ -131,6 +130,33 @@ class Test_Receiving_First_Status(unittest.TestCase):
         self.es = ExternalServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.2)
+
+    def test_makes_server_to_send_status_response_and_command_to_the_device(self):
+        device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        connect_payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
+        status_payload = status(
+            session_id="some_id",
+            state=_Status.CONNECTING,
+            counter=0,
+            status=_DeviceStatus(device=device),
+        )
+        with self.executor as ex:
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload.SerializeToString())
+            # the next thread will wait for the broker receiving the status response
+            response = ex.submit(
+                self.broker.get_message,
+                self.es.mqtt_client.publish_topic,
+                number_of_messages = 2
+            )
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload.SerializeToString())
+            self.assertEqual(
+                response.result()[0].payload,
+                _status_response("some_id", 0).SerializeToString()
+            )
+            self.assertEqual(
+                response.result()[1].payload,
+                _external_command("some_id", 0, device).SerializeToString()
+            )
 
     def test_makes_server_to_send_status_response_and_command_to_the_device(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")

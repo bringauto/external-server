@@ -21,17 +21,16 @@ class CommandChecker(_Checker):
     constructor. Is also External Server's memory of commands, which didn't have
     received Command response yet.
     """
+
     def __init__(self, timeout: int) -> None:
         super().__init__(_TimeoutType.COMMAND_TIMEOUT)
         self._timeout = timeout
-        self._commands: Queue[tuple[_Command, int, bool, _Timer]] = (
-            Queue()
-        )
+        self._commands: Queue[tuple[_Command, int, bool, _Timer]] = Queue()
         self._received_acks: list[int] = []
         self._counter = 0
 
     def acknowledge_and_pop_commands(self, msg_counter: int) -> list[_ExternalCommand]:
-        """Pops commands from checker
+        """Pops commands from checker.
 
         Returns list of Command messages, which have been acknowledged with Command
         responses in correct order. With every command the returned_from_api flag is
@@ -73,7 +72,6 @@ class CommandChecker(_Checker):
                 )
                 continue
             break
-
         return command_list
 
     def add_command(self, command: _Command, returned_from_api: _ReturnedFromAPIFlag) -> None:
