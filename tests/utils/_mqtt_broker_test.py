@@ -26,13 +26,28 @@ class MQTTBrokerTest:
     def is_running(self) -> bool:
         return self.broker_process is not None
 
-    def get_message(self, topic: str, number_of_messages: int = 1) -> _MQTTMessage:
-        return subscribe.simple(
-            topic, hostname=self._DEFAULT_HOST, port=self._port, msg_count=number_of_messages
+    def get_messages(self, topic: str, n_of_msg: int = 1) -> list[_MQTTMessage]:
+        result = subscribe.simple(
+            topic, hostname=self._DEFAULT_HOST, port=self._port, msg_count=n_of_msg
         )
+        if n_of_msg == 1:
+            return [result]
+        else:
+            return result
 
-    def publish_message(self, topic: str, payload: str) -> None:
-        publish.single(topic, payload, hostname=self._DEFAULT_HOST, port=self._port)
+    def publish_messages(self, topic: str, *payload: str) -> None:
+        if len(payload) == 0:
+            return
+        elif len(payload) == 1:
+            publish.single(topic, payload[0], hostname=self._DEFAULT_HOST, port=self._port)
+        else:
+            try:
+                payload_list = [(topic, p) for p in payload]
+                publish.multiple(payload_list, hostname=self._DEFAULT_HOST, port=self._port)
+            except Exception as e:
+                print(e)
+                raise e
+
 
     def start(self):
         broker_script = self._script_path

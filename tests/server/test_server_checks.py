@@ -1,4 +1,5 @@
 import unittest
+import logging
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import DevicePy
@@ -61,16 +62,33 @@ class Test_Server_Checks(unittest.TestCase):
 class Test_Connecting_State(unittest.TestCase):
 
     def test_connecting_state_returns_without_exception(self):
-        status = _Status(sessionId="some_id", deviceState=_Status.CONNECTING)
-        status.deviceState = _Status.CONNECTING
-        ES.check_connecting_state(_Status(sessionId="some_id", deviceState=_Status.CONNECTING))
+        ES.check_connecting_state(_Status.CONNECTING)
 
     def test_other_than_connecting_state_returns_exception(self):
         for state in [_Status.DISCONNECT, _Status.ERROR, _Status.RUNNING]:
             with self.assertRaises(ConnectSequenceException):
-                status = _Status(sessionId="some_id", deviceState=state)
-                status.deviceState = state
-                ES.check_connecting_state(status)
+                ES.check_connecting_state(state)
+
+
+class Test_Logging_Warning_For_Status_From_Not_Connected_Device(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.logger = logging.Logger("test_logger")
+
+    def test_warning_is_logged_if_device_not_in_list(self):
+        device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        devices = [
+            DevicePy(module_id=2000, type=0, name="TestDevice", role="test", priority=0),
+            DevicePy(module_id=3000, type=0, name="TestDevice", role="test", priority=0)
+        ]
+        with self.assertLogs(self.logger, level="WARNING") as cm:
+            ES.warn_if_device_not_in_list(devices, device, self.logger, msg="Test message")
+
+    def test_warning_is_not_logged_if_device_in_list(self):
+        device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        devices = [DevicePy(module_id=1000, type=0, name="TestDevice", role="test", priority=0)]
+        with self.assertNoLogs(self.logger, level="WARNING") as cm:
+            ES.warn_if_device_not_in_list(devices, device, self.logger, msg="Test message")
 
 
 if __name__=="__main__":  # pragma: no cover

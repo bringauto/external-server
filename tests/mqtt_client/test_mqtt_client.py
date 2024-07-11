@@ -111,18 +111,18 @@ class Test_Publishing_Message(unittest.TestCase):
     def test_device_connect_message(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             msg = DeviceConnect(device=self.device)
-            pub_msg = executor.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = executor.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def test_connect_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = ConnectResponse(sessionId="some-session-id", type=ConnectResponse.OK)
-            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def test_device_status(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
@@ -132,34 +132,34 @@ class Test_Publishing_Message(unittest.TestCase):
                 messageCounter=4,
                 deviceStatus=DeviceStatus(device=self.device, statusData=b"working"),
             )
-            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def test_status_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = StatusResponse(sessionId="some-session-id", messageCounter=4, type=StatusResponse.OK)
-            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def test_device_command(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = DeviceCommand(device=self.device, commandData=b"some-command")
-            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def test_command_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = CommandResponse(sessionId="some-session-id", type=CommandResponse.OK)
-            pub_msg = ex.submit(self.broker.get_message, self.client.publish_topic)
+            pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
-            self.assertEqual(msg.SerializeToString(), pub_msg.result().payload)
+            self.assertEqual(msg.SerializeToString(), pub_msg.result()[0].payload)
 
     def tearDown(self) -> None:
         self.broker.stop()
@@ -193,7 +193,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
             ex.submit(self.client.start)
             rec_msg = ex.submit(self.client.get_message)
             time.sleep(0.5)
-            self.broker.publish_message(topic=self.client.subscribe_topic, payload=msg.SerializeToString())
+            self.broker.publish_messages(self.client.subscribe_topic, msg.SerializeToString())
             rec_msg = rec_msg.result()
             self.assertEqual(msg, rec_msg)
 
