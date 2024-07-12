@@ -6,6 +6,7 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import paho.mqtt.client as mqtt
@@ -13,7 +14,7 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 from ExternalProtocol_pb2 import (  # type: ignore
     ExternalClient as _ExternalClientMsg,
-    ExternalServer as _ExternalServerMsg
+    ExternalServer as _ExternalServerMsg,
 )
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
@@ -32,32 +33,37 @@ with open("./config/logging.json", "r") as f:
     logging.config.dictConfig(json.load(f))
 
 
+def _create_mqtt_client(subscribe_topic: str) -> mqtt.Client:
+    client_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
+    client = mqtt.Client(
+        callback_api_version=CallbackAPIVersion.VERSION2,
+        client_id=client_id,
+        protocol=mqtt.MQTTv311,
+        reconnect_on_failure=True,
+    )
+    client.subscribe(subscribe_topic, qos=_QOS)
+    client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
+    return client
+
+
 class MQTTClient:
     """Class representing an MQTT client."""
 
+    _EXTERNAL_SERVER_SUFFIX = "external_server"
+    _MODULE_GATEWAY_SUFFIX = "module_gateway"
+
     def __init__(
-        self,
-        company_name: str,
-        car_name: str,
-        timeout: float,
-        broker_address: str,
-        broker_port: int
+        self, company: str, car_name: str, timeout: float, broker_host: str, broker_port: int
     ) -> None:
 
-        self._publish_topic = f"{company_name}/{car_name}/external_server"
-        self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
+        self._publish_topic = f"{company}/{car_name}/{MQTTClient._EXTERNAL_SERVER_SUFFIX}"
+        self._subscribe_topic = f"{company}/{car_name}/{MQTTClient._MODULE_GATEWAY_SUFFIX}"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
-        self._mqtt_client = mqtt.Client(
-            callback_api_version=CallbackAPIVersion.VERSION2,
-            client_id=MQTTClient.generate_client_id(),
-            protocol=mqtt.MQTTv311,
-            reconnect_on_failure=True
-        )
-        self._mqtt_client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
+        self._mqtt_client = _create_mqtt_client(self._subscribe_topic)
         self._event_queue = EventQueueSingleton()
         self._timeout = timeout
         self._keepalive = _KEEPALIVE
-        self._broker_address = broker_address
+        self._broker_host = broker_host
         self._broker_port = broker_port
 
     @property
@@ -82,29 +88,35 @@ class MQTTClient:
     def timeout(self) -> Optional[float]:
         return self._timeout
 
-    def connect_to_broker(self) -> None:
-        self._mqtt_client.connect(self._broker_address, port=self._broker_port, keepalive=_KEEPALIVE)
+    def connect(self) -> None:
+        """Connect to the MQTT broker."""
+        _logger.debug(f"Connecting to broker: {self._broker_host}:{self._broker_port}")
+        self._mqtt_client.connect(self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE)
 
-    def block_and_get_message(self) -> _ExternalClientMsg | None:
+    def disconnect(self) -> None:
+        """Disconnect from the MQTT broker."""
+        if self._mqtt_client.is_connected():
+            self._mqtt_client.disconnect()
+            _logger.debug(f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}")
+        else:
+            _logger.debug(
+                "Trying to disconnect from MQTT broker, but not connected. No action is taken."
+            )
+
+    def get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
         """Returns message from MQTTClient.
 
-        Function blocks until message is available.
-        """
-        try:
-            return self._received_msgs.get(block=True)
-        except Empty:
-            return None
+        If `ignore_timeout` is `False`(default), the function blocks until message is available
+        or timeout is reached (then `None` is returned).
 
-    def get_message(self) -> _ExternalClientMsg | None:
-        """Returns message from MQTTClient.
-
-        Function blocks until message is available or until timeout is reached - in the latter
-        case function returns `None`.
+        If `ignore_timeout` is set to `True`, the function will return only if a message is
+        available.
         """
+        t = None if ignore_timeout else self._timeout
         try:
-            msgs = self._received_msgs.get(block=True, timeout=self._timeout)
-            _logger.debug(f"Received message: {msgs}")
-            return msgs
+            message = self._received_msgs.get(block=True, timeout=t)
+            _logger.debug(f"Received message: {message}")
+            return message
         except Empty:
             return None
 
@@ -113,20 +125,24 @@ class MQTTClient:
         payload = msg.SerializeToString()
         self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS)
 
-    def set_broker_address_and_port(self, broker_ip: str, broker_port: int) -> None:
-        self._broker_address = broker_ip
-        self._broker_port = broker_port
+    def start(self) -> None:
+        """Start the MQTT client's event loop."""
+        self._mqtt_client.loop_start()
+        _logger.debug("Started MQTT client's event loop")
 
-    def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+    def stop(self) -> None:
+        """Stop the MQTT client's event loop."""
+        self._mqtt_client.loop_stop()
+        _logger.debug("Stopped MQTT client's event loop")
+
+    def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
 
-        Args:
-        - ca_certs (str): The path to the CA certificates file.
-        - certfile (str): The path to the client certificate file.
-        - keyfile (str): The path to the client private key file.
+        `ca_certs` - path to the CA certificates file.
+        `certfile` - path to the client certificate file.
+        `keyfile` - path to the client private key file.
         """
         if self._mqtt_client is not None:
-            # maybe use tls_version= ssl.PROTOCOL_TLS_SERVER
             self._mqtt_client.tls_set(
                 ca_certs=ca_certs,
                 certfile=certfile,
@@ -135,29 +151,12 @@ class MQTTClient:
             )
             self._mqtt_client.tls_insecure_set(False)
 
-    def set_up_callbacks(self) -> None:
-        self._mqtt_client.on_connect = self._on_connect
-        self._mqtt_client.on_disconnect = self._on_disconnect
-        self._mqtt_client.on_message = self._on_message
-
-    def start(self) -> None:
-        """Start the MQTT client's event loop."""
-        self._mqtt_client.loop_start()
-
-    def connect_and_start(self) -> None:
-        """Start the MQTT client's event loop."""
-        self.set_up_callbacks()
-        self.connect_to_broker(self._broker_address, self._broker_port)
-        self._mqtt_client.loop_start()
-
-    def stop(self) -> None:
-        """Stop the MQTT client's event loop."""
-        self._mqtt_client.loop_stop()
-        self._mqtt_client.disconnect()
+    def update_broker_host_and_port(self, broker_host: str, broker_port: int) -> None:
+        self._broker_host = broker_host
+        self._broker_port = broker_port
 
     def _on_connect(self, client: mqtt.Client, _userdata, _flags, _rc, properties):
-        """
-        Callback function for handling connection events.
+        """Callback function for handling connection events.
 
         Args:
         - client (mqtt.Client): The MQTT client instance.
@@ -167,11 +166,9 @@ class MQTTClient:
         - _properties: The properties associated with the disconnection event.
         """
         _logger.info("Server connected to MQTT broker")
-        client.subscribe(self._subscribe_topic, qos=_QOS)
 
-    def _on_disconnect(self, _client, _userdata, _flags, ret_code, properties) -> None:
-        """
-        Callback function for handling disconnection events.
+    def _on_disconnect(self, client: mqtt.Client, _userdata, _flags, ret_code, properties) -> None:
+        """Callback function for handling disconnection events.
 
         Args:
         - _client (mqtt.Client): The MQTT client instance.
@@ -183,22 +180,22 @@ class MQTTClient:
         self._received_msgs.put(False)
         self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
 
-    def _on_message(self, _client: mqtt.Client, _userdata, message: mqtt.MQTTMessage) -> None:
-        """
-        Callback function for handling incoming messages.
+    def _on_message(self, client: mqtt.Client, _userdata, message: mqtt.MQTTMessage) -> None:
+        """Callback function for handling incoming messages.
+
+        The message is added to the received messages queue, if the topic matches the subscribe topic,
+        and an event is added to the event queue.
 
         Args:
         - _client (mqtt.Client): The MQTT client instance.
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
-        if message.topic != self._subscribe_topic:
-            return
-        message_external_client = _ExternalClientMsg().FromString(message.payload)
-        self._received_msgs.put(message_external_client)
-        self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
+        if message.topic == self._subscribe_topic:
+            self._received_msgs.put(_ExternalClientMsg().FromString(message))
+            self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
 
-
-    @staticmethod
-    def generate_client_id() -> str:
-        return "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
+    def _set_up_callbacks(self) -> None:
+        self._mqtt_client.on_connect = self._on_connect
+        self._mqtt_client.on_disconnect = self._on_disconnect
+        self._mqtt_client.on_message = self._on_message

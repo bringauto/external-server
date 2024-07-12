@@ -47,6 +47,9 @@ class EventQueueSingleton(metaclass=SingletonMeta):
     def add_event(self, event_type: EventType, data: Any | None = None) -> None:
         self._queue.put(Event(event=event_type, data=data))
 
+    def empty(self) -> bool:
+        return self._queue.empty()
+
     def get(self, *args, **kwargs) -> Event:
         return self._queue.get(*args, **kwargs)
 

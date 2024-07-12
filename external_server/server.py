@@ -115,10 +115,10 @@ class ExternalServer:
             raise FileNotFoundError(certfile)
         if not check_file_exists(keyfile):
             raise FileNotFoundError(keyfile)
-        self._mqtt_client.set_tls(ca_certs, certfile, keyfile)
+        self._mqtt_client.tls_set(ca_certs, certfile, keyfile)
 
     def start(self) -> None:
-        self._mqtt_client.set_up_callbacks()
+        self._mqtt_client._set_up_callbacks()
         for module_number in self._modules:
             self._modules_command_threads[module_number].start()
         self._running = True
@@ -126,7 +126,7 @@ class ExternalServer:
             try:
                 if not self._mqtt_client.is_connected:
                     _logger.info("Connecting to MQTT broker")
-                    self._mqtt_client.connect_to_broker()
+                    self._mqtt_client.connect()
                     self._mqtt_client.start()
                 self._run_init_sequence()
                 self._normal_communication()
@@ -549,7 +549,7 @@ class ExternalServer:
         while True:
             event = self._event_queue.get()
             if event.event == EventType.RECEIVED_MESSAGE:
-                received_msg = self._mqtt_client.block_and_get_message()
+                received_msg = self._mqtt_client.get_message(ignore_timeout=True)
                 if received_msg == False:
                     raise CommunicationException()
                 elif received_msg is not None:
