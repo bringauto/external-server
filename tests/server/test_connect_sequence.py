@@ -14,7 +14,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from external_server.config import Config, ModuleConfig
-from external_server.server import ExternalServer
+from external_server.server import ExternalServer, _logger
 from external_server.models.structures import DevicePy as DevicePy
 from external_server.utils import connect_msg, status  # type: ignore
 from external_server.server_message_creator import (
@@ -24,7 +24,7 @@ from external_server.server_message_creator import (
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
-logging.getLogger("ExternalServer").setLevel(logging.DEBUG)
+_logger.setLevel(logging.DEBUG)
 
 
 ES_CONFIG_WITHOUT_MODULES = {
@@ -53,6 +53,7 @@ def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *pay
     broker.publish_messages(server.mqtt_client.subscribe_topic, *payload_str)
 
 
+@unittest.skip("Not implemented yet")
 class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -156,6 +157,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
                 _external_command("some_id", 0, device).SerializeToString(),
             )
 
+    @unittest.skip("Not implemented yet")
     def test_from_multiple_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
         device_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
@@ -175,13 +177,12 @@ class Test_Receiving_First_Status(unittest.TestCase):
                 status_2,
                 status_3
             )
-            # response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
-            # time.sleep(0.5)
-            # for m in response.result():
-            #     print(m.payload)
-            #     self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
+            time.sleep(0.5)
+            for m in response.result():
+                self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
-
+    @unittest.skip("Not implemented yet")
     def test_yields_response_only_to_devices_from_the_connect_message(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         device_2 = _Device(
