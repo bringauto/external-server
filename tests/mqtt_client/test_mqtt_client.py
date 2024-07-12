@@ -4,6 +4,7 @@ import time
 import concurrent.futures
 import socket
 import os
+
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -21,55 +22,64 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Connect,
     Status,
     StatusResponse,
-    ExternalClient
+    ExternalClient,
 )
 from tests.utils import MQTTBrokerTest  # type: ignore
 
 
-TEST_IP_ADDRESS = "127.0.0.1"
+TEST_ADDRESS = "127.0.0.1"
 TEST_PORT = 1883
 
 
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
-        client = MQTTClient("some_company", "test_car", timeout=1)
+        client = MQTTClient("some_company", "test_car", timeout=1, broker_address="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("some_company/test_car"))
 
     def test_empty_company_name_is_allowed(self):
-        client = MQTTClient(company_name="", car_name="test_car", timeout=1)
+        client = MQTTClient(company_name="", car_name="test_car", timeout=1, broker_address="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("/test_car"))
 
     def test_empty_car_name_is_allowed(self):
-        client = MQTTClient(company_name="some_company", car_name="", timeout=1)
+        client = MQTTClient(company_name="some_company", car_name="", timeout=1, broker_address="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("some_company/"))
 
     def test_both_names_empty_is_allowed(self):
-        client = MQTTClient(company_name="", car_name="", timeout=1)
+        client = MQTTClient(company_name="", car_name="", timeout=1, broker_address="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
 class Test_Failing_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car", timeout=1)
+        self.client = MQTTClient(
+            "some_company", "test_car", timeout=1, broker_address="", broker_port=0
+        )
 
     def test_client_is_not_initially_connected(self):
         self.assertFalse(self.client.is_connected)
 
     def test_connecting_to_nonexistent_broker_raises_socket_gaiaerror(self) -> None:
         self.client.set_up_callbacks()
+        self.client.set_broker_address_and_port(broker_ip="nonexistent_ip", broker_port=TEST_PORT)
         with self.assertRaises(socket.gaierror):
-            self.client.connect_to_broker(broker_ip="nonexistent_ip", broker_port=TEST_PORT)
+            self.client.connect_to_broker()
 
 
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car", timeout=1)
+        self.client = MQTTClient(
+            "some_company",
+            "test_car",
+            timeout=1,
+            broker_address=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
         self.test_broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
-        self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
+        self.client.connect_to_broker()
 
     def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
         self.assertFalse(self.client.is_connected)
@@ -93,16 +103,22 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 class Test_Publishing_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car", timeout=1)
+        self.client = MQTTClient(
+            "some_company",
+            "test_car",
+            timeout=1,
+            broker_address=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
         self.broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
-        self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
+        self.client.connect_to_broker()
         self.device = Device(
-            module = Device.MISSION_MODULE,
-            deviceType = 4,
-            deviceName = "AutonomyDevice",
-            deviceRole = "autonomy-device",
-            priority=1
+            module=Device.MISSION_MODULE,
+            deviceType=4,
+            deviceName="AutonomyDevice",
+            deviceRole="autonomy-device",
+            priority=1,
         )
 
     def test_device_connect_message(self):
@@ -136,7 +152,9 @@ class Test_Publishing_Message(unittest.TestCase):
 
     def test_status_response(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
-            msg = StatusResponse(sessionId="some-session-id", messageCounter=4, type=StatusResponse.OK)
+            msg = StatusResponse(
+                sessionId="some-session-id", messageCounter=4, type=StatusResponse.OK
+            )
             pub_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
             time.sleep(0.05)
             self.client.publish(msg)
@@ -165,17 +183,23 @@ class Test_Publishing_Message(unittest.TestCase):
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient("some_company", "test_car", timeout=1)
+        self.client = MQTTClient(
+            "some_company",
+            "test_car",
+            timeout=1,
+            broker_address=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
         self.broker = MQTTBrokerTest(start=True)
         self.client.set_up_callbacks()
-        self.client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
+        self.client.connect_to_broker()
         self.device = Device(
-                module = Device.MISSION_MODULE,
-                deviceType = 4,
-                deviceName = "AutonomyDevice",
-                deviceRole = "autonomy-device",
-                priority=1
-            )
+            module=Device.MISSION_MODULE,
+            deviceType=4,
+            deviceName="AutonomyDevice",
+            deviceRole="autonomy-device",
+            priority=1,
+        )
 
     def test_mqtt_client_receives_connect_message(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
@@ -184,7 +208,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
                     sessionId="some_session_id",
                     company="some_company",
                     vehicleName="test_car",
-                    devices=[self.device]
+                    devices=[self.device],
                 )
             )
             ex.submit(self.client.start)
@@ -203,16 +227,22 @@ class Test_MQTT_Client_Reconnection(unittest.TestCase):
     def setUp(self) -> None:
         self.broker = MQTTBrokerTest(start=True)
 
-    def test_mqtt_client_message_even_after_stopping_and_starting_again(self):
-        client = MQTTClient("some_company", "test_car", timeout=5)
+    def test_mqtt_client_receives_message_even_after_stopping_and_starting_again(self):
+        client = MQTTClient(
+            "some_company",
+            "test_car",
+            timeout=5,
+            broker_address=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
         client.set_up_callbacks()
-        client.connect_to_broker(broker_ip=TEST_IP_ADDRESS, broker_port=TEST_PORT)
+        client.connect_to_broker()
         self.device = Device(
-            module = Device.MISSION_MODULE,
-            deviceType = 4,
-            deviceName = "AutonomyDevice",
-            deviceRole = "autonomy-device",
-            priority=1
+            module=Device.MISSION_MODULE,
+            deviceType=4,
+            deviceName="AutonomyDevice",
+            deviceRole="autonomy-device",
+            priority=1,
         )
         with concurrent.futures.ThreadPoolExecutor() as ex:
             msg = ExternalClient(
@@ -220,7 +250,7 @@ class Test_MQTT_Client_Reconnection(unittest.TestCase):
                     sessionId="some_session_id",
                     company="some_company",
                     vehicleName="test_car",
-                    devices=[self.device]
+                    devices=[self.device],
                 )
             )
             ex.submit(client.start)

@@ -35,7 +35,15 @@ with open("./config/logging.json", "r") as f:
 class MQTTClient:
     """Class representing an MQTT client."""
 
-    def __init__(self, company_name: str, car_name: str, timeout: float) -> None:
+    def __init__(
+        self,
+        company_name: str,
+        car_name: str,
+        timeout: float,
+        broker_address: str,
+        broker_port: int
+    ) -> None:
+
         self._publish_topic = f"{company_name}/{car_name}/external_server"
         self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
@@ -45,13 +53,12 @@ class MQTTClient:
             protocol=mqtt.MQTTv311,
             reconnect_on_failure=True
         )
-        # TODO reason these values
         self._mqtt_client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
         self._event_queue = EventQueueSingleton()
         self._timeout = timeout
-        self._broker_ip = ""
-        self._broker_port = 0
         self._keepalive = _KEEPALIVE
+        self._broker_address = broker_address
+        self._broker_port = broker_port
 
     @property
     def is_connected(self) -> bool:
@@ -75,10 +82,8 @@ class MQTTClient:
     def timeout(self) -> Optional[float]:
         return self._timeout
 
-    def connect_to_broker(self, broker_ip: str, broker_port: int) -> None:
-        self._mqtt_client.connect(broker_ip, port=broker_port, keepalive=_KEEPALIVE)
-        self._broker_ip = broker_ip
-        self._broker_port = broker_port
+    def connect_to_broker(self) -> None:
+        self._mqtt_client.connect(self._broker_address, port=self._broker_port, keepalive=_KEEPALIVE)
 
     def block_and_get_message(self) -> _ExternalClientMsg | None:
         """Returns message from MQTTClient.
@@ -107,6 +112,10 @@ class MQTTClient:
         """Publish a message to the MQTT broker."""
         payload = msg.SerializeToString()
         self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS)
+
+    def set_broker_address_and_port(self, broker_ip: str, broker_port: int) -> None:
+        self._broker_address = broker_ip
+        self._broker_port = broker_port
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -138,7 +147,7 @@ class MQTTClient:
     def connect_and_start(self) -> None:
         """Start the MQTT client's event loop."""
         self.set_up_callbacks()
-        self.connect_to_broker(self._broker_ip, self._broker_port)
+        self.connect_to_broker(self._broker_address, self._broker_port)
         self._mqtt_client.loop_start()
 
     def stop(self) -> None:

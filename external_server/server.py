@@ -59,7 +59,11 @@ class ExternalServer:
         self._connected_devices: list[DevicePy] = list()
         self._not_connected_devices: list[DevicePy] = list()
         self._mqtt_client = MQTTClient(
-            self._config.company_name, self._config.car_name, config.timeout
+            self._config.company_name,
+            self._config.car_name,
+            config.timeout,
+            self._config.mqtt_address,
+            self._config.mqtt_port
         )
         self._running = False
         self._modules: dict[int, ExternalServerApiClient] = dict()
@@ -122,9 +126,7 @@ class ExternalServer:
             try:
                 if not self._mqtt_client.is_connected:
                     _logger.info("Connecting to MQTT broker")
-                    self._mqtt_client.connect_to_broker(
-                        self._config.mqtt_address, self._config.mqtt_port
-                    )
+                    self._mqtt_client.connect_to_broker()
                     self._mqtt_client.start()
                 self._run_init_sequence()
                 self._normal_communication()
