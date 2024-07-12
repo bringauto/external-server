@@ -11,7 +11,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from paho.mqtt.client import MQTTMessage
 
 from queue import Empty
-from external_server.clients.mqtt_client import MQTTClientAdapter, _QOS# type: ignore
+from external_server.clients.mqtt_client import MQTTClientAdapter, _QOS, create_mqtt_client # type: ignore
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
     DeviceCommand,
@@ -24,7 +24,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Connect,
     Status,
     StatusResponse,
-    ExternalClient,
+    ExternalClient
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from tests.utils import MQTTBrokerTest  # type: ignore
@@ -36,11 +36,40 @@ TEST_PORT = 1883
 
 class Test_Creating_MQTT_Client(unittest.TestCase):
 
-    @patch("external_server.clients.mqtt_client.mqtt.Client.subscribe")
-    def test_wrapped_client_subscribes_to_topic(self, mock: Mock):
-        client = MQTTClientAdapter("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
-        self.assertTrue(client.subscribe_topic.startswith("some_company/test_car"))
-        mock.assert_called_with(client.subscribe_topic, qos=_QOS)
+    def test_creating_mqtt_client(self):
+        self.broker = MQTTBrokerTest(start=True)
+        self.x = 0
+        def on_message(client, userdata, message):
+            self.x += 1
+        self.client = create_mqtt_client()
+        self.client.on_message = on_message
+        self.client.connect(self.broker._host, self.broker._port)
+        self.client.subscribe("some_topic", qos=_QOS)
+        self.client.loop_start()
+
+        time.sleep(0.1)
+        assert self.client.is_connected()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.submit(self.broker.publish_messages("some_topic", "some_message"))
+            time.sleep(0.5)
+            print(self.x)
+
+
+    def tearDown(self) -> None:
+        self.client.disconnect()
+        self.broker.stop()
+
+
+class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
+
+    def test_creating_mqtt_client_adapter(self):
+        self.client = MQTTClientAdapter(
+            "some_company",
+            "test_car",
+            timeout=1,
+            broker_host=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
 
 
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
@@ -193,15 +222,15 @@ class Test_Publishing_Message(unittest.TestCase):
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
         self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
-            timeout=1,
-            broker_host=TEST_ADDRESS,
-            broker_port=TEST_PORT,
+            timeout=2,
+            broker_host=self.broker._host,
+            broker_port=self.broker._port
         )
-        self.broker = MQTTBrokerTest(start=True)
-        self.client._set_up_callbacks()
+        assert self.broker.is_running
         self.client.connect()
         self.device = Device(
             module=Device.MISSION_MODULE,
@@ -210,6 +239,24 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
             deviceRole="autonomy-device",
             priority=1,
         )
+        assert self.client._broker_host == self.broker._host
+        assert self.client._broker_port == self.broker._port
+
+    def test_client_publishing_message(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            msg = ExternalClient(
+                connect=Connect(
+                    sessionId="some_session_id",
+                    company="some_company",
+                    vehicleName="test_car",
+                    devices=[self.device],
+                )
+            )
+            rec_msg = ex.submit(self.broker.get_messages, self.client.publish_topic)
+            time.sleep(0.5)
+            ex.submit(self.client.publish, msg)
+            time.sleep(0.5)
+            self.assertEqual(msg.SerializeToString(), rec_msg.result()[0].payload)
 
     def test_mqtt_client_receives_connect_message(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
@@ -220,13 +267,11 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
                     vehicleName="test_car",
                     devices=[self.device],
                 )
-            )
-            ex.submit(self.client.start)
-            rec_msg = ex.submit(self.client.get_message)
-            time.sleep(0.5)
-            self.broker.publish_messages(self.client.subscribe_topic, msg.SerializeToString())
-            rec_msg = rec_msg.result()
-            self.assertEqual(msg, rec_msg)
+            ).SerializeToString()
+            future = ex.submit(self.client.get_message)
+            ex.submit(self.broker.publish_messages, self.client.subscribe_topic, msg)
+            rec_msg = future.result()
+            self.assertEqual(msg, rec_msg.SerializeToString())
 
     def tearDown(self) -> None:
         self.broker.stop()
@@ -269,6 +314,7 @@ class Test_On_Message_Callback(unittest.TestCase):
             broker_host=TEST_ADDRESS,
             broker_port=TEST_PORT,
         )
+        self.client._event_queue.clear()
 
     def test_event_and_msg_queues_are_initially_empty(self):
         self.assertTrue(self.client._event_queue.empty())
@@ -305,11 +351,13 @@ class Test_On_Connect_Callback(unittest.TestCase):
             broker_host=TEST_ADDRESS,
             broker_port=TEST_PORT,
         )
+        self.client._event_queue.clear()
 
     def test_on_connect_callback_adds_no_event_to_queue(self):
         self.client._on_connect(client=self.client._mqtt_client, _userdata=None, _flags=None, _rc=0, properties=None)
         with self.assertRaises(Empty):
-            self.client._event_queue.get(block=True, timeout=0.1)
+            event = self.client._event_queue.get(block=True, timeout=0.1)
+            event
 
 
 class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):

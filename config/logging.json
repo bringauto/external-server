@@ -29,6 +29,13 @@
         "console"
       ],
       "propagate": false
+    },
+    "tests.utils._mqtt_broker_test": {
+      "level": "DEBUG",
+      "handlers": [
+        "console"
+      ],
+      "propagate": false
     }
   },
   "root": {

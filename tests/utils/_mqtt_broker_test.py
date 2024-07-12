@@ -1,11 +1,18 @@
 import os
 import subprocess
+import logging.config
+import json
 
 import external_server as _external_server
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
 from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
+
+
+logger = logging.getLogger(__name__)
+with open("./config/logging.json", "r") as f:
+    logging.config.dictConfig(json.load(f))
 
 
 _EXTERNAL_SERVER_PATH = _external_server.PATH
@@ -19,6 +26,7 @@ class MQTTBrokerTest:
     def __init__(self, start: bool = False, port: int = _DEFAULT_PORT):
         self.broker_process = None
         self._port = port
+        self._host = self._DEFAULT_HOST
         self._script_path = os.path.join(_EXTERNAL_SERVER_PATH, "lib/mqtt-testing/interoperability/startbroker.py")
         if start:
             self.start()
@@ -32,15 +40,16 @@ class MQTTBrokerTest:
 
         `n` is the number of messages to wait for and return.
         """
+        logger.debug(f"Waiting for {n} messages on topic {topic}")
         result = subscribe.simple(
-            topic, hostname=self._DEFAULT_HOST, port=self._port, msg_count=n
+            [topic], hostname=self._host, port=self._port, msg_count=n
         )
         if n == 1:
             return [result]
         else:
             return result
 
-    def publish_messages(self, topic: str, *payload: str) -> None:
+    def publish_messages(self, topic: str, *payload: str | bytes) -> None:
         payload_list = []
         for p in payload:
             if isinstance(p, Ex):
@@ -50,11 +59,13 @@ class MQTTBrokerTest:
         if len(payload_list) == 0:
             return
         elif len(payload_list) == 1:
-            publish.single(topic, payload_list[0], hostname=self._DEFAULT_HOST, port=self._port)
+            publish.single(topic, payload_list[0], hostname=self._host, port=self._port)
+            logger.debug(f"Published message to topic {topic}: {payload_list[0]}")
         else:
             try:
                 payload_list = [(topic, p) for p in payload_list]
-                publish.multiple(payload_list, hostname=self._DEFAULT_HOST, port=self._port)
+                publish.multiple(payload_list, hostname=self._host, port=self._port)
+                logger.debug(f"Published messages to topic {topic}: {payload_list}")
             except Exception as e:
                 print(e)
                 raise e
