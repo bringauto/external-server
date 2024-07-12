@@ -240,6 +240,4 @@ class Test_MQTT_Client_Reconnection(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # runner = unittest.TextTestRunner()
-    # runner.run(Test_MQTT_Client_Reconnection("test_mqtt_client_message_even_after_stopping_and_starting_again"))
     unittest.main()
