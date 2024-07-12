@@ -191,8 +191,10 @@ class MQTTClient:
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
+        assert isinstance(message.topic, str)
+        assert isinstance(self._subscribe_topic, str)
         if message.topic == self._subscribe_topic:
-            self._received_msgs.put(_ExternalClientMsg().FromString(message))
+            self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
             self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
 
     def _set_up_callbacks(self) -> None:

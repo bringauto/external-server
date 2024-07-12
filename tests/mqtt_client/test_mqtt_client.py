@@ -282,7 +282,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         msg = self.client.received_messages.get(block=True, timeout=0.1)
         self.assertEqual(msg, ExternalClient())
         event = self.client._event_queue.get(block=True, timeout=0.1)
-        self.assertEqual(event, EventType.RECEIVED_MESSAGE)
+        self.assertEqual(event.event, EventType.RECEIVED_MESSAGE)
 
     def test_receiving_empty_message_on_wrong_topic_does_not_add_it_to_queue(self):
         message = MQTTMessage()
@@ -291,6 +291,8 @@ class Test_On_Message_Callback(unittest.TestCase):
         self.client._on_message(client=self.client, _userdata=None, message=message)
         with self.assertRaises(Empty):
             self.client.received_messages.get(block=True, timeout=0.1)
+        with self.assertRaises(Empty):
+            self.client._event_queue.get(block=True, timeout=0.1)
 
 
 class Test_On_Connect_Callback(unittest.TestCase):
