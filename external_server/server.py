@@ -77,6 +77,7 @@ class ExternalServer:
                     f"Module {module_number}: Error occurred in init function. Check the configuration file."
                 )
             self._check_module_number_from_config_is_module_id(module_number)
+        _logger.debug("External server has been initialized.")
 
     @property
     def connected_devices(self) -> list[DevicePy]:
@@ -634,7 +635,10 @@ class ExternalServer:
         """
         logger.info("Expecting a connect message")
         msg = mqtt_client.get_message()
-        if not msg or not msg.HasField("connect"):
+        while msg is False:
+            logger.debug("Found disconnect message from connected client. Repeating message retrieval")
+            msg = mqtt_client.get_message()
+        if msg is None:
             logger.error("Connect message has not been received")
             return None
         elif not msg.HasField("connect"):

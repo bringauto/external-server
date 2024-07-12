@@ -1,4 +1,5 @@
-import logging
+import logging.config
+import json
 import random
 import string
 from queue import Queue, Empty
@@ -26,11 +27,15 @@ _KEEPALIVE = 15
 _QOS = 1
 
 
+_logger = logging.getLogger(__name__)
+with open("./config/logging.json", "r") as f:
+    logging.config.dictConfig(json.load(f))
+
+
 class MQTTClient:
     """Class representing an MQTT client."""
 
     def __init__(self, company_name: str, car_name: str, timeout: float) -> None:
-        self._logger = logging.getLogger(self.__class__.__name__)
         self._publish_topic = f"{company_name}/{car_name}/external_server"
         self._subscribe_topic = f"{company_name}/{car_name}/module_gateway"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
@@ -93,6 +98,7 @@ class MQTTClient:
         """
         try:
             msgs = self._received_msgs.get(block=True, timeout=self._timeout)
+            _logger.debug(f"Received message: {msgs}")
             return msgs
         except Empty:
             return None
@@ -151,7 +157,7 @@ class MQTTClient:
         - _rc (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        self._logger.info("Server connected to MQTT broker")
+        _logger.info("Server connected to MQTT broker")
         client.subscribe(self._subscribe_topic, qos=_QOS)
 
     def _on_disconnect(self, _client, _userdata, _flags, ret_code, properties) -> None:
@@ -164,7 +170,7 @@ class MQTTClient:
         - ret_code (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        self._logger.info("Server disconnected from MQTT broker")
+        _logger.info("Server disconnected from MQTT broker")
         self._received_msgs.put(False)
         self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
 

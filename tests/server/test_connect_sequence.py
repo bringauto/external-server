@@ -53,7 +53,6 @@ def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *pay
     broker.publish_messages(server.mqtt_client.subscribe_topic, *payload_str)
 
 
-@unittest.skip("Not implemented yet")
 class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -157,7 +156,6 @@ class Test_Receiving_First_Status(unittest.TestCase):
                 _external_command("some_id", 0, device).SerializeToString(),
             )
 
-    @unittest.skip("Not implemented yet")
     def test_from_multiple_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
         device_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
@@ -182,7 +180,6 @@ class Test_Receiving_First_Status(unittest.TestCase):
             for m in response.result():
                 self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
-    @unittest.skip("Not implemented yet")
     def test_yields_response_only_to_devices_from_the_connect_message(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         device_2 = _Device(
