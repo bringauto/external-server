@@ -11,7 +11,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from paho.mqtt.client import MQTTMessage
 
 from queue import Empty
-from external_server.clients.mqtt_client import MQTTClient, _QOS# type: ignore
+from external_server.clients.mqtt_client import MQTTClientAdapter, _QOS# type: ignore
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
     DeviceCommand,
@@ -38,7 +38,7 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
 
     @patch("external_server.clients.mqtt_client.mqtt.Client.subscribe")
     def test_wrapped_client_subscribes_to_topic(self, mock: Mock):
-        client = MQTTClient("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
         self.assertTrue(client.subscribe_topic.startswith("some_company/test_car"))
         mock.assert_called_with(client.subscribe_topic, qos=_QOS)
 
@@ -46,26 +46,26 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
-        client = MQTTClient("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("some_company/test_car"))
 
     def test_empty_company_name_is_allowed(self):
-        client = MQTTClient(company="", car_name="test_car", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(company="", car_name="test_car", timeout=1, broker_host="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("/test_car"))
 
     def test_empty_car_name_is_allowed(self):
-        client = MQTTClient(company="some_company", car_name="", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(company="some_company", car_name="", timeout=1, broker_host="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("some_company/"))
 
     def test_both_names_empty_is_allowed(self):
-        client = MQTTClient(company="", car_name="", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(company="", car_name="", timeout=1, broker_host="", broker_port=0)
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
 class Test_Failing_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company", "test_car", timeout=1, broker_host="", broker_port=0
         )
 
@@ -82,7 +82,7 @@ class Test_Failing_Client_Connection(unittest.TestCase):
 class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=1,
@@ -114,7 +114,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 class Test_Publishing_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=1,
@@ -193,7 +193,7 @@ class Test_Publishing_Message(unittest.TestCase):
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=1,
@@ -235,7 +235,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 class Test_Getting_Message(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=1,
@@ -262,7 +262,7 @@ class Test_Getting_Message(unittest.TestCase):
 class Test_On_Message_Callback(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=0.5,
@@ -298,7 +298,7 @@ class Test_On_Message_Callback(unittest.TestCase):
 class Test_On_Connect_Callback(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=0.5,
@@ -312,13 +312,11 @@ class Test_On_Connect_Callback(unittest.TestCase):
             self.client._event_queue.get(block=True, timeout=0.1)
 
 
-
-
 class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
 
     def setUp(self) -> None:
         self.broker = MQTTBrokerTest(start=True)
-        self.client = MQTTClient(
+        self.client = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=5,

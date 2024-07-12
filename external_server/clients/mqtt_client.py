@@ -46,8 +46,12 @@ def _create_mqtt_client(subscribe_topic: str) -> mqtt.Client:
     return client
 
 
-class MQTTClient:
-    """Class representing an MQTT client."""
+class MQTTClientAdapter:
+    """Class binding together a MQTT client and queues for storing received messages and events.
+
+    Enables to set up in advance the timeout for getting messages from the queues and connection
+    parameters for the MQTT client.
+    """
 
     _EXTERNAL_SERVER_SUFFIX = "external_server"
     _MODULE_GATEWAY_SUFFIX = "module_gateway"
@@ -56,8 +60,8 @@ class MQTTClient:
         self, company: str, car_name: str, timeout: float, broker_host: str, broker_port: int
     ) -> None:
 
-        self._publish_topic = f"{company}/{car_name}/{MQTTClient._EXTERNAL_SERVER_SUFFIX}"
-        self._subscribe_topic = f"{company}/{car_name}/{MQTTClient._MODULE_GATEWAY_SUFFIX}"
+        self._publish_topic = f"{company}/{car_name}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
+        self._subscribe_topic = f"{company}/{car_name}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = _create_mqtt_client(self._subscribe_topic)
         self._event_queue = EventQueueSingleton()

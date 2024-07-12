@@ -29,7 +29,7 @@ from external_server.server_message_creator import (
     status_response as _status_response,
     external_command as _external_command,
 )
-from external_server.clients.mqtt_client import MQTTClient
+from external_server.clients.mqtt_client import MQTTClientAdapter
 from external_server.utils import check_file_exists, device_repr
 from external_server.clients.api_client import ExternalServerApiClient
 from external_server.command_waiting_thread import CommandWaitingThread
@@ -58,7 +58,7 @@ class ExternalServer:
         self._status_order_checker = StatusOrderChecker(self._config.timeout)
         self._connected_devices: list[DevicePy] = list()
         self._not_connected_devices: list[DevicePy] = list()
-        self._mqtt_client = MQTTClient(
+        self._mqtt_client = MQTTClientAdapter(
             self._config.company_name,
             self._config.car_name,
             config.timeout,
@@ -100,7 +100,7 @@ class ExternalServer:
         return self._modules.copy()
 
     @property
-    def mqtt_client(self) -> MQTTClient:
+    def mqtt_client(self) -> MQTTClientAdapter:
         return self._mqtt_client
 
     @property
@@ -630,7 +630,7 @@ class ExternalServer:
             logger.error(f"Module {module_id}: Error in command_ack function, code: {code}")
 
     @staticmethod
-    def get_connect_message(mqtt_client: MQTTClient, logger: logging.Logger) -> _Connect | None:
+    def get_connect_message(mqtt_client: MQTTClientAdapter, logger: logging.Logger) -> _Connect | None:
         """Get expected connect message from mqtt client.
 
         Raise an exception if the message is not received or is not a connect message.
@@ -650,7 +650,7 @@ class ExternalServer:
         return msg.connect
 
     @staticmethod
-    def get_status(mqtt_client: MQTTClient, logger: logging.Logger) -> _Status | None:
+    def get_status(mqtt_client: MQTTClientAdapter, logger: logging.Logger) -> _Status | None:
         """Get expected status message from mqtt client.
 
         Raise an exception if the message is not received or is not a status message.
