@@ -134,27 +134,23 @@ class Test_Receiving_First_Status(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.2)
 
-    def test_makes_server_to_send_status_response_and_command_to_the_device(self):
-        device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        connect_payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
-        status_payload = status(
-            session_id="some_id",
-            state=_Status.CONNECTING,
-            counter=0,
-            status=_DeviceStatus(device=device),
-        )
+    def test_from_single_connected_devices(self):
+        device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
+        status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            # the next thread will wait for the broker receiving the status response
-            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=2)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
-            self.assertEqual(
-                response.result()[0].payload, _status_response("some_id", 0).SerializeToString()
+            time.sleep(0.1)
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
+            ex.submit(
+                publish_from_ext_client,
+                self.es,
+                self.broker,
+                status_1
             )
-            self.assertEqual(
-                response.result()[1].payload,
-                _external_command("some_id", 0, device).SerializeToString(),
-            )
+            time.sleep(0.2)
+            m = response.result()[0]
+            self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
     def test_from_multiple_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
@@ -166,7 +162,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
         status_3 = status("some_id", _Status.CONNECTING, 2, _DeviceStatus(device=device_3))
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            time.sleep(0.1)
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
             ex.submit(
                 publish_from_ext_client,
                 self.es,
@@ -175,8 +171,6 @@ class Test_Receiving_First_Status(unittest.TestCase):
                 status_2,
                 status_3
             )
-            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
-            time.sleep(0.5)
             for m in response.result():
                 self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 

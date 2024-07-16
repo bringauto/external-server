@@ -130,8 +130,9 @@ class ExternalServer:
                     self._mqtt_client.start()
                 self._run_init_sequence()
                 self._normal_communication()
-            except ConnectSequenceException:
+            except ConnectSequenceException as e:
                 # repeat the connect sequence
+                _logger.error(e)
                 continue
             except ConnectionRefusedError:
                 _logger.error(
@@ -413,7 +414,7 @@ class ExternalServer:
         """
         msg = self.get_connect_message(self._mqtt_client, _logger)
         if msg is None:
-            raise ConnectSequenceException("Connect message has not been received.")
+            raise ConnectSequenceException
         else:
             self._handle_connect_message(msg)
 
@@ -600,7 +601,8 @@ class ExternalServer:
             self._event_queue.clear()
             _logger.info("Connect sequence has finished succesfully")
         except Exception as e:
-            raise ConnectSequenceException
+            _logger.warning("Connection sequence has not been started.")
+            raise ConnectSequenceException(f"Connection sequence has failed. {e}")
 
     @staticmethod
     def check_connecting_state(state: _Status.DeviceState, logger: Optional[_Logger] = None) -> None:

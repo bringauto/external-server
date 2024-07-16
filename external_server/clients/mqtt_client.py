@@ -5,12 +5,16 @@ import string
 from queue import Queue, Empty
 import sys
 import ssl
-from typing import Optional
+from typing import Optional, Any
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import paho.mqtt.client as mqtt
-from paho.mqtt.client import MQTTMessage
+from paho.mqtt.client import (
+    error_string as _error_string,
+    MQTTErrorCode as _MQTTErrorCode,
+    MQTTMessage as MQTTMessage
+)
 from paho.mqtt.enums import CallbackAPIVersion
 
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -44,6 +48,11 @@ def create_mqtt_client() -> mqtt.Client:
     )
     client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
     return client
+
+
+def mqtt_error(code: int) -> str:
+    enum_val = _MQTTErrorCode._value2member_map_[code]
+    return _error_string(enum_val)  # type: ignore
 
 
 class MQTTClientAdapter:
@@ -123,9 +132,7 @@ class MQTTClientAdapter:
         """
         t = None if ignore_timeout else self._timeout
         try:
-            _logger.debug(f"Waiting for message for on topic: '{self._subscribe_topic}'. Timeout: {t}")
             message = self._received_msgs.get(block=True, timeout=t)
-            _logger.debug(f"Received a message.")
             return message
         except Empty:
             return None
@@ -133,11 +140,11 @@ class MQTTClientAdapter:
     def publish(self, msg: _ExternalServerMsg) -> None:
         """Publish a message to the MQTT broker."""
         payload = msg.SerializeToString()
-        code = self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS)
-        if code.rc == mqtt.MQTT_ERR_SUCCESS:
+        code = self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS).rc
+        if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.debug(f"Published message on topic '{self._publish_topic}'")
         else:
-            _logger.error(f"Failed to publish message: {code}")
+            _logger.error(f"Failed to publish message: {mqtt_error(code)}")
 
     def start(self) -> None:
         """Start the MQTT client's event loop."""
@@ -145,15 +152,17 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.debug("Started MQTT client's event loop")
         else:
-            _logger.error(f"Failed to start MQTT client's event loop: {code}")
+            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error(code)}")
 
     def stop(self) -> None:
-        """Stop the MQTT client's event loop."""
-        code = self._mqtt_client.loop_stop()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.debug("Stopped MQTT client's event loop")
-        else:
-            _logger.error(f"Failed to stop MQTT client's event loop: {code}")
+        """Stop the MQTT client's event loop. Do nothing, if the loop is not running."""
+        cli = self._mqtt_client
+        if cli._thread and cli._thread.is_alive():
+            code = self._mqtt_client.loop_stop()
+            if code == mqtt.MQTT_ERR_SUCCESS:
+                _logger.debug("Stopped MQTT client's event loop")
+            else :
+                _logger.error(f"Failed to stop MQTT client's event loop: {mqtt_error(code)}")
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -181,7 +190,7 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Connected to broker: {self._broker_host}:{self._broker_port}")
         else:
-            _logger.error(f"Failed to start MQTT client's event loop: {code}")
+            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error(code)}")
 
     def _on_connect(self, client: mqtt.Client, _userdata, _flags, _rc, properties):
         """Callback function for handling connection events.
@@ -195,7 +204,7 @@ class MQTTClientAdapter:
         """
         _logger.info("Server connected to MQTT broker")
 
-    def _on_disconnect(self, client: mqtt.Client, _userdata, _flags, ret_code, properties) -> None:
+    def _on_disconnect(self, client: mqtt.Client, _userdata: Any, _flags: Any, ret_code, properties) -> None:
         """Callback function for handling disconnection events.
 
         Args:
@@ -236,9 +245,10 @@ class MQTTClientAdapter:
         test_msg.payload = _ExternalClientMsg().SerializeToString()
         test_msg.topic = self._subscribe_topic.encode()  # type: ignore
 
-        self._mqtt_client.on_message(self._mqtt_client, _userdata=None, message=test_msg)
+        assert self._mqtt_client._on_message is not None
+        self._mqtt_client._on_message(self._mqtt_client, None, test_msg)
         assert self._received_msgs.get(block=True, timeout=0.1) is not None
 
-        self._mqtt_client.on_message(self._mqtt_client, _userdata=None, message=test_msg)
+        self._mqtt_client._on_message(self._mqtt_client, None, test_msg)
         result = self.get_message(ignore_timeout=True)
         assert result is not None

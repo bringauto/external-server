@@ -69,9 +69,9 @@ class Buffer(ct.Structure):
 
 # struct device_identification {
 # 	int device_type;
-# 	char device_role[NAME_LENGTH];
-# 	char device_name[NAME_LENGTH];
-# };
+# 	char device# 	char device_name[NAME_LENGTH];
+# };_role[NAME_LENGTH];
+
 class DeviceIdentification(ct.Structure):
     _fields_ = [
         ("module", ct.c_int),
