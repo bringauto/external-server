@@ -68,7 +68,6 @@ class MQTTClientAdapter:
     def __init__(
         self, company: str, car_name: str, timeout: float, broker_host: str, broker_port: int
     ) -> None:
-
         self._publish_topic = f"{company}/{car_name}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
         self._subscribe_topic = f"{company}/{car_name}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
@@ -81,12 +80,23 @@ class MQTTClientAdapter:
         self._set_up_callbacks()
 
     @property
+    def client(self) -> mqtt.Client:
+        """The MQTT client instance."""
+        return self._mqtt_client
+
+    @property
+    def events(self) -> EventQueueSingleton:
+        """The event queue (singleton) for the MQTT client."""
+        return self._event_queue
+
+    @property
     def is_connected(self) -> bool:
+        """Whether the MQTT client is connected to the broker with its loop started."""
         return self._mqtt_client.is_connected()
 
     @property
     def publish_topic(self) -> str:
-        """The topic to publish messages to."""
+        """The topic the MQTT client is publishing to."""
         return self._publish_topic
 
     @property
@@ -96,10 +106,12 @@ class MQTTClientAdapter:
 
     @property
     def subscribe_topic(self) -> str:
+        """The topic the MQTT client is subscribed to."""
         return self._subscribe_topic
 
     @property
     def timeout(self) -> Optional[float]:
+        """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
     def connect(self) -> None:
@@ -109,17 +121,22 @@ class MQTTClientAdapter:
             self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
             self._start_client_loop()
         else:
-            _logger.error(f"Failed to connect to broker: {self._broker_host}:{self._broker_port}")
+            _logger.error(
+                f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
+                f"{mqtt_error(code)}"
+            )
 
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         if self._mqtt_client.is_connected():
-            self._mqtt_client.disconnect()
-            _logger.debug(f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}")
-        else:
-            _logger.debug(
-                "Trying to disconnect from MQTT broker, but not connected. No action is taken."
-            )
+            code = self._mqtt_client.disconnect()
+            if code==mqtt.MQTT_ERR_SUCCESS:
+                _logger.debug(f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}")
+            else:
+                _logger.debug(
+                    f"Trying to disconnect from MQTT broker, but not connected. {mqtt_error(code)}. "
+                    "No action is taken."
+                )
 
     def get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
         """Returns message from MQTTClient.

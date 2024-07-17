@@ -2,12 +2,14 @@ import unittest
 import sys
 import logging
 import time
+
 sys.path.append(".")
 
 from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device, DeviceStatus as _DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
+    CommandResponse as _CommandResponse,
     ConnectResponse as _ConnectResponse,
     ExternalClient as _ExternalClient,
     ExternalServer as _ExternalServer,
@@ -16,7 +18,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer, _logger
 from external_server.models.structures import DevicePy as DevicePy
-from external_server.utils import connect_msg, status  # type: ignore
+from external_server.utils import connect_msg, status, command_response  # type: ignore
 from external_server.server_message_creator import (
     external_command as _external_command,
     status_response as _status_response,
@@ -140,15 +142,8 @@ class Test_Receiving_First_Status(unittest.TestCase):
         status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            time.sleep(0.1)
             response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
-            ex.submit(
-                publish_from_ext_client,
-                self.es,
-                self.broker,
-                status_1
-            )
-            time.sleep(0.2)
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
             m = response.result()[0]
             self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
@@ -163,14 +158,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
-            ex.submit(
-                publish_from_ext_client,
-                self.es,
-                self.broker,
-                status_1,
-                status_2,
-                status_3
-            )
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_1, status_2, status_3)
             for m in response.result():
                 self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
@@ -191,6 +179,63 @@ class Test_Receiving_First_Status(unittest.TestCase):
             self.assertEqual(
                 response.result()[0].payload, _status_response("some_id", 0).SerializeToString()
             )
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+
+
+class Test_Command_Response(unittest.TestCase):
+
+    def setUp(self) -> None:
+        module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.es = ExternalServer(config=self.config)
+        self.broker = MQTTBrokerTest(start=True)
+        self.executor = ExternalServerThreadExecutor(self.es, 0.2)
+
+    def test_command_response_is_received_at_the_end_of_the_conn_sequence_for_single_device(self):
+        device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
+        status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
+        cmd_response = command_response("some_id", 0, _CommandResponse.OK)
+        with self.executor as ex:
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.subscribe_topic, n=2)
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, cmd_response)
+            received_msgs = response.result()
+            self.assertEqual(len(received_msgs), 2)
+            self.assertEqual(received_msgs[0].payload, status_1.SerializeToString())
+            self.assertEqual(received_msgs[1].payload, cmd_response.SerializeToString())
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+
+
+class Test_Connection_Sequence_Restarted(unittest.TestCase):
+
+    def setUp(self):
+        module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.es = ExternalServer(config=self.config)
+        self.timeout = self.es.mqtt_client.timeout
+        self.broker = MQTTBrokerTest(start=True)
+        self.executor = ExternalServerThreadExecutor(self.es, 0.2)
+        time.sleep(0.1)
+
+    def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
+        device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
+        delayed_status = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
+        with self.executor as ex:
+            time.sleep(0.1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            time.sleep(self.timeout+0.1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            response = ex.submit(self.broker.get_messages, self.es.mqtt_client.publish_topic, n=1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, delayed_status)
+            m = response.result()[0]
+            self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
     def tearDown(self) -> None:
         self.broker.stop()
