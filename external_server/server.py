@@ -118,40 +118,8 @@ class ExternalServer:
         self._mqtt_client.tls_set(ca_certs, certfile, keyfile)
 
     def start(self) -> None:
-        self._mqtt_client._set_up_callbacks()
-        for module_number in self._modules:
-            self._modules_command_threads[module_number].start()
-        self._running = True
-        while self._running:
-            try:
-                if not self._mqtt_client.is_connected:
-                    _logger.info("Connecting to MQTT broker")
-                    self._mqtt_client.connect()
-                    self._mqtt_client._start()
-                self._run_init_sequence()
-                self._normal_communication()
-            except ConnectSequenceException as e:
-                # repeat the connect sequence
-                _logger.error(e)
-                continue
-            except ConnectionRefusedError:
-                _logger.error(
-                    f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}, trying again"
-                )
-                time.sleep(self._config.mqtt_client_connection_retry_period)
-            except ClientDisconnectedExc:  # if 30 seconds any message has not been received
-                _logger.error("Client timed out")
-            except StatusTimeOutExc:
-                _logger.error("Status messages have not been received in time")
-            except CommandResponseTimeOutExc:
-                _logger.error("Command response message has not been received in time")
-            except CommunicationException:
-                pass
-            except Exception as e:
-                _logger.error(f"Unexpected error occurred: {e}")
-                time.sleep(self._config.mqtt_client_connection_retry_period)
-            finally:
-                self._clear_context()
+        self._start_module_threads()
+        self._communicate()
 
     def stop(self, reason: str = "") -> None:
         """Stop the external server communication
@@ -194,18 +162,37 @@ class ExternalServer:
             self._modules[int(module_key)]
         )
 
-    def _create_status_response(self, status: _Status) -> _ExternalServerMsg:
-        module = status.deviceStatus.device.module
-        if module not in self._modules:
-            _logger.warning(f"Module '{module}' is not supported")
-        _logger.info(
-            f"Sending Status response message, messageCounter: {status.messageCounter}"
-        )
-        return _status_response(status.sessionId, status.messageCounter)
-
-    def _publish_status_response(self, status: _Status) -> None:
-        msg = self._create_status_response(status)
-        self._mqtt_client.publish(msg)
+    def _communicate(self) -> None:
+        self._running = True
+        while self._running:
+            try:
+                if not self._mqtt_client.is_connected:
+                    _logger.info("Connecting to MQTT broker")
+                    self._mqtt_client.connect()
+                    self._mqtt_client._start()
+                self._run_init_sequence()
+                self._normal_communication()
+            except ConnectSequenceException as e:
+                _logger.error(f"Connection sequence has failed.")
+            except ConnectionRefusedError:
+                _logger.error(
+                    f"Unable to connect to MQTT broker on {self._config.mqtt_address}:{self._config.mqtt_port}, trying again"
+                )
+                time.sleep(self._config.mqtt_client_connection_retry_period)
+            except ClientDisconnectedExc as e:
+                # if no message has been received for given time
+                _logger.error("Client timed out")
+            except StatusTimeOutExc:
+                _logger.error("Status messages have not been received in time")
+            except CommandResponseTimeOutExc:
+                _logger.error("Command response message has not been received in time")
+            except CommunicationException as e:
+                _logger.error(e)
+            except Exception as e:
+                _logger.error(f"Unexpected error occurred: {e}")
+            finally:
+                time.sleep(self._config.mqtt_client_connection_retry_period)
+                self._clear_context()
 
     def _connect_device(self, device: _Device) -> int:
         ExternalServer._remove_device_priority(device)
@@ -221,6 +208,23 @@ class ExternalServer:
                 f"could not be connected. Response code from API: {code}"
             )
         return code
+
+    def _create_status_response(self, status: _Status) -> _ExternalServerMsg:
+        module = status.deviceStatus.device.module
+        if module not in self._modules:
+            _logger.warning(f"Module '{module}' is not supported")
+        _logger.info(
+            f"Sending Status response message, messageCounter: {status.messageCounter}"
+        )
+        return _status_response(status.sessionId, status.messageCounter)
+
+    def _publish_status_response(self, status: _Status) -> None:
+        msg = self._create_status_response(status)
+        self._mqtt_client.publish(msg)
+
+    def _start_module_threads(self) -> None:
+        for module_number in self._modules:
+            self._modules_command_threads[module_number].start()
 
     def _warn_if_device_not_supported_by_module(self, device: _Device) -> None:
         if not self._modules[device.module].is_device_type_supported(device.deviceType):
@@ -272,8 +276,9 @@ class ExternalServer:
     def _handle_connect(self, received_msg_session_id: str) -> None:
         _logger.warning("Received Connect message when already connected")
         if self._session_id == received_msg_session_id:
-            _logger.error("Same session is attempting to connect multiple times")
-            raise CommunicationException()
+            msg = "Same session is attempting to connect multiple times"
+            _logger.error(msg)
+            raise CommunicationException(msg)
         self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
 
     def _handle_status(self, received_status: _Status) -> None:
@@ -335,8 +340,9 @@ class ExternalServer:
             status_response = self._create_status_response(status)
             self._mqtt_client.publish(status_response)
             if len(self._connected_devices) == 0:
-                _logger.warning("All devices have been disconnected, restarting server")
-                raise CommunicationException()
+                msg = "All devices have been disconnected, restarting server"
+                _logger.warning(msg)
+                raise CommunicationException(msg)
 
     def _handle_command_response(self, command_response: _CommandResponse) -> None:
         _logger.info("Received command response")
@@ -551,8 +557,8 @@ class ExternalServer:
             event = self._event_queue.get()
             if event.event == EventType.RECEIVED_MESSAGE:
                 received_msg = self._mqtt_client.get_message(ignore_timeout=True)
-                if received_msg == False:
-                    raise CommunicationException()
+                if received_msg is False:
+                    raise CommunicationException("Unexpected disconnection")
                 elif received_msg is not None:
                     if received_msg.HasField("connect"):
                         self._handle_connect(received_msg.connect.sessionId)
@@ -563,7 +569,7 @@ class ExternalServer:
                     elif received_msg.HasField("commandResponse"):
                         self._handle_command_response(received_msg.commandResponse)
             elif event.event == EventType.MQTT_BROKER_DISCONNECTED:
-                raise CommunicationException()
+                raise CommunicationException("Unexpected disconnection")
             elif event.event == EventType.TIMEOUT_OCCURRED:
                 if event.data == TimeoutType.SESSION_TIMEOUT:
                     raise ClientDisconnectedExc()

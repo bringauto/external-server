@@ -6,7 +6,7 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional, Any
-import abc
+
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -302,7 +302,7 @@ class MQTTClientAdapter:
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
-        _logger.debug(f"Received message from {message.topic}: {message.payload.decode()}")
+        _logger.debug(f"Received message from {message.topic}: {message.payload}")
         if message.topic == self._subscribe_topic:
             self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
             self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
