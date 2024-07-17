@@ -29,9 +29,9 @@ from external_server.server_message_creator import (
     status_response as _status_response,
     external_command as _external_command,
 )
-from external_server.clients.mqtt_client import MQTTClientAdapter
+from external_server.adapters.mqtt_client import MQTTClientAdapter
 from external_server.utils import check_file_exists, device_repr
-from external_server.clients.api_client import ExternalServerApiClient
+from external_server.adapters.api_client import ExternalServerApiClient
 from external_server.command_waiting_thread import CommandWaitingThread
 from external_server.config import Config
 from external_server.models.structures import (
@@ -127,7 +127,7 @@ class ExternalServer:
                 if not self._mqtt_client.is_connected:
                     _logger.info("Connecting to MQTT broker")
                     self._mqtt_client.connect()
-                    self._mqtt_client.start()
+                    self._mqtt_client._start()
                 self._run_init_sequence()
                 self._normal_communication()
             except ConnectSequenceException as e:

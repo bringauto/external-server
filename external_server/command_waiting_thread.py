@@ -6,7 +6,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCodes, EsErrorCodes
-from external_server.clients.api_client import ExternalServerApiClient
+from external_server.adapters.api_client import ExternalServerApiClient  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
 

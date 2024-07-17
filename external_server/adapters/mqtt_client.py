@@ -6,14 +6,17 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional, Any
+import abc
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import (
+    Client as _Client,
+    _ConnectionState as _ConnectionState,
     error_string as _error_string,
     MQTTErrorCode as _MQTTErrorCode,
-    MQTTMessage as MQTTMessage
+    MQTTMessage as MQTTMessage,
 )
 from paho.mqtt.enums import CallbackAPIVersion
 
@@ -33,14 +36,28 @@ _KEEPALIVE = 15
 _QOS = 1
 
 
+ClientConnectionState = _ConnectionState
+
+
+_CONNECTION_STATES = {
+    ClientConnectionState.MQTT_CS_CONNECT_ASYNC: "Connected to a remote broker asynchronously",
+    ClientConnectionState.MQTT_CS_CONNECTED: "Client is connected to a broker.",
+    ClientConnectionState.MQTT_CS_CONNECTING: "Client is either connecting or reconnecting to a broker.",
+    ClientConnectionState.MQTT_CS_DISCONNECTED: "Client is disconnected from a broker",
+    ClientConnectionState.MQTT_CS_DISCONNECTING: "Client is disconnecting from a broker",
+    ClientConnectionState.MQTT_CS_NEW: "Client has been created or is creating asynchronous connection.",
+    ClientConnectionState.MQTT_CS_CONNECTION_LOST: "Client lost connection to a broker without purposeful disconnect.",
+}
+
+
 _logger = logging.getLogger(__name__)
 with open("./config/logging.json", "r") as f:
     logging.config.dictConfig(json.load(f))
 
 
-def create_mqtt_client() -> mqtt.Client:
+def create_mqtt_client() -> _Client:
     client_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
-    client = mqtt.Client(
+    client = _Client(
         callback_api_version=CallbackAPIVersion.VERSION2,
         client_id=client_id,
         protocol=mqtt.MQTTv311,
@@ -50,9 +67,24 @@ def create_mqtt_client() -> mqtt.Client:
     return client
 
 
-def mqtt_error(code: int) -> str:
-    enum_val = _MQTTErrorCode._value2member_map_[code]
-    return _error_string(enum_val)  # type: ignore
+def mqtt_error_from_code(code: int) -> str:
+    """Return the error message based on the given code.
+
+    If the code is not recognized, an empty string is returned.
+    """
+    try:
+        enum_val = _MQTTErrorCode._value2member_map_[code]
+        return _error_string(enum_val)  # type: ignore
+    except:
+        return ""
+
+
+def mqtt_connection_state_from_enum(state_enum: _ConnectionState) -> str:
+    """Return the connection state as a string based on the given code.
+
+    If the code is not recognized, an empty string is returned.
+    """
+    return _CONNECTION_STATES.get(state_enum, "")
 
 
 class MQTTClientAdapter:
@@ -80,7 +112,7 @@ class MQTTClientAdapter:
         self._set_up_callbacks()
 
     @property
-    def client(self) -> mqtt.Client:
+    def client(self) -> _Client:
         """The MQTT client instance."""
         return self._mqtt_client
 
@@ -105,6 +137,16 @@ class MQTTClientAdapter:
         return self._received_msgs
 
     @property
+    def state(self) -> ClientConnectionState:
+        """The state of the MQTT client."""
+        return self._mqtt_client._state
+
+    @property
+    def state_str(self) -> str:
+        """The state of the MQTT client."""
+        return mqtt_connection_state_from_enum(self._mqtt_client._state)
+
+    @property
     def subscribe_topic(self) -> str:
         """The topic the MQTT client is subscribed to."""
         return self._subscribe_topic
@@ -114,28 +156,31 @@ class MQTTClientAdapter:
         """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
-    def connect(self) -> None:
+    def connect(self) -> mqtt.MQTTErrorCode:
         """Connect to the MQTT broker."""
         code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
-        if code==mqtt.MQTT_ERR_SUCCESS:
+        if code == mqtt.MQTT_ERR_SUCCESS:
             self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
             self._start_client_loop()
         else:
             _logger.error(
                 f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
-                f"{mqtt_error(code)}"
+                f"{mqtt_error_from_code(code)}"
             )
+        return code
 
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         if self._mqtt_client.is_connected():
             code = self._mqtt_client.disconnect()
-            if code==mqtt.MQTT_ERR_SUCCESS:
-                _logger.debug(f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}")
+            if code == mqtt.MQTT_ERR_SUCCESS:
+                _logger.debug(
+                    f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}"
+                )
             else:
                 _logger.debug(
-                    f"Trying to disconnect from MQTT broker, but not connected. {mqtt_error(code)}. "
-                    "No action is taken."
+                    "Trying to disconnect from MQTT broker, but not connected."
+                    f"{mqtt_error_from_code(code)}. No action is taken."
                 )
 
     def get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
@@ -161,15 +206,11 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.debug(f"Published message on topic '{self._publish_topic}'")
         else:
-            _logger.error(f"Failed to publish message: {mqtt_error(code)}")
+            _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")
 
-    def start(self) -> None:
+    def _start(self) -> None:
         """Start the MQTT client's event loop."""
-        code = self._mqtt_client.loop_start()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.debug("Started MQTT client's event loop")
-        else:
-            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error(code)}")
+        self._start_client_loop()
 
     def stop(self) -> None:
         """Stop the MQTT client's event loop. Do nothing, if the loop is not running."""
@@ -178,8 +219,10 @@ class MQTTClientAdapter:
             code = self._mqtt_client.loop_stop()
             if code == mqtt.MQTT_ERR_SUCCESS:
                 _logger.debug("Stopped MQTT client's event loop")
-            else :
-                _logger.error(f"Failed to stop MQTT client's event loop: {mqtt_error(code)}")
+            else:
+                _logger.error(
+                    f"Failed to stop MQTT client's event loop: {mqtt_error_from_code(code)}"
+                )
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -201,19 +244,20 @@ class MQTTClientAdapter:
         self._broker_host = broker_host
         self._broker_port = broker_port
 
-
     def _start_client_loop(self) -> None:
         code = self._mqtt_client.loop_start()
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Connected to broker: {self._broker_host}:{self._broker_port}")
+        elif code == mqtt.MQTT_ERR_INVAL:
+            _logger.info(f"Connecting to a MQTT broker: MQTT client has been already connected.")
         else:
-            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error(code)}")
+            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}")
 
-    def _on_connect(self, client: mqtt.Client, _userdata, _flags, _rc, properties):
+    def _on_connect(self, client: _Client, _userdata, _flags, _rc, properties):
         """Callback function for handling connection events.
 
         Args:
-        - client (mqtt.Client): The MQTT client instance.
+        - client (Client): The MQTT client instance.
         - _userdata: The user data associated with the client.
         - _flags:
         - _rc (int): The return code indicating the reason for disconnection.
@@ -221,11 +265,13 @@ class MQTTClientAdapter:
         """
         _logger.info("Server connected to MQTT broker")
 
-    def _on_disconnect(self, client: mqtt.Client, _userdata: Any, _flags: Any, ret_code, properties) -> None:
+    def _on_disconnect(
+        self, client: _Client, _userdata: Any, _flags: Any, ret_code, properties
+    ) -> None:
         """Callback function for handling disconnection events.
 
         Args:
-        - _client (mqtt.Client): The MQTT client instance.
+        - _client (Client): The MQTT client instance.
         - _userdata: The user data associated with the client.
         - ret_code (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
@@ -234,14 +280,14 @@ class MQTTClientAdapter:
         self._received_msgs.put(False)
         self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
 
-    def _on_message(self, client: mqtt.Client, _userdata, message: MQTTMessage) -> None:
+    def _on_message(self, client: _Client, _userdata, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
 
         The message is added to the received messages queue, if the topic matches the subscribe topic,
         and an event is added to the event queue.
 
         Args:
-        - _client (mqtt.Client): The MQTT client instance.
+        - _client (Client): The MQTT client instance.
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """

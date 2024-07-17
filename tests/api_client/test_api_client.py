@@ -3,7 +3,7 @@ import sys
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from external_server.clients.api_client import ExternalServerApiClient
+from external_server.adapters.api_client import ExternalServerApiClient
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.config import ModuleConfig
 from external_server.models.structures import DisconnectTypes

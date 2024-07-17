@@ -11,7 +11,12 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from paho.mqtt.client import MQTTMessage
 
 from queue import Empty
-from external_server.clients.mqtt_client import MQTTClientAdapter, _QOS, create_mqtt_client # type: ignore
+from external_server.adapters.mqtt_client import (  # type: ignore
+    ClientConnectionState,
+    create_mqtt_client,
+    MQTTClientAdapter,
+    _QOS,
+)
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
     DeviceCommand,
@@ -24,7 +29,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Connect,
     Status,
     StatusResponse,
-    ExternalClient
+    ExternalClient,
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
@@ -36,14 +41,15 @@ TEST_PORT = 1883
 
 
 class Test_Creating_MQTT_Client(unittest.TestCase):
-
     """Tests for creating an MQTT client - NOT THE ADAPTER."""
 
     def test_creating_mqtt_client_adapter(self):
         broker = MQTTBrokerTest(start=True)
         self.x = 0
+
         def on_message(client, userdata, message):
             self.x += 1
+
         client = create_mqtt_client()
         client.on_message = on_message
         client.connect(broker._host, broker._port)
@@ -64,8 +70,12 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
 
     def test_sets_up_subscribe_and_publish_topics_including_company_and_car_name(self):
         adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", broker_port=0)
-        self.assertEqual(adapter.subscribe_topic, f"company/car/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}")
-        self.assertEqual(adapter.publish_topic, f"company/car/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}")
+        self.assertEqual(
+            adapter.subscribe_topic, f"company/car/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
+        )
+        self.assertEqual(
+            adapter.publish_topic, f"company/car/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
+        )
 
     def test_creates_empty_received_message_queue(self) -> None:
         adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", broker_port=0)
@@ -98,24 +108,118 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
         self.assertEqual(adapter.client._on_socket_register_write, None)
         self.assertEqual(adapter.client._on_socket_unregister_write, None)
 
+    def test_leaves_client_in_connection_state_equal_to_new_and_without_connection_thread_existing(
+        self,
+    ):
+        adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", broker_port=0)
+        self.assertEqual(adapter.state, ClientConnectionState.MQTT_CS_NEW)
+        self.assertIsNone(adapter.client._thread)
+
 
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
-        client = MQTTClientAdapter("some_company", "test_car", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(
+            "some_company", "test_car", timeout=1, broker_host="", broker_port=0
+        )
         self.assertTrue(client.publish_topic.startswith("some_company/test_car"))
 
     def test_empty_company_name_is_allowed(self):
-        client = MQTTClientAdapter(company="", car_name="test_car", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(
+            company="", car_name="test_car", timeout=1, broker_host="", broker_port=0
+        )
         self.assertTrue(client.publish_topic.startswith("/test_car"))
 
     def test_empty_car_name_is_allowed(self):
-        client = MQTTClientAdapter(company="some_company", car_name="", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(
+            company="some_company", car_name="", timeout=1, broker_host="", broker_port=0
+        )
         self.assertTrue(client.publish_topic.startswith("some_company/"))
 
     def test_both_names_empty_is_allowed(self):
-        client = MQTTClientAdapter(company="", car_name="", timeout=1, broker_host="", broker_port=0)
+        client = MQTTClientAdapter(
+            company="", car_name="", timeout=1, broker_host="", broker_port=0
+        )
         self.assertTrue(client.publish_topic.startswith("/"))
+
+
+class Test_Connecting_To_Broker(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.adapter = MQTTClientAdapter(
+            "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
+        )
+        self.broker = MQTTBrokerTest()
+
+    def test_client_immediatelly_after_starting_connecting_to_broker_is_in_connecting_state(self):
+        self.adapter.connect()
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
+        self.assertFalse(self.adapter.is_connected)
+
+    def test_client_connecting_to_a_broker_ends_up_in_connected_state(self):
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
+        self.assertTrue(self.adapter.is_connected)
+
+    def test_repeated_connect_calls_have_no_effect_after_the_first_call(self):
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
+
+    def test_repeated_connecting_to_broker_has_no_effect(self):
+        self.broker.start()
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
+
+    def test_disconnecting_client_before_calling_connect_has_no_effect(self):
+        state_before = self.adapter.state
+        self.adapter.disconnect()
+        time.sleep(0.1)
+        self.assertEqual(self.adapter.state, state_before)
+
+    def test_client_after_disconnecting_is_in_disconnecting_state(self):
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.adapter.disconnect()
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTING)
+
+    def test_repeated_disconnect_calls_have_no_effect_after_the_first_cal(self):
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.adapter.disconnect()
+        self.adapter.disconnect()
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTING)
+
+    def tearDown(self) -> None:
+        return self.broker.stop()
+
+
+class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.adapter = MQTTClientAdapter(
+            "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
+        )
+
+    def test_client_loop_is_not_started_and_returns_connection_lost_state_if_broker_does_not_exist(
+        self,
+    ):
+        self.adapter.start()
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTION_LOST)
+
+    def test_client_loop_is_started_and_returns_connected_state_if_broker_does_exist(self):
+        broker = MQTTBrokerTest(start=True, port=1883)
+        self.adapter.connect()
+        self.adapter.start()
+        time.sleep(0.1)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
+        broker.stop()
 
 
 class Test_Failing_Client_Connection(unittest.TestCase):
@@ -255,7 +359,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
             "test_car",
             timeout=2,
             broker_host=self.broker._host,
-            broker_port=self.broker._port
+            broker_port=self.broker._port,
         )
         assert self.broker.is_running
         self.client.connect()
@@ -326,7 +430,9 @@ class Test_Getting_Message(unittest.TestCase):
         self.assertFalse(self.client.get_message())
 
     @patch("external_server.clients.mqtt_client.Queue.get")
-    def test_getting_message_with_some_nonempty_content_yields_the_message(self, mock: Mock) -> None:
+    def test_getting_message_with_some_nonempty_content_yields_the_message(
+        self, mock: Mock
+    ) -> None:
         mock.side_effect = lambda block, timeout: {"content": "some content"}
         self.assertEqual(self.client.get_message(), {"content": "some content"})
 
@@ -381,7 +487,9 @@ class Test_On_Connect_Callback(unittest.TestCase):
         self.client._event_queue.clear()
 
     def test_on_connect_callback_adds_no_event_to_queue(self):
-        self.client._on_connect(client=self.client._mqtt_client, _userdata=None, _flags=None, _rc=0, properties=None)
+        self.client._on_connect(
+            client=self.client._mqtt_client, _userdata=None, _flags=None, _rc=0, properties=None
+        )
         with self.assertRaises(Empty):
             event = self.client._event_queue.get(block=True, timeout=0.1)
 
