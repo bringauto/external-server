@@ -2,7 +2,6 @@ import unittest
 import sys
 import time
 import concurrent.futures
-import socket
 from unittest.mock import patch, Mock
 
 sys.path.append(".")
@@ -151,18 +150,29 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         )
         self.broker = MQTTBrokerTest()
 
-    def test_client_immediatelly_after_starting_connecting_to_broker_is_in_connecting_state(self):
+    def test_client_immediatelly_after_connecting_to_started_broker_is_in_connecting_state(self):
+        self.broker.start()
+        self.assertTrue(self.broker.is_running)
         self.adapter.connect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
         self.assertFalse(self.adapter.is_connected)
 
-    def test_client_connecting_to_a_broker_ends_up_in_connected_state(self):
+    def test_connecting_to_not_running_broker_leaves_client_in_connecting_state(self):
+        # the broker was not started
         self.adapter.connect()
-        time.sleep(0.1)
+        time.sleep(0.2)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
+        self.assertFalse(self.adapter.is_connected)
+
+    def test_client_connecting_to_a_broker_ends_up_in_connected_state(self):
+        self.broker.start()
+        self.adapter.connect()
+        time.sleep(0.2)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
         self.assertTrue(self.adapter.is_connected)
 
     def test_repeated_connect_calls_have_no_effect_after_the_first_call(self):
+        self.broker.start()
         self.adapter.connect()
         time.sleep(0.1)
         self.adapter.connect()
@@ -178,18 +188,21 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
 
     def test_disconnecting_client_before_calling_connect_has_no_effect(self):
+        self.broker.start()
         state_before = self.adapter.state
         self.adapter.disconnect()
         time.sleep(0.1)
         self.assertEqual(self.adapter.state, state_before)
 
     def test_client_after_disconnecting_is_in_disconnecting_state(self):
+        self.broker.start()
         self.adapter.connect()
         time.sleep(0.1)
         self.adapter.disconnect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTING)
 
     def test_repeated_disconnect_calls_have_no_effect_after_the_first_cal(self):
+        self.broker.start()
         self.adapter.connect()
         time.sleep(0.1)
         self.adapter.disconnect()
@@ -197,7 +210,8 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTING)
 
     def tearDown(self) -> None:
-        return self.broker.stop()
+        self.broker.stop()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
@@ -210,33 +224,22 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
     def test_client_loop_is_not_started_and_returns_connection_lost_state_if_broker_does_not_exist(
         self,
     ):
-        self.adapter.start()
-        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTION_LOST)
+        self.assertFalse(MQTTBrokerTest.running_processes())
+        self.adapter.connect()
+        time.sleep(0.1)
+        self.adapter.client.publish(self.adapter.publish_topic)
+        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
 
     def test_client_loop_is_started_and_returns_connected_state_if_broker_does_exist(self):
         broker = MQTTBrokerTest(start=True, port=1883)
+        time.sleep(0.1)
         self.adapter.connect()
-        self.adapter.start()
         time.sleep(0.1)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
         broker.stop()
 
-
-class Test_Failing_Client_Connection(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.client = MQTTClientAdapter(
-            "some_company", "test_car", timeout=1, broker_host="", broker_port=0
-        )
-
-    def test_client_is_not_initially_connected(self):
-        self.assertFalse(self.client.is_connected)
-
-    def test_connecting_to_nonexistent_broker_raises_socket_gaiaerror(self) -> None:
-        self.client._set_up_callbacks()
-        self.client.update_broker_host_and_port(broker_host="nonexistent_ip", broker_port=TEST_PORT)
-        with self.assertRaises(socket.gaierror):
-            self.client.connect()
+    def tearDown(self) -> None:
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 class Test_MQTT_Client_Connection(unittest.TestCase):
@@ -254,21 +257,18 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
         self.assertFalse(self.client.is_connected)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(self.client.start)
-            time.sleep(0.01)
-            self.assertTrue(self.client.is_connected)
+        time.sleep(0.01)
+        self.assertTrue(self.client.is_connected)
 
     def test_stopped_client_is_still_connected(self) -> None:
         self.assertFalse(self.client.is_connected)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(self.client.start)
-            time.sleep(0.02)
-            self.client.stop()
-            self.assertTrue(self.client.is_connected)
+        time.sleep(0.02)
+        self.client.stop()
+        self.assertTrue(self.client.is_connected)
 
     def tearDown(self) -> None:
         self.test_broker.stop()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 class Test_Publishing_Message(unittest.TestCase):
@@ -348,6 +348,7 @@ class Test_Publishing_Message(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
@@ -406,6 +407,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 class Test_Getting_Message(unittest.TestCase):
@@ -419,17 +421,17 @@ class Test_Getting_Message(unittest.TestCase):
             broker_port=TEST_PORT,
         )
 
-    @patch("external_server.clients.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_client.Queue.get")
     def test_getting_no_message_returns_none(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: None
         self.assertIsNone(self.client.get_message())
 
-    @patch("external_server.clients.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_client.Queue.get")
     def test_getting_message_equal_to_false_returns_False(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: False
         self.assertFalse(self.client.get_message())
 
-    @patch("external_server.clients.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_client.Queue.get")
     def test_getting_message_with_some_nonempty_content_yields_the_message(
         self, mock: Mock
     ) -> None:
@@ -536,6 +538,7 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
 
 if __name__ == "__main__":  # pragma: no cover

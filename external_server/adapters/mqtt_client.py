@@ -158,16 +158,23 @@ class MQTTClientAdapter:
 
     def connect(self) -> mqtt.MQTTErrorCode:
         """Connect to the MQTT broker."""
-        code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
-            self._start_client_loop()
-        else:
-            _logger.error(
-                f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
-                f"{mqtt_error_from_code(code)}"
-            )
-        return code
+        try:
+            code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
+            if code == mqtt.MQTT_ERR_SUCCESS:
+                self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
+                self._start_client_loop()
+            else:
+                _logger.error(
+                    f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
+                    f"{mqtt_error_from_code(code)}"
+                )
+            return code
+        except ConnectionRefusedError as e:
+            _logger.error(f"Cannot connect to a broker {self._broker_host}:{self._broker_port}: {e}")
+            return mqtt.MQTT_ERR_CONN_REFUSED
+        except Exception as e:
+            _logger.error(f"Failed to connect to broker: {e}")
+            return mqtt.MQTT_ERR_UNKNOWN
 
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
@@ -209,6 +216,10 @@ class MQTTClientAdapter:
             _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")
 
     def _start(self) -> None:
+        """Start the MQTT client's event loop."""
+        self._start_client_loop()
+
+    def start(self) -> None:
         """Start the MQTT client's event loop."""
         self._start_client_loop()
 
@@ -291,7 +302,7 @@ class MQTTClientAdapter:
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
-        _logger.debug(f"Received message: {message}")
+        _logger.debug(f"Received message from {message.topic}: {message.payload.decode()}")
         if message.topic == self._subscribe_topic:
             self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
             self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
