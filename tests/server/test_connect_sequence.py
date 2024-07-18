@@ -244,9 +244,33 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
             self.assertEqual(msg_2.statusResponse.sessionId, "some_id")
             self.assertEqual(msg_2.statusResponse.messageCounter, 0)
 
+    def test_if_command_response_is_not_delivered_before_timeout(self) -> None:
+        device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
+        status_payload = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
+        cmd_response_payload = command_response("some_id", 0, _CommandResponse.OK)
+        with self.executor as ex:
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            time.sleep(0.1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
+            time.sleep(self.timeout+0.1)
+
+            # connect sequence is repeated
+
+            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            time.sleep(0.1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
+            time.sleep(0.1)
+            ex.submit(publish_from_ext_client, self.es, self.broker, cmd_response_payload)
+            time.sleep(0.5)
+
+
     def tearDown(self) -> None:
         self.broker.stop()
         MQTTBrokerTest.kill_all_zombie_brokers()
+
+
+
 
 
 if __name__ == "__main__":  # pragma: no cover

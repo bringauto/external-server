@@ -103,3 +103,4 @@ class MQTTBrokerTest:
             assert self._process.poll() is not None
             self._running_broker_processes.remove(self._process)
             self._process = None
+            MQTTBrokerTest.kill_all_zombie_brokers()

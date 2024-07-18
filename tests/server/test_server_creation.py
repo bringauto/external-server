@@ -92,7 +92,7 @@ class Test_External_Server_Start(unittest.TestCase):
             deviceRole = "test"
         )
         self.mqttbroker = MQTTBrokerTest(start=True)
-        time.sleep(0.02)
+        time.sleep(0.2)
 
     def test_external_server_starting_and_stopping_sets_connected_flag_to_connected_and_disconnected(self):
         with futures.ThreadPoolExecutor() as ex:

@@ -287,9 +287,12 @@ class MQTTClientAdapter:
         - ret_code (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        _logger.info("Server disconnected from MQTT broker")
-        self._received_msgs.put(False)
-        self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
+        try:
+            _logger.info("Server disconnected from MQTT broker")
+            self._received_msgs.put(False)
+            self._event_queue.add_event(event_type=EventType.MQTT_BROKER_DISCONNECTED)
+        except:
+            _logger.error("MQTT on disconnect callback: Failed to disconnect from the broker")
 
     def _on_message(self, client: _Client, _userdata, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
@@ -302,10 +305,13 @@ class MQTTClientAdapter:
         - _userdata: The user data associated with the client.
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
-        _logger.debug(f"Received message from {message.topic}: {message.payload}")
-        if message.topic == self._subscribe_topic:
-            self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
-            self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
+        try:
+            _logger.debug(f"Received message from {message.topic}: {message.payload.decode()}")
+            if message.topic == self._subscribe_topic:
+                self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
+                self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
+        except:
+            _logger.error("MQTT on message callback: Failed to parse the received message")
 
     def _set_up_callbacks(self) -> None:
         self._mqtt_client.on_connect = self._on_connect

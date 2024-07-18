@@ -149,6 +149,7 @@ class Test_Connecting_To_Broker(unittest.TestCase):
             "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
         )
         self.broker = MQTTBrokerTest()
+        MQTTBrokerTest.kill_all_zombie_brokers()
 
     def test_client_immediatelly_after_connecting_to_started_broker_is_in_connecting_state(self):
         self.broker.start()
