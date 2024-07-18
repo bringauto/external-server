@@ -30,7 +30,9 @@ from external_server.server_message_creator import (
 )
 from external_server.adapters.mqtt_client import MQTTClientAdapter
 from external_server.utils import check_file_exists, device_repr
-from external_server.adapters.api_client import ExternalServerApiClient
+from external_server.adapters.api_client import (
+    ExternalServerApiClient as _APIClient
+)
 from external_server.command_waiting_thread import CommandWaitingThread
 from external_server.config import Config
 from external_server.models.structures import (
@@ -49,6 +51,7 @@ with open("./config/logging.json", "r") as f:
 
 class ExternalServer:
     def __init__(self, config: Config) -> None:
+        self._running = False
         self._config = config
         self._event_queue = EventQueueSingleton()
         self._session = Session(timeout=self._config.mqtt_timeout)
@@ -62,26 +65,26 @@ class ExternalServer:
             self._config.mqtt_address,
             self._config.mqtt_port,
         )
-        self._running = False
-        self._modules: dict[int, ExternalServerApiClient] = dict()
+
+        self._modules: dict[int, _APIClient] = dict()
         self._modules_command_threads: dict[int, CommandWaitingThread] = dict()
-        for module_number, module in config.modules.items():
-            self._modules[int(module_number)] = ExternalServerApiClient(
-                module, self._config.company_name, self._config.car_name
-            )
-            self._modules[int(module_number)].init()
-            if not self._modules[int(module_number)].device_initialized():
+        for module_id_str, module in config.modules.items():
+            module_id = int(module_id_str)
+            self._modules[module_id] = _APIClient(module, self._config.company_name, self._config.car_name)
+            self._modules[module_id].init()
+            if not self._modules[module_id].device_initialized():
                 _logger.error(
-                    f"Module {module_number}: Error occurred in init function. Check the configuration file."
+                    f"Module {module_id}: Error occurred in init function. Check the configuration file."
                 )
                 raise RuntimeError(
-                    f"Module {module_number}: Error occurred in init function. Check the configuration file."
+                    f"Module {module_id}: Error occurred in init function. Check the configuration file."
                 )
-            self._check_module_number_from_config_is_module_id(module_number)
+            self._check_module_number_from_config_is_module_id(module_id)
+
         _logger.debug("External server has been initialized.")
 
     @property
-    def modules(self) -> dict[int, ExternalServerApiClient]:
+    def modules(self) -> dict[int, _APIClient]:
         return self._modules.copy()
 
     @property
@@ -142,15 +145,13 @@ class ExternalServer:
             return
         self._modules_command_threads[module_id].connection_established = connected
 
-    def _check_module_number_from_config_is_module_id(self, module_key: str) -> None:
-        real_mod_number = self._modules[int(module_key)].get_module_number()
-        if real_mod_number != int(module_key):
-            msg = f"Module number '{real_mod_number}' returned from API does not match module number {int(module_key)} in config."
+    def _check_module_number_from_config_is_module_id(self, module_id: int) -> None:
+        real_mod_number = self._modules[module_id].get_module_number()
+        if real_mod_number != module_id:
+            msg = f"Module number '{real_mod_number}' returned from API does not match module number {module_id} in config."
             _logger.error(msg)
             raise RuntimeError(msg)
-        self._modules_command_threads[int(module_key)] = CommandWaitingThread(
-            self._modules[int(module_key)]
-        )
+        self._modules_command_threads[module_id] = CommandWaitingThread(self._modules[module_id])
 
     def _communicate(self) -> None:
         self._running = True
