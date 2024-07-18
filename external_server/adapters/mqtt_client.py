@@ -6,6 +6,7 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional, Any
+from functools import partial
 
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -112,6 +113,17 @@ class MQTTClientAdapter:
         self._set_up_callbacks()
 
     @property
+    def broker_address(self) -> str:
+        """The address of the MQTT broker."""
+        return f"{self._broker_host}:{self._broker_port}"
+
+    @broker_address.deleter
+    def broker_address(self) -> None:
+        """Delete the address of the MQTT broker."""
+        self._broker_host = ""
+        self._broker_port = -1
+
+    @property
     def client(self) -> _Client:
         """The MQTT client instance."""
         return self._mqtt_client
@@ -156,11 +168,15 @@ class MQTTClientAdapter:
         """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
-    def connect(self) -> mqtt.MQTTErrorCode:
-        """Connect to the MQTT broker."""
+    def connect(self) -> Exception | None:
+        """Connect to the MQTT broker.
+
+        Returns an exception if raised, otherwise `None`.
+        """
         try:
             code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
             if code == mqtt.MQTT_ERR_SUCCESS:
+                self._set_up_callbacks()
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
             else:
@@ -168,18 +184,20 @@ class MQTTClientAdapter:
                     f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
                     f"{mqtt_error_from_code(code)}"
                 )
-            return code
+            return None
         except ConnectionRefusedError as e:
+            self.stop()
             _logger.error(f"Cannot connect to a broker {self._broker_host}:{self._broker_port}: {e}")
-            return mqtt.MQTT_ERR_CONN_REFUSED
+            return e
         except Exception as e:
             _logger.error(f"Failed to connect to broker: {e}")
-            return mqtt.MQTT_ERR_UNKNOWN
+            return e
 
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
         if self._mqtt_client.is_connected():
             code = self._mqtt_client.disconnect()
+            self.stop()
             if code == mqtt.MQTT_ERR_SUCCESS:
                 _logger.debug(
                     f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}"
@@ -256,7 +274,7 @@ class MQTTClientAdapter:
         self._broker_port = broker_port
 
     def _start_client_loop(self) -> None:
-        code = self._mqtt_client.loop_start()
+        self._mqtt_client.loop_start()
 
     def _log_connection_result(self, code: int) -> None:
         address = f"{self._broker_host}:{self._broker_port}"
@@ -302,12 +320,11 @@ class MQTTClientAdapter:
         and an event is added to the event queue.
 
         Args:
-        - `clien` The MQTT client instance.
+        - `client` The MQTT client instance.
         - `data` The user data associated with the client.
         - `message` (mqtt.MQTTMessage): The received MQTT message.
         """
         try:
-            _logger.debug(f"Received message from {message.topic}.")
             if message.topic == self._subscribe_topic:
                 self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
                 self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)

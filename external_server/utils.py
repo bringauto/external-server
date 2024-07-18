@@ -48,7 +48,7 @@ def connect_msg(session_id: str, company: str, car: str, devices: list[_Device])
     )
 
 
-def command_response(session_id: str, counter: int, type: _CommandResponse.Type) -> _ExternalClientMsg:
+def cmd_response(session_id: str, counter: int, type: _CommandResponse.Type) -> _ExternalClientMsg:
     return _ExternalClientMsg(
         commandResponse=_CommandResponse(sessionId=session_id, type=type, messageCounter=counter)
     )

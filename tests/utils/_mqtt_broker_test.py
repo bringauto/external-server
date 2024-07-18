@@ -68,7 +68,7 @@ class MQTTBrokerTest:
         else:
             return result
 
-    def publish_messages(self, topic: str, *payload: str | bytes) -> None:
+    def publish(self, topic: str, *payload: str | bytes) -> None:
         payload_list = []
         for p in payload:
             if isinstance(p, Ex):
@@ -79,13 +79,6 @@ class MQTTBrokerTest:
             return
         elif len(payload_list) == 1:
             publish.single(topic, payload_list[0], hostname=self._host, port=self._port)
-            msg = payload_list[0]
-            try:
-                if isinstance(msg, bytes):
-                    msg = msg.decode()
-            except:
-                msg = msg
-            logger.debug(f"Published message to topic {topic}: {msg}")
         else:
             try:
                 payload_list = [(topic, p) for p in payload_list]
@@ -109,6 +102,7 @@ class MQTTBrokerTest:
             self._process.terminate()
             self._process.wait()
             assert self._process.poll() is not None
-            self._running_broker_processes.remove(self._process)
+            if self._process in self._running_broker_processes:
+                self._running_broker_processes.remove(self._process)
             self._process = None
             MQTTBrokerTest.kill_all_test_brokers()
