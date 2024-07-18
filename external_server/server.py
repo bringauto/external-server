@@ -4,6 +4,7 @@ import sys
 from logging import Logger as _Logger
 from typing import Optional
 import json
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -13,9 +14,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as _ExternalServerMsg,
     Status as _Status,
 )
-from InternalProtocol_pb2 import (  # type: ignore
-    Device as _Device
-)
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.checkers import CommandChecker, Session, StatusOrderChecker
 from external_server.models.exceptions import (
     ConnectSequenceException,
@@ -38,8 +37,8 @@ from external_server.models.structures import (
     GeneralErrorCodes,
     DisconnectTypes,
     TimeoutType,
-    DevicePy as DevicePy,
 )
+from external_server.models.devices import DevicePy, KnownDevices
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
 
@@ -51,19 +50,17 @@ with open("./config/logging.json", "r") as f:
 class ExternalServer:
     def __init__(self, config: Config) -> None:
         self._config = config
-        self._session_id = ""
         self._event_queue = EventQueueSingleton()
         self._session = Session(timeout=self._config.mqtt_timeout)
         self._command_checker = CommandChecker(timeout=self._config.timeout)
         self._status_order_checker = StatusOrderChecker(self._config.timeout)
-        self._connected_devices: list[DevicePy] = list()
-        self._not_connected_devices: list[DevicePy] = list()
+        self._devices = KnownDevices()
         self._mqtt = MQTTClientAdapter(
             self._config.company_name,
             self._config.car_name,
             config.timeout,
             self._config.mqtt_address,
-            self._config.mqtt_port
+            self._config.mqtt_port,
         )
         self._running = False
         self._modules: dict[int, ExternalServerApiClient] = dict()
@@ -84,28 +81,25 @@ class ExternalServer:
         _logger.debug("External server has been initialized.")
 
     @property
-    def connected_devices(self) -> list[DevicePy]:
-        return self._connected_devices.copy()
-
-    @property
-    def n_of_all_devices(self) -> int:
-        return len(self._connected_devices) + len(self._not_connected_devices)
-
-    @property
-    def not_connected_devices(self) -> list[DevicePy]:
-        return self._not_connected_devices.copy()
-
-    @property
     def modules(self) -> dict[int, ExternalServerApiClient]:
         return self._modules.copy()
 
     @property
-    def mqtt_client(self) -> MQTTClientAdapter:
+    def mqtt_adapter(self) -> MQTTClientAdapter:
         return self._mqtt
 
     @property
     def session_id(self) -> str:
-        return self._session_id
+        return self._session.id
+
+    def is_connected(self, device: _Device|DevicePy) -> bool:
+        return self._devices.is_connected(device)
+
+    def is_not_connected(self, device: _Device|DevicePy) -> bool:
+        return self._devices.is_not_connected(device)
+
+    def is_unknown(self, device: _Device|DevicePy) -> bool:
+        return self._devices.is_unknown(device)
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to mqtt client"
@@ -135,23 +129,18 @@ class ExternalServer:
         self._mqtt.disconnect()
         self._clear_modules()
 
-
     def _add_connected_device(self, device: _Device) -> None:
         assert isinstance(device, _Device)
-        self._connected_devices.append(DevicePy.from_device(device))
+        self._devices.connected(DevicePy.from_device(device))
 
     def _add_not_connected_device(self, device: _Device) -> None:
-        self._not_connected_devices.append(DevicePy.from_device(device))
+        self._devices.not_connected(DevicePy.from_device(device))
 
-    def _adjust_connection_state_of_module_thread(self, device_module: int, connected: bool):
-        for device in self._connected_devices:
-            if device_module == device.module_id:
-                # There is connected device with same module, no need to adjust the module thread
-                return
-        if connected:
-            self._modules_command_threads[device_module].connection_established = True
-        else:
-            self._modules_command_threads[device_module].connection_established = False
+    def _adjust_connection_state_of_module_thread(self, module_id: int, connected: bool):
+        if self._devices.is_module_connected(module_id):
+            # There is connected device with same module, no need to adjust the module thread
+            return
+        self._modules_command_threads[module_id].connection_established = connected
 
     def _check_module_number_from_config_is_module_id(self, module_key: str) -> None:
         real_mod_number = self._modules[int(module_key)].get_module_number()
@@ -214,9 +203,7 @@ class ExternalServer:
         module = status.deviceStatus.device.module
         if module not in self._modules:
             _logger.warning(f"Module '{module}' is not supported")
-        _logger.info(
-            f"Sending Status response message, messageCounter: {status.messageCounter}"
-        )
+        _logger.info(f"Sending Status response message, messageCounter: {status.messageCounter}")
         return _status_response(status.sessionId, status.messageCounter)
 
     def _publish_status_response(self, status: _Status) -> None:
@@ -240,15 +227,14 @@ class ExternalServer:
         self._command_checker.reset()
         self._session.stop()
         self._status_order_checker.reset()
-        for device in self._connected_devices:
+        for device in self._devices.list_connected():
             code = self._modules[device.module_id].device_disconnected(
                 DisconnectTypes.timeout, device.to_device()
             )
             ExternalServer._check_device_disconnected_code(device.module_id, code, _logger)
         for command_thread in self._modules_command_threads.values():
             command_thread.connection_established = False
-        self._connected_devices.clear()
-        self._not_connected_devices.clear()
+        self._devices.clear()
         self._event_queue.clear()
 
     def _clear_modules(self) -> None:
@@ -266,7 +252,7 @@ class ExternalServer:
     def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> None:
         ExternalServer._remove_device_priority(device)
         try:
-            self._connected_devices.remove(DevicePy.from_device(device))
+            self._devices.remove(DevicePy.from_device(device))
         except ValueError:
             return
         assert isinstance(device, _Device)
@@ -274,9 +260,9 @@ class ExternalServer:
         ExternalServer._check_device_disconnected_code(device.module, rc, _logger)
         self._adjust_connection_state_of_module_thread(device.module, False)
 
-    def _handle_connect(self, received_msg_session_id: str) -> None:
+    def _handle_connect(self, msg_session_id: str) -> None:
         _logger.warning("Received Connect message when already connected")
-        if self._session_id == received_msg_session_id:
+        if self._session.id == msg_session_id:
             msg = "Same session is attempting to connect multiple times"
             _logger.error(msg)
             raise CommunicationException(msg)
@@ -304,7 +290,7 @@ class ExternalServer:
                 continue
 
             if status.deviceState == _Status.RUNNING:
-                if not self.is_device_in_list(device, self._connected_devices):
+                if not self._devices.is_connected(device):
                     _logger.error(f"Device {device_repr(device)} is not connected")
                     continue
                 code = self._modules[device.module].forward_status(
@@ -312,7 +298,7 @@ class ExternalServer:
                 )
                 ExternalServer._check_forward_status_code(device.module, code, _logger)
             elif status.deviceState == _Status.CONNECTING:
-                if self.is_device_in_list(device, self._connected_devices):
+                if self._devices.is_connected(device):
                     _logger.error(f"Device {device_repr(device)} is already connected")
                     continue
                 self._connect_device(device)
@@ -321,7 +307,7 @@ class ExternalServer:
                 )
                 ExternalServer._check_forward_status_code(device.module, code, _logger)
             elif status.deviceState == _Status.DISCONNECT:
-                if not self.is_device_in_list(device, self._connected_devices):
+                if not self._devices.is_connected(device):
                     _logger.error(f"Device {device_repr(device)} is not connected")
                     continue
                 code = self._modules[device.module].forward_status(
@@ -334,13 +320,11 @@ class ExternalServer:
                 )
 
             if len(status.errorMessage) > 0:
-                _logger.error(
-                    f"Status for device {device_repr(device)} contains error message"
-                )
+                _logger.error(f"Status for device {device_repr(device)} contains error message")
 
             status_response = self._create_status_response(status)
             self._mqtt.publish(status_response)
-            if len(self._connected_devices) == 0:
+            if self._devices.n_connected == 0:
                 msg = "All devices have been disconnected, restarting server"
                 _logger.warning(msg)
                 raise CommunicationException(msg)
@@ -357,9 +341,7 @@ class ExternalServer:
             rc = self._modules[command.deviceCommand.device.module].command_ack(
                 command.deviceCommand.commandData, command.deviceCommand.device
             )
-            ExternalServer._check_command_ack_code(
-                command.deviceCommand.device.module, rc, _logger
-            )
+            ExternalServer._check_command_ack_code(command.deviceCommand.device.module, rc, _logger)
             if device_not_connected and command.messageCounter == command_response.messageCounter:
                 self._disconnect_device(DisconnectTypes.announced, command.deviceCommand.device)
                 _logger.warning(
@@ -373,13 +355,15 @@ class ExternalServer:
             return
         command, target_device = result
         ExternalServer.warn_if_device_not_in_list(
-            self._connected_devices,
+            self._devices.list_connected(),
             target_device,
             _logger,
-            msg="Command for not connected device will not be sent."
+            msg="Command for not connected device will not be sent.",
         )
         _logger.info(f"Sending Command message, messageCounter: {command_counter}")
-        external_command = _external_command(self._session_id, command_counter, target_device, command)
+        external_command = _external_command(
+            self._session.id, command_counter, target_device, command
+        )
         if len(external_command.command.deviceCommand.commandData) == 0:
             _logger.warning(
                 f"Command data for device {external_command.command.deviceCommand.device.deviceName} is empty"
@@ -401,16 +385,18 @@ class ExternalServer:
             self._mqtt.publish(external_command)
 
     def _handle_connect_message(self, msg: _Connect) -> None:
-        self._session_id = msg.sessionId
+        self._session.id = msg.sessionId
         devices = msg.devices
         for device in devices:
             if self._is_module_supported(device.module):
                 self._warn_if_device_not_supported_by_module(device)
                 code = self._connect_device(device)
-                if code==GeneralErrorCodes.OK:
+                if code == GeneralErrorCodes.OK:
                     self._add_connected_device(device)
             else:
-                ExternalServer.warn_module_not_supported(device.module, _logger, msg="Ignoring device.")
+                ExternalServer.warn_module_not_supported(
+                    device.module, _logger, msg="Ignoring device."
+                )
                 self._add_not_connected_device(device)
         self._publish_connect_response(_ConnectResponse.OK)
 
@@ -432,25 +418,25 @@ class ExternalServer:
 
         Send response to each status message.
         """
-        n_devices = self.n_of_all_devices
-        for k in range(n_devices):
-            _logger.info(f"Waiting for status message {k + 1} out of {n_devices}.")
+        n = self._devices.n_all
+        for k in range(n):
+            _logger.info(f"Waiting for status message {k + 1} out of {n}.")
             status_obj = ExternalServer.get_status(self._mqtt, _logger)
             if status_obj is None:
                 raise ConnectSequenceException
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             ExternalServer.warn_if_device_not_in_list(
-                self._connected_devices,
+                self._devices.list_connected(),
                 device,
                 _logger,
-                msg="Received status from not connected device."
+                msg="Received status from not connected device.",
             )
             ExternalServer.check_connecting_state(status_obj.deviceState, _logger)
             self._status_order_checker.check(status_obj)
             self._status_order_checker.get_status()  # Checked status is not needed in Init sequence
             self._log_new_status(status_obj)
 
-            if device not in self._not_connected_devices:
+            if self._devices.is_not_connected(device):
                 if status_obj.errorMessage:
                     code = self._modules[device.module].forward_error_message(
                         device, status_obj.errorMessage
@@ -465,7 +451,7 @@ class ExternalServer:
 
     def send_first_commands_and_check_responses(self) -> None:
         """Send command to all connected devices and check responses are returned."""
-        no_cmd_devices = self._connected_devices.copy()
+        no_cmd_devices = self._devices.list_connected()
         _logger.info("Generating and sending commands to all devices.")
         for module in self._modules:
             module_commands: list[tuple[bytes, _Device]] = []
@@ -477,8 +463,9 @@ class ExternalServer:
                     module_commands.append((command_bytes, target_device))
 
             for command_bytes, target_device in module_commands:
-                if not self.is_device_in_list(target_device, no_cmd_devices) \
-                and self.is_device_in_list(target_device, self._connected_devices):
+                if not self.is_device_in_list(
+                    target_device, no_cmd_devices
+                ) and self._devices.is_connected(target_device):
                     _logger.warning(
                         f"Command for {target_device.deviceName} device was returned from API more than once"
                     )
@@ -489,7 +476,7 @@ class ExternalServer:
                 else:
                     command_counter = self._command_checker.counter
                     cmd = _external_command(
-                        self._session_id, command_counter, target_device, command_bytes
+                        self._session.id, command_counter, target_device, command_bytes
                     )
                     _logger.info(f"Sending Command message, messageCounter: {command_counter}")
                     self._mqtt.publish(cmd)
@@ -503,10 +490,10 @@ class ExternalServer:
                         )
                         raise ConnectSequenceException()
 
-        for device_py in no_cmd_devices + self._not_connected_devices:
+        for device_py in no_cmd_devices + self._devices.list_not_connected():
             command_counter = self._command_checker.counter
             device = device_py.to_device()
-            cmd = _external_command(self._session_id, command_counter, device)
+            cmd = _external_command(self._session.id, command_counter, device)
             _logger.warning(
                 f"No command was returned from API for device {device.deviceName}, sending empty command for this device"
             )
@@ -514,12 +501,10 @@ class ExternalServer:
             self._mqtt.publish(cmd)
             self._command_checker.add_command(cmd.command, True)
 
-        n_devices = self.n_of_all_devices
+        n_devices = self._devices.n_all
         _logger.info(f"Expecting {n_devices} command response messages")
         for iter in range(n_devices):
-            _logger.info(
-                f"Waiting for command response message {iter + 1} of {n_devices}"
-            )
+            _logger.info(f"Waiting for command response message {iter + 1} of {n_devices}")
             received_msg = self._mqtt.get_message()
             if received_msg is None or received_msg == False:
                 _logger.error("Command response message has not been received")
@@ -533,7 +518,7 @@ class ExternalServer:
             )
             for command, was_returned_from_api in commands:
                 device = command.deviceCommand.device
-                device_connected = DevicePy.from_device(device) in self._connected_devices
+                device_connected = self._devices.is_connected(device)
                 if device_connected and was_returned_from_api:
                     rc = self._modules[command.deviceCommand.device.module].command_ack(
                         command.deviceCommand.commandData, command.deviceCommand.device
@@ -541,7 +526,6 @@ class ExternalServer:
                     ExternalServer._check_command_ack_code(
                         command.deviceCommand.device.module, rc, _logger
                     )
-
 
     def _is_module_supported(self, module_id: int) -> bool:
         return module_id in self._modules
@@ -592,11 +576,11 @@ class ExternalServer:
 
     def _publish_connect_response(self, response_type: int) -> None:
         _logger.info(f"Sending Connect respons. Response type: {response_type}")
-        msg = _connect_response(self._session_id, response_type)
+        msg = _connect_response(self._session.id, response_type)
         self._mqtt.publish(msg)
 
     def _reset_session_checker_if_session_id_is_ok(self, msg_session_id: str) -> None:
-        if self._session_id == msg_session_id:
+        if self._session.id == msg_session_id:
             self._session.reset()
 
     def _run_init_sequence(self) -> None:
@@ -612,14 +596,15 @@ class ExternalServer:
             raise ConnectSequenceException(f"Connection sequence has failed. {e}")
 
     @staticmethod
-    def check_connecting_state(state: _Status.DeviceState, logger: Optional[_Logger] = None) -> None:
+    def check_connecting_state(
+        state: _Status.DeviceState, logger: Optional[_Logger] = None
+    ) -> None:
         if state == _Status.CONNECTING:
             return
         else:
             if logger:
                 logger.error(
-                    f"Expected connecting device (state={_Status.CONNECTING}),"
-                    f"received {state}"
+                    f"Expected connecting device (state={_Status.CONNECTING})," f"received {state}"
                 )
             raise ConnectSequenceException
 
@@ -639,7 +624,9 @@ class ExternalServer:
             logger.error(f"Module {module_id}: Error in command_ack function, code: {code}")
 
     @staticmethod
-    def get_connect_message(mqtt_client: MQTTClientAdapter, logger: logging.Logger) -> _Connect | None:
+    def get_connect_message(
+        mqtt_client: MQTTClientAdapter, logger: logging.Logger
+    ) -> _Connect | None:
         """Get expected connect message from mqtt client.
 
         Raise an exception if the message is not received or is not a connect message.
@@ -647,7 +634,9 @@ class ExternalServer:
         logger.info("Expecting a connect message")
         msg = mqtt_client.get_message()
         while msg is False:
-            logger.debug("Found disconnect message from connected client. Repeating message retrieval")
+            logger.debug(
+                "Found disconnect message from connected client. Repeating message retrieval"
+            )
             msg = mqtt_client.get_message()
         if msg is None:
             logger.error("Connect message has not been received")

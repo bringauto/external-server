@@ -20,6 +20,7 @@ class Session:
         self._timeout = timeout
         self._timer: _Timer | None = None
         self._timer_running = False
+        self.id: str = ""
 
     @property
     def timeout(self) -> _Event:

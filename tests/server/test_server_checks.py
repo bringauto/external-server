@@ -2,7 +2,7 @@ import unittest
 import logging
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.models.structures import DevicePy
+from external_server.models.devices import DevicePy
 from external_server.models.exceptions import ConnectSequenceException
 from external_server import ExternalServer as ES
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore

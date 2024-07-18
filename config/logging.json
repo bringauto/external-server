@@ -18,23 +18,17 @@
   "loggers": {
     "external_server.server": {
       "level": "DEBUG",
-      "handlers": [
-        "console"
-      ],
+      "handlers": ["console"],
       "propagate": false
     },
     "external_server.adapters.mqtt_client": {
       "level": "DEBUG",
-      "handlers": [
-        "console"
-      ],
+      "handlers": ["console"],
       "propagate": false
     },
     "tests.utils._mqtt_broker_test": {
       "level": "DEBUG",
-      "handlers": [
-        "console"
-      ],
+      "handlers": ["console"],
       "propagate": false
     }
   },

@@ -257,14 +257,17 @@ class MQTTClientAdapter:
 
     def _start_client_loop(self) -> None:
         code = self._mqtt_client.loop_start()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to broker: {self._broker_host}:{self._broker_port}")
-        elif code == mqtt.MQTT_ERR_INVAL:
-            _logger.info(f"Connecting to a MQTT broker: MQTT client has been already connected.")
-        else:
-            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}")
 
-    def _on_connect(self, client: _Client, _userdata, _flags, _rc, properties):
+    def _log_connection_result(self, code: int) -> None:
+        address = f"{self._broker_host}:{self._broker_port}"
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.info(f"Connected to a MQTT broker ({address}).")
+        elif code == mqtt.MQTT_ERR_INVAL:
+            _logger.info(f"Connecting to a MQTT broker ({address}). MQTT client has been already connected.")
+        else:
+            _logger.error(f"Failed to to a MQTT broker ({address}). {mqtt_error_from_code(code)}")
+
+    def _on_connect(self, client: _Client, _userdata, _flags, _rc, properties) -> None:
         """Callback function for handling connection events.
 
         Args:
@@ -274,11 +277,9 @@ class MQTTClientAdapter:
         - _rc (int): The return code indicating the reason for disconnection.
         - _properties: The properties associated with the disconnection event.
         """
-        _logger.info("Server connected to MQTT broker")
+        self._log_connection_result(_rc)
 
-    def _on_disconnect(
-        self, client: _Client, _userdata: Any, _flags: Any, ret_code, properties
-    ) -> None:
+    def _on_disconnect(self, client: _Client, _data: Any, _flags: Any, rc, properties) -> None:
         """Callback function for handling disconnection events.
 
         Args:
@@ -294,7 +295,7 @@ class MQTTClientAdapter:
         except:
             _logger.error("MQTT on disconnect callback: Failed to disconnect from the broker")
 
-    def _on_message(self, client: _Client, _userdata, message: MQTTMessage) -> None:
+    def _on_message(self, client: _Client, _data, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
 
         The message is added to the received messages queue, if the topic matches the subscribe topic,
@@ -306,7 +307,7 @@ class MQTTClientAdapter:
         - message (mqtt.MQTTMessage): The received MQTT message.
         """
         try:
-            _logger.debug(f"Received message from {message.topic}: {message.payload.decode()}")
+            _logger.debug(f"Received message from {message.topic}.")
             if message.topic == self._subscribe_topic:
                 self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
                 self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)

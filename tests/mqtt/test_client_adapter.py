@@ -149,7 +149,7 @@ class Test_Connecting_To_Broker(unittest.TestCase):
             "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
         )
         self.broker = MQTTBrokerTest()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
     def test_client_immediatelly_after_connecting_to_started_broker_is_in_connecting_state(self):
         self.broker.start()
@@ -212,12 +212,13 @@ class Test_Connecting_To_Broker(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
 
     def setUp(self) -> None:
+        MQTTBrokerTest.kill_all_test_brokers()
         self.adapter = MQTTClientAdapter(
             "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
         )
@@ -240,7 +241,7 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
         broker.stop()
 
     def tearDown(self) -> None:
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_MQTT_Client_Connection(unittest.TestCase):
@@ -269,7 +270,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.test_broker.stop()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_Publishing_Message(unittest.TestCase):
@@ -349,7 +350,7 @@ class Test_Publishing_Message(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
@@ -408,7 +409,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_Getting_Message(unittest.TestCase):
@@ -460,7 +461,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         message = MQTTMessage()
         message.topic = self.client.subscribe_topic.encode()
         message.payload = b""
-        self.client._on_message(client=self.client, _userdata=None, message=message)
+        self.client._on_message(client=self.client, _data=None, message=message)
         msg = self.client.received_messages.get(block=True, timeout=0.1)
         self.assertEqual(msg, ExternalClient())
         event = self.client._event_queue.get(block=True, timeout=0.1)
@@ -470,7 +471,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         message = MQTTMessage()
         message.topic = "wrong_topic".encode()
         message.payload = b""
-        self.client._on_message(client=self.client, _userdata=None, message=message)
+        self.client._on_message(client=self.client, _data=None, message=message)
         with self.assertRaises(Empty):
             self.client.received_messages.get(block=True, timeout=0.1)
         with self.assertRaises(Empty):
@@ -539,7 +540,7 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
-        MQTTBrokerTest.kill_all_zombie_brokers()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 if __name__ == "__main__":  # pragma: no cover

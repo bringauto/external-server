@@ -26,7 +26,9 @@ class MQTTBrokerTest:
     _DEFAULT_HOST = "127.0.0.1"
     _DEFAULT_PORT = 1883
 
-    def __init__(self, start: bool = False, port: int = _DEFAULT_PORT):
+    def __init__(self, start: bool = False, port: int = _DEFAULT_PORT, kill_others: bool = True):
+        if kill_others:
+            MQTTBrokerTest.kill_all_test_brokers()
         self._process: None | subprocess.Popen = None
         self._port = port
         self._host = self._DEFAULT_HOST
@@ -39,7 +41,7 @@ class MQTTBrokerTest:
         return cls._running_broker_processes
 
     @classmethod
-    def kill_all_zombie_brokers(cls):
+    def kill_all_test_brokers(cls):
         for process in cls._running_broker_processes:
             print(f"Killing test broker process '{process.pid}'.")
             process.kill()
@@ -77,7 +79,13 @@ class MQTTBrokerTest:
             return
         elif len(payload_list) == 1:
             publish.single(topic, payload_list[0], hostname=self._host, port=self._port)
-            logger.debug(f"Published message to topic {topic}: {payload_list[0]}")
+            msg = payload_list[0]
+            try:
+                if isinstance(msg, bytes):
+                    msg = msg.decode()
+            except:
+                msg = msg
+            logger.debug(f"Published message to topic {topic}: {msg}")
         else:
             try:
                 payload_list = [(topic, p) for p in payload_list]
@@ -103,4 +111,4 @@ class MQTTBrokerTest:
             assert self._process.poll() is not None
             self._running_broker_processes.remove(self._process)
             self._process = None
-            MQTTBrokerTest.kill_all_zombie_brokers()
+            MQTTBrokerTest.kill_all_test_brokers()

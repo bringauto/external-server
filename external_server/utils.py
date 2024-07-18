@@ -7,8 +7,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
-    DeviceCommand as _DeviceCommand,
-    DeviceStatus as _DeviceStatus,
+    DeviceStatus as _DeviceStatus
 )
 from ExternalProtocol_pb2 import (  # type: ignore
     CommandResponse as _CommandResponse,
@@ -71,3 +70,4 @@ def status(
         errorMessage=error_message,
     )
     return _ExternalClientMsg(status=status)
+
