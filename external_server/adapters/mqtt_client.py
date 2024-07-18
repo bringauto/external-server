@@ -267,26 +267,26 @@ class MQTTClientAdapter:
         else:
             _logger.error(f"Failed to to a MQTT broker ({address}). {mqtt_error_from_code(code)}")
 
-    def _on_connect(self, client: _Client, _userdata, _flags, _rc, properties) -> None:
+    def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:
         """Callback function for handling connection events.
 
         Args:
-        - client (Client): The MQTT client instance.
-        - _userdata: The user data associated with the client.
-        - _flags:
-        - _rc (int): The return code indicating the reason for disconnection.
-        - _properties: The properties associated with the disconnection event.
+        - `client` The MQTT client instance.
+        - `data` The user data associated with the client.
+        - `flags`
+        - `rc` The return code indicating the reason for disconnection.
+        - `properties` The properties associated with the disconnection event.
         """
-        self._log_connection_result(_rc)
+        self._log_connection_result(rc)
 
-    def _on_disconnect(self, client: _Client, _data: Any, _flags: Any, rc, properties) -> None:
+    def _on_disconnect(self, client: _Client, data: Any, flags: Any, rc, properties) -> None:
         """Callback function for handling disconnection events.
 
         Args:
-        - _client (Client): The MQTT client instance.
-        - _userdata: The user data associated with the client.
-        - ret_code (int): The return code indicating the reason for disconnection.
-        - _properties: The properties associated with the disconnection event.
+        - `client` The MQTT client instance.
+        - `data` The user data associated with the client.
+        - `rc (int)` The return code indicating the reason for disconnection.
+        - `properties` The properties associated with the disconnection event.
         """
         try:
             _logger.info("Server disconnected from MQTT broker")
@@ -295,16 +295,16 @@ class MQTTClientAdapter:
         except:
             _logger.error("MQTT on disconnect callback: Failed to disconnect from the broker")
 
-    def _on_message(self, client: _Client, _data, message: MQTTMessage) -> None:
+    def _on_message(self, client: _Client, data, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
 
         The message is added to the received messages queue, if the topic matches the subscribe topic,
         and an event is added to the event queue.
 
         Args:
-        - _client (Client): The MQTT client instance.
-        - _userdata: The user data associated with the client.
-        - message (mqtt.MQTTMessage): The received MQTT message.
+        - `clien` The MQTT client instance.
+        - `data` The user data associated with the client.
+        - `message` (mqtt.MQTTMessage): The received MQTT message.
         """
         try:
             _logger.debug(f"Received message from {message.topic}.")
@@ -318,18 +318,3 @@ class MQTTClientAdapter:
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
-        self.callback_test()
-
-    def callback_test(self) -> None:
-        # test if the message callback is set up correctly
-        test_msg = MQTTMessage()
-        test_msg.payload = _ExternalClientMsg().SerializeToString()
-        test_msg.topic = self._subscribe_topic.encode()  # type: ignore
-
-        assert self._mqtt_client._on_message is not None
-        self._mqtt_client._on_message(self._mqtt_client, None, test_msg)
-        assert self._received_msgs.get(block=True, timeout=0.1) is not None
-
-        self._mqtt_client._on_message(self._mqtt_client, None, test_msg)
-        result = self.get_message(ignore_timeout=True)
-        assert result is not None

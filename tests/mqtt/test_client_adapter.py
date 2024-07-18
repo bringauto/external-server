@@ -461,7 +461,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         message = MQTTMessage()
         message.topic = self.client.subscribe_topic.encode()
         message.payload = b""
-        self.client._on_message(client=self.client, _data=None, message=message)
+        self.client._on_message(client=self.client, data=None, message=message)
         msg = self.client.received_messages.get(block=True, timeout=0.1)
         self.assertEqual(msg, ExternalClient())
         event = self.client._event_queue.get(block=True, timeout=0.1)
@@ -471,7 +471,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         message = MQTTMessage()
         message.topic = "wrong_topic".encode()
         message.payload = b""
-        self.client._on_message(client=self.client, _data=None, message=message)
+        self.client._on_message(client=self.client, data=None, message=message)
         with self.assertRaises(Empty):
             self.client.received_messages.get(block=True, timeout=0.1)
         with self.assertRaises(Empty):

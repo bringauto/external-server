@@ -14,7 +14,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
         self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
 
     def test_creating_server_module(self):
-        module = ServerModule("company", "car", self.module_config)
+        module = ServerModule(1000, "company", "car", self.module_config)
         self.assertIsNotNone(module.api_client)
         self.assertEqual(module.car, "car")
         self.assertEqual(module.company, "company")

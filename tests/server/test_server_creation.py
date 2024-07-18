@@ -57,7 +57,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def setUp(self) -> None:
         example_module_config = _ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
 
     def test_external_server_initially_has_no_connected_devices(self):
@@ -71,7 +71,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         self.assertTrue(1000 in self.es.modules)
 
     def test_all_devices_are_initialized(self):
-        self.assertTrue(self.es.modules[1000].device_initialized())
+        self.assertTrue(self.es.modules[1000].api_client.device_initialized())
 
     def test_session_id_is_empty(self):
         self.assertEqual(self.es.session_id, "")
@@ -83,7 +83,7 @@ class Test_External_Server_Start(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES) # type: ignore
         self.es = ExternalServer(config=self.config)
         self.device = _Device(
             module = _Device.EXAMPLE_MODULE,
