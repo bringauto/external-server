@@ -23,17 +23,26 @@ class Session:
         self.id: str = ""
 
     @property
-    def timeout(self) -> _Event:
-        return self._checker.timeout
+    def timeout(self) -> int:
+        """Time period in seconds after which session is considered timed out."""
+        return self._timeout
 
-    def _clear_timeout(self) -> None:
-        self._checker.timeout.clear()
-        self.reset()
+    @property
+    def timeout_event(self) -> _Event:
+        return self._checker.timeout
 
     def start(self) -> None:
         self._timer = _Timer(self._timeout, self._checker._timeout_occurred)
         self._timer.start()
         self._timer_running = True
+
+    def reset(self) -> None:
+        """Resets the checker's timer.
+
+        Next messages' timeout is checked relative to call to this method.
+        """
+        self.stop()
+        self.start()
 
     def stop(self) -> None:
         if self._timer_running and self._timer is not None:
@@ -43,6 +52,7 @@ class Session:
             self._checker.timeout.clear()
             self._timer_running = False
 
-    def reset(self) -> None:
-        self.stop()
-        self.start()
+
+    def _clear_timeout(self) -> None:
+        self._checker.timeout.clear()
+        self.reset()

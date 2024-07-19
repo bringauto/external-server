@@ -8,7 +8,7 @@ from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device # type: ignore
 from external_server.config import (
-    Config as _Config,
+    Config as Config as _Config,
     ModuleConfig as _ModuleConfig
 )
 from external_server.server import ExternalServer
@@ -39,14 +39,14 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
 
     def test_module_dict_key_in_config_equal_to_the_module_id_is_accepted(self):
         correct_id = "1000"
-        self.config = _Config(
+        self.config = Config(
             modules={correct_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
         self.es = ExternalServer(config=self.config)
 
     def test_module_dict_key_in_config_not_equal_to_the_module_id_raises_error(self):
         incorrect_id = "111111111"
-        self.config = _Config(
+        self.config = Config(
             modules={incorrect_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
         with self.assertRaises(RuntimeError):
@@ -57,7 +57,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def setUp(self) -> None:
         example_module_config = _ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
 
     def test_external_server_initially_has_no_connected_devices(self):
@@ -83,7 +83,7 @@ class Test_External_Server_Start(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = _Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES) # type: ignore
+        self.config = Config(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES) # type: ignore
         self.es = ExternalServer(config=self.config)
         self.device = _Device(
             module = _Device.EXAMPLE_MODULE,

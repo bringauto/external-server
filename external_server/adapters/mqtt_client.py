@@ -6,7 +6,6 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional, Any
-from functools import partial
 
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -22,8 +21,10 @@ from paho.mqtt.client import (
 from paho.mqtt.enums import CallbackAPIVersion
 
 from ExternalProtocol_pb2 import (  # type: ignore
+    Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
     ExternalServer as _ExternalServerMsg,
+    Status as _Status,
 )
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
@@ -323,6 +324,7 @@ class MQTTClientAdapter:
         """
         try:
             if message.topic == self._subscribe_topic:
+                _logger.debug(f"Received message on topic '{self._subscribe_topic}'")
                 self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
                 self._event_queue.add_event(event_type=EventType.RECEIVED_MESSAGE)
         except:
@@ -332,3 +334,36 @@ class MQTTClientAdapter:
         self._mqtt_client.on_connect = self._on_connect
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
+
+    def get_connect_message(self) -> _Connect | None:
+        """Get expected connect message from mqtt client.
+
+        Raise an exception if the message is not received or is not a connect message.
+        """
+        _logger.info("Expecting a connect message")
+        msg = self.get_message()
+        while msg is False:
+            _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
+            msg = self.get_message()
+        if msg is None:
+            _logger.error("Connect message has not been received")
+            return None
+        elif not msg.HasField("connect"):
+            _logger.error("Received message is not a connect message")
+            return None
+        _logger.info("Connect message has been received")
+        return msg.connect
+
+    def get_status(self) -> _Status | None:
+        """Get expected status message from mqtt client.
+
+        Raise an exception if the message is not received or is not a status message.
+        """
+        msg = self.get_message()
+        if msg is None or msg == False:
+            _logger.error("Status message has not been received")
+            return None
+        if not msg.HasField("status"):
+            _logger.error("Received message is not a status message")
+            return None
+        return msg.status

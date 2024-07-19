@@ -59,4 +59,3 @@ class ServerModule:
                 f"Device of type '{device.deviceType}' is not supported by module with ID={module_id}"
                 "and probably will not work properly."
             )
-

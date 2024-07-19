@@ -39,7 +39,7 @@ def check_file_exists(path: str) -> bool:
 
 
 def device_repr(device: _Device) -> str:
-    return f"Device {device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
+    return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
 
 
 def connect_msg(session_id: str, company: str, car: str, devices: list[_Device]) -> _ExternalClientMsg:

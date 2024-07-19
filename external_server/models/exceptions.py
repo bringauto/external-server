@@ -14,6 +14,11 @@ class ClientDisconnected(CommunicationException):
         super().__init__("Unexpected disconnection")
 
 
+class SessionTimeout(CommunicationException):
+    def __init__(self) -> None:
+        super().__init__("Session has not been received in time")
+
+
 class CommandResponseTimeout(CommunicationException):
     def __init__(self) -> None:
         super().__init__("Command response message has not been received in time")
