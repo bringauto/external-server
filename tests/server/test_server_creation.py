@@ -8,7 +8,7 @@ from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device # type: ignore
 from external_server.config import (
-    Config as Config as _Config,
+    Config as Config,
     ModuleConfig as _ModuleConfig
 )
 from external_server.server import ExternalServer

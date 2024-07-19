@@ -87,7 +87,7 @@ ExternalClientMessage = _Connect | _Status | _CommandResponse
 
 
 class ExternalServer:
-    def __init__(self, config: Config as Config) -> None:
+    def __init__(self, config: Config) -> None:
         self._running = False
         self._config = config
         self._event_queue = EventQueueSingleton()
@@ -531,11 +531,15 @@ class ExternalServer:
         Send response to each status message.
         """
         n = self._devices.n_all
+        _counter_initialized = False
         for k in range(n):
             _logger.info(f"Waiting for status message {k + 1} out of {n}.")
             status_obj = self._mqtt.get_status()
             if status_obj is None:
+                print("Status message has not been received.")
                 raise ConnectSequenceFailure("First status from device has not been received.")
+            if not _counter_initialized:
+                self._status_order_checker.initialize_counter(status_obj.messageCounter+1)
             ExternalServer.check_connecting_state(status_obj.deviceState)
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             if not self._devices.is_connected(device):
@@ -547,7 +551,6 @@ class ExternalServer:
                     module.api_client.forward_error_message(device, status_obj.errorMessage)
                 module.api_client.forward_status(device, status.statusData)
             self._publish_status_response(status_obj)
-            self._status_order_checker.initialize_counter(status_obj.messageCounter+1)
 
     def _init_sequence(self) -> None:
         _logger.info("Starting the connect sequence.")

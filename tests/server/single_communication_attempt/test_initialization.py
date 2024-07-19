@@ -109,5 +109,122 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         self.broker.stop()
 
 
+class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_3")
+
+    def test_initialization_with_mutliple_supported_devices_connects_them_all(self):
+        broker = self.broker
+        device_status_1 = DeviceStatus(device=self.device_1)
+        device_status_2 = DeviceStatus(device=self.device_2)
+        device_status_3 = DeviceStatus(device=self.device_3)
+        topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._initialize)
+            time.sleep(0.2)
+            broker.publish(
+                topic,
+                connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
+            )
+            broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status_1))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 1, device_status_2))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 1, device_status_3))
+            broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
+        self.assertEqual(self.es.state, ServerState.INITIALIZED)
+        self.assertTrue(self.es.is_connected(self.device_1))
+        self.assertTrue(self.es.is_connected(self.device_2))
+        self.assertTrue(self.es.is_connected(self.device_3))
+
+    def test_initialization_with_mutliple_supported_devices_sending_first_statuses_in_wrong_order_connects_them_anyway(self):
+        broker = self.broker
+        device_status_1 = DeviceStatus(device=self.device_1)
+        device_status_2 = DeviceStatus(device=self.device_2)
+        device_status_3 = DeviceStatus(device=self.device_3)
+        topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._initialize)
+            broker.publish(
+                topic,
+                connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
+            )
+            broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status_2))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 2, device_status_3))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 1, device_status_1))
+            broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
+        self.assertEqual(self.es.state, ServerState.INITIALIZED)
+        self.assertTrue(self.es.is_connected(self.device_1))
+        self.assertTrue(self.es.is_connected(self.device_2))
+        self.assertTrue(self.es.is_connected(self.device_3))
+
+    def test_initialization_with_mutliple_supported_devices_sending_command_responses_in_wrong_order_connects_them_anyway(self):
+        broker = self.broker
+        device_status_1 = DeviceStatus(device=self.device_1)
+        device_status_2 = DeviceStatus(device=self.device_2)
+        device_status_3 = DeviceStatus(device=self.device_3)
+        topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._initialize)
+            broker.publish(
+                topic,
+                connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
+            )
+            broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status_1))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 1, device_status_2))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 2, device_status_3))
+            broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
+        self.assertEqual(self.es.state, ServerState.INITIALIZED)
+        self.assertTrue(self.es.is_connected(self.device_1))
+        self.assertTrue(self.es.is_connected(self.device_2))
+        self.assertTrue(self.es.is_connected(self.device_3))
+
+    def tearDown(self) -> None:
+        self.es.mqtt.stop()
+        self.broker.stop()
+
+
+class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_3")
+
+    def test_initialization_in_wrong_order_connects_devices_anyway_but_sets_server_state_to_error_and_raises_exception(self):
+        broker = self.broker
+        device_status_1 = DeviceStatus(device=self.device_1)
+        device_status_2 = DeviceStatus(device=self.device_2)
+        topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            future = ex.submit(self.es._initialize)
+            broker.publish(
+                topic,
+                connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
+            )
+            broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status_1))
+            broker.publish(topic, status("session_id", Status.CONNECTING, 1, device_status_2))
+            broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
+            broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
+            with self.assertRaises(ConnectSequenceFailure):
+                future.result()
+        self.assertEqual(self.es.state, ServerState.ERROR)
+        self.assertTrue(self.es.is_connected(self.device_1))
+        self.assertTrue(self.es.is_connected(self.device_2))
+        self.assertTrue(self.es.is_connected(self.device_3))
+
+
 if __name__=="__main__":  # pragma: no cover
     unittest.main(verbosity=2)

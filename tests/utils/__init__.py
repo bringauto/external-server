@@ -30,5 +30,5 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def get_test_server() -> ExternalServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    config = Config as Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+    config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
     return ExternalServer(config=config)
