@@ -6,14 +6,12 @@ import concurrent.futures as futures
 sys.path.append(".")
 
 from pydantic import FilePath
-from external_server.server import (
-    ExternalServer,
-    ServerState
-)
-from InternalProtocol_pb2 import Device, DeviceStatus
-from ExternalProtocol_pb2 import Status, CommandResponse
+
+from external_server.server import ExternalServer, ServerState
+from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
+from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.config import Config, ModuleConfig
-from external_server.models.exceptions import ConnectSequenceException
+from external_server.models.exceptions import ConnectSequenceFailure
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 from external_server.utils import connect_msg, status, cmd_response
 
@@ -71,7 +69,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
 
     def test_without_receiving_connect_message_sets_the_state_to_error(self):
-        with self.assertRaises(ConnectSequenceException):
+        with self.assertRaises(ConnectSequenceFailure):
             self.es._initialize()
         self.assertEqual(self.es.state, ServerState.ERROR)
 

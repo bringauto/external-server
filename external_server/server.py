@@ -17,11 +17,11 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.checkers import CommandChecker, Session, StatusOrderChecker
 from external_server.models.exceptions import (
-    ConnectSequenceException,
+    ConnectSequenceFailure,
     CommunicationException,
-    StatusTimeOutExc,
-    ClientDisconnectedExc,
-    CommandResponseTimeOutExc,
+    StatusTimeout,
+    ClientDisconnected,
+    CommandResponseTimeout,
 )
 from external_server.server_message_creator import (
     connect_response as _connect_response,
@@ -203,17 +203,17 @@ class ExternalServer:
     def _handle_communication_exception(self, e: Exception) -> None:
         try:
             raise e
-        except ConnectSequenceException as e:
+        except ConnectSequenceFailure as e:
             _logger.error(f"Connection sequence has failed.")
         except ConnectionRefusedError as e:
             address = self._mqtt.broker_address
             _logger.error(f"Unable to connect to broker ({address}. Trying again.")
-        except ClientDisconnectedExc as e:
+        except ClientDisconnected as e:
             # if no message has been received for given time
             _logger.error("Client timed out")
-        except StatusTimeOutExc as e:
+        except StatusTimeout as e:
             _logger.error("Status messages have not been received in time")
-        except CommandResponseTimeOutExc as e:
+        except CommandResponseTimeout as e:
             _logger.error("Command response message has not been received in time")
         except CommunicationException as e:
             _logger.error(e)
@@ -435,7 +435,7 @@ class ExternalServer:
         """
         msg = self.get_connect_message(self._mqtt)
         if msg is None:
-            raise ConnectSequenceException("Connect message has not been received")
+            raise ConnectSequenceFailure("Connect message has not been received")
         self._handle_connect_message(msg)
 
     def get_all_first_statuses_and_respond(self) -> None:
@@ -450,7 +450,7 @@ class ExternalServer:
             _logger.info(f"Waiting for status message {k + 1} out of {n}.")
             status_obj = ExternalServer.get_status(self._mqtt, _logger)
             if status_obj is None:
-                raise ConnectSequenceException("First status from device has not been received.")
+                raise ConnectSequenceFailure("First status from device has not been received.")
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             ExternalServer.warn_if_device_not_in_list(
                 self._devices.list_connected(),
@@ -512,7 +512,7 @@ class ExternalServer:
                     except ValueError:
                         msg = f"Got command for unexpected device: {self.device_identificator(device)}"
                         _logger.error(msg)
-                        raise ConnectSequenceException(msg)
+                        raise ConnectSequenceFailure(msg)
 
         for device_py in no_cmd_devices + self._devices.list_not_connected():
             command_counter = self._command_checker.counter
@@ -532,10 +532,10 @@ class ExternalServer:
             received_msg = self._mqtt.get_message()
             if received_msg is None or received_msg == False:
                 _logger.error("Command response message has not been received")
-                raise ConnectSequenceException()
+                raise ConnectSequenceFailure()
             if not received_msg.HasField("commandResponse"):
                 _logger.error(f"Received message is not a command response message.")
-                raise ConnectSequenceException()
+                raise ConnectSequenceFailure()
             _logger.info(f"Received Command response message")
             commands = self._command_checker.acknowledge_and_pop_commands(
                 received_msg.commandResponse.messageCounter
@@ -581,11 +581,11 @@ class ExternalServer:
                 raise CommunicationException("Unexpected disconnection")
             elif event.event == EventType.TIMEOUT_OCCURRED:
                 if event.data == TimeoutType.SESSION_TIMEOUT:
-                    raise ClientDisconnectedExc()
+                    raise ClientDisconnected()
                 elif event.data == TimeoutType.MESSAGE_TIMEOUT:
-                    raise StatusTimeOutExc()
+                    raise StatusTimeout()
                 elif event.data == TimeoutType.COMMAND_TIMEOUT:
-                    raise CommandResponseTimeOutExc()
+                    raise CommandResponseTimeout()
                 else:
                     _logger.error(
                         "Internal error: Received Event TimeoutOccurred without TimeoutType"
@@ -617,7 +617,7 @@ class ExternalServer:
             _logger.info("Connect sequence has finished succesfully")
         except Exception as e:
             _logger.warning("Connection sequence has not been started.")
-            raise ConnectSequenceException(f"Connection sequence has failed. {e}")
+            raise ConnectSequenceFailure(f"Connection sequence has failed. {e}")
 
     @staticmethod
     def check_connecting_state(state_enum: _Status.DeviceState) -> None:
@@ -626,7 +626,7 @@ class ExternalServer:
             _logger.error(
                 f"Expected connecting device (state={DeviceStatusName[_Status.CONNECTING]}), "
                 f"received {state_name}")
-            raise ConnectSequenceException
+            raise ConnectSequenceFailure
 
     @staticmethod
     def _check_forward_status_code(module_id: int, code: int, logger: _Logger) -> None:

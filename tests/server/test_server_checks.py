@@ -3,7 +3,7 @@ import logging
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.devices import DevicePy
-from external_server.models.exceptions import ConnectSequenceException
+from external_server.models.exceptions import ConnectSequenceFailure
 from external_server import ExternalServer as ES
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
 
@@ -66,7 +66,7 @@ class Test_Connecting_State(unittest.TestCase):
 
     def test_other_than_connecting_state_returns_exception(self):
         for state in [_Status.DISCONNECT, _Status.ERROR, _Status.RUNNING]:
-            with self.assertRaises(ConnectSequenceException):
+            with self.assertRaises(ConnectSequenceFailure):
                 ES.check_connecting_state(state)
 
 

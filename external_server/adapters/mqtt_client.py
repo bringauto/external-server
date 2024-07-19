@@ -233,14 +233,6 @@ class MQTTClientAdapter:
         else:
             _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")
 
-    def _start(self) -> None:
-        """Start the MQTT client's event loop."""
-        self._start_client_loop()
-
-    def start(self) -> None:
-        """Start the MQTT client's event loop."""
-        self._start_client_loop()
-
     def stop(self) -> None:
         """Stop the MQTT client's event loop. Do nothing, if the loop is not running."""
         cli = self._mqtt_client
@@ -260,21 +252,26 @@ class MQTTClientAdapter:
         `certfile` - path to the client certificate file.
         `keyfile` - path to the client private key file.
         """
-        if self._mqtt_client is not None:
-            self._mqtt_client.tls_set(
-                ca_certs=ca_certs,
-                certfile=certfile,
-                keyfile=keyfile,
-                tls_version=ssl.PROTOCOL_TLS_CLIENT,
-            )
-            self._mqtt_client.tls_insecure_set(False)
+        self._mqtt_client.tls_set(
+            ca_certs=ca_certs,
+            certfile=certfile,
+            keyfile=keyfile,
+            tls_version=ssl.PROTOCOL_TLS_CLIENT,
+        )
+        self._mqtt_client.tls_insecure_set(False)
 
     def update_broker_host_and_port(self, broker_host: str, broker_port: int) -> None:
         self._broker_host = broker_host
         self._broker_port = broker_port
 
     def _start_client_loop(self) -> None:
-        self._mqtt_client.loop_start()
+        code = self._mqtt_client.loop_start()
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.debug("Started MQTT client's event loop")
+        else:
+            _logger.error(
+                f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}"
+            )
 
     def _log_connection_result(self, code: int) -> None:
         address = f"{self._broker_host}:{self._broker_port}"

@@ -19,11 +19,7 @@ from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer, _logger
 from external_server.models.devices import DevicePy as DevicePy
 from external_server.utils import connect_msg, status, cmd_response  # type: ignore
-from external_server.server_message_creator import (
-    external_command as _external_command,
-    connect_response as _connect_response,
-    status_response as _status_response,
-)
+from external_server.server_message_creator import status_response as _status_response
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
@@ -47,12 +43,7 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *payload: str):
     """This mocks publishing a message by an External Client."""
-    payload_str = []
-    for p in payload:
-        if isinstance(p, _ExternalClientMsg):
-            payload_str.append(p.SerializeToString())
-        else:
-            payload_str.append(p)
+    payload_str = [p.SerializeToString() if isinstance(p, _ExternalClientMsg) else p for p in payload]
     broker.publish(server.mqtt.subscribe_topic, *payload_str)
 
 
@@ -196,7 +187,7 @@ class Test_Command_Response(unittest.TestCase):
         self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
-        self.executor = ExternalServerThreadExecutor(self.es, 0.2)
+        self.executor = ExternalServerThreadExecutor(self.es, 0.1)
 
     def test_command_response_is_received_at_the_end_of_the_conn_sequence_for_single_device(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
@@ -209,7 +200,7 @@ class Test_Command_Response(unittest.TestCase):
                 self.broker.get_messages, self.es.mqtt.subscribe_topic, n=2
             )
             ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, cmd_response)
+            ex.submit(publish_from_ext_client, self.es, self.broker, command_response)
             received_msgs = response.result()
             self.assertEqual(len(received_msgs), 2)
             self.assertEqual(received_msgs[0].payload, status_1.SerializeToString())
@@ -227,7 +218,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         self.es = ExternalServer(config=self.config)
         self.timeout = self.es.mqtt.timeout
         self.broker = MQTTBrokerTest(start=True)
-        self.executor = ExternalServerThreadExecutor(self.es, 0.2)
+        self.executor = ExternalServerThreadExecutor(self.es, 0.1)
         time.sleep(0.1)
 
     def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
@@ -265,7 +256,6 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
             ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
             ex.submit(publish_from_ext_client, self.es, self.broker, cmd_response_payload)
-            time.sleep(0.5)
 
     def tearDown(self) -> None:
         self.broker.stop()

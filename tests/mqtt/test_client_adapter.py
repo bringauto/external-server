@@ -534,11 +534,11 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
                     devices=[self.device],
                 )
             )
-            ex.submit(self.adapter.start)
+            ex.submit(self.adapter._start_client_loop)
             time.sleep(0.5)
             ex.submit(self.adapter.stop)
             time.sleep(1)
-            ex.submit(self.adapter.start)
+            ex.submit(self.adapter._start_client_loop)
             time.sleep(0.2)
             rec_msg = ex.submit(self.adapter.get_message)
             ex.submit(self.broker.publish, self.adapter.subscribe_topic, msg)
