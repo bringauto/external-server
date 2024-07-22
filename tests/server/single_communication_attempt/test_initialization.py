@@ -29,7 +29,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
 
     def test_without_running_broker_raises_error_and_sets_state_to_error(self):
         with self.assertRaises(ConnectionRefusedError):
-            self.es._initialize()
+            result = self.es._initialize()
         self.assertEqual(self.es.state, ServerState.ERROR)
 
 

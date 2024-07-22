@@ -10,7 +10,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from paho.mqtt.client import MQTTMessage
 
 from queue import Empty
-from external_server.adapters.mqtt_client import (  # type: ignore
+from external_server.adapters.mqtt_adapter import (  # type: ignore
     ClientConnectionState,
     create_mqtt_client,
     MQTTClientAdapter,
@@ -429,17 +429,17 @@ class Test_Getting_Message(unittest.TestCase):
             broker_port=TEST_PORT,
         )
 
-    @patch("external_server.adapters.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_no_message_returns_none(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: None
         self.assertIsNone(self.adapter.get_message())
 
-    @patch("external_server.adapters.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_equal_to_false_returns_False(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: False
         self.assertFalse(self.adapter.get_message())
 
-    @patch("external_server.adapters.mqtt_client.Queue.get")
+    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_with_some_nonempty_content_yields_the_message(
         self, mock: Mock
     ) -> None:

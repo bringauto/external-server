@@ -6,18 +6,18 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCodes, EsErrorCodes
-from external_server.adapters.api_client import ExternalServerApiClient  # type: ignore
+from external_server.adapters.api_adapter import APIClientAdapter  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
 
 class CommandWaitingThread:
     TIMEOUT = 1000  # Timeout for wait_for_command in ms
 
-    def __init__(self, api_client: ExternalServerApiClient) -> None:
+    def __init__(self, api_client: APIClientAdapter) -> None:
         self._logger = logging.getLogger(
             f"{self.__class__.__name__}({api_client.get_module_number()})"
         )
-        self._api_client = api_client
+        self._api_adapter: APIClientAdapter = api_client
         self._event_queue = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
         self._commands: Queue[tuple[bytes, _Device]] = Queue()
@@ -64,7 +64,7 @@ class CommandWaitingThread:
     def _save_available_commands(self) -> None:
         remaining_commands = 1
         while remaining_commands > 0:
-            command, device, remaining_commands = self._api_client.pop_command()
+            command, device, remaining_commands = self._api_adapter.pop_command()
             if remaining_commands < 0:
                 self._logger.error(
                     f"Error occured in pop_command function in API. Return code: {remaining_commands}"
@@ -79,12 +79,12 @@ class CommandWaitingThread:
                     self._commands.put((command, device))
         if self._connection_established:
             self._event_queue.add_event(
-                event_type=EventType.COMMAND_AVAILABLE, data=self._api_client.get_module_number()
+                event_type=EventType.COMMAND_AVAILABLE, data=self._api_adapter.get_module_number()
             )
 
     def _main_thread(self) -> None:
         while self._continue_thread:
-            rc = self._api_client.wait_for_command(self.TIMEOUT)
+            rc = self._api_adapter.wait_for_command(self.TIMEOUT)
             if rc == GeneralErrorCodes.OK:
                 self._save_available_commands()
             elif rc == EsErrorCodes.TIMEOUT_OCCURRED:

@@ -29,7 +29,7 @@ from external_server.server_messages import (
     status_response as _status_response,
     external_command as _external_command,
 )
-from external_server.adapters.mqtt_client import MQTTClientAdapter
+from external_server.adapters.mqtt_adapter import MQTTClientAdapter
 from external_server.utils import check_file_exists, device_repr
 from external_server.config import Config as Config
 from external_server.models.structures import (

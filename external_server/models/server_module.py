@@ -1,7 +1,7 @@
 import logging.config
 import json
 
-from external_server.adapters.api_client import ExternalServerApiClient as _ApiClient
+from external_server.adapters.api_adapter import APIClientAdapter as _ApiAdapter
 from external_server.command_waiting_thread import CommandWaitingThread as _CommandWaitingThread
 from external_server.config import ModuleConfig as _ModuleConfig
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
@@ -16,7 +16,7 @@ class ServerModule:
 
     def __init__(self, module_id: int, company: str, car: str, config: _ModuleConfig) -> None:
         self._id = module_id
-        self._api_client = _ApiClient(module_config=config, company_name=company, car_name=car)
+        self._api_client = _ApiAdapter(module_config=config, company_name=company, car_name=car)
         self._api_client.init()
         if not self._api_client.device_initialized():
             _logger.error(
@@ -33,7 +33,7 @@ class ServerModule:
         self._thread = _CommandWaitingThread(api_client=self._api_client)
 
     @property
-    def api_client(self) -> _ApiClient:
+    def api_client(self) -> _ApiAdapter:
         return self._api_client
 
     @property

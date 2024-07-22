@@ -21,7 +21,7 @@
       "handlers": ["console"],
       "propagate": false
     },
-    "external_server.adapters.mqtt_client": {
+    "external_server.adapters.mqtt_adapter": {
       "level": "DEBUG",
       "handlers": ["console"],
       "propagate": false

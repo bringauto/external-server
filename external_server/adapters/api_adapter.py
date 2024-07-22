@@ -26,11 +26,10 @@ with open("./config/logging.json", "r") as f:
     logging.config.dictConfig(json.load(f))
 
 
-class ExternalServerApiClient:
-    """External server API functions wrapper
+class APIClientAdapter:
+    """A wrapper around External server API functions (further API).
 
-    This class is wrapper around External server API functions (further API). It
-    retains context, created by init and uses it with other functions. It also take
+    It retains context, created by init and uses it with other functions. It also take
     care about API's specific structures like Buffer and device_identification
     (memory management, converting from Protobuf messages or bytes). So methods,
     which represents every'API function, is called with Protobuf messages. Then
@@ -39,7 +38,6 @@ class ExternalServerApiClient:
     according to Fleet protocol.
     Class also implements some helper functions like deallocate, get_module_number
     and is_device_type_supported.
-
     """
 
     def __init__(self, module_config: ModuleConfig, company_name: str, car_name: str) -> None:
@@ -75,7 +73,7 @@ class ExternalServerApiClient:
         """Initializes the library and sets the context."""
         if not check_file_exists(self._lib_path):
             raise FileNotFoundError(self._lib_path)
-        self._library = ct.cdll.LoadLibrary(self._lib_path)    # type: ignore
+        self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
         self._type_all_function()
         self._set_context()
 
@@ -103,38 +101,38 @@ class ExternalServerApiClient:
         """
         Defines the argument types and return types for all the library functions.
         """
-        self._library.get_module_number.argtypes = []    # type: ignore
-        self._library.get_module_number.restype = ct.c_int    # type: ignore
-        self._library.deallocate.argtypes = [ct.POINTER(Buffer)]    # type: ignore
-        self._library.deallocate.restype = ct.c_void_p   # type: ignore
-        self._library.init.argtypes = [Config]    # type: ignore
-        self._library.init.restype = ct.c_void_p    # type: ignore
-        self._library.device_connected.argtypes = [DeviceIdentification, ct.c_void_p]    # type: ignore
-        self._library.device_connected.restype = ct.c_int    # type: ignore
-        self._library.device_disconnected.argtypes = [    # type: ignore  # type: ignore
+        self._library.get_module_number.argtypes = []  # type: ignore
+        self._library.get_module_number.restype = ct.c_int  # type: ignore
+        self._library.deallocate.argtypes = [ct.POINTER(Buffer)]  # type: ignore
+        self._library.deallocate.restype = ct.c_void_p  # type: ignore
+        self._library.init.argtypes = [Config]  # type: ignore
+        self._library.init.restype = ct.c_void_p  # type: ignore
+        self._library.device_connected.argtypes = [DeviceIdentification, ct.c_void_p]  # type: ignore
+        self._library.device_connected.restype = ct.c_int  # type: ignore
+        self._library.device_disconnected.argtypes = [  # type: ignore  # type: ignore
             DisconnectTypes,
             DeviceIdentification,
             ct.c_void_p,
         ]
-        self._library.device_disconnected.restype = ct.c_int    # type: ignore
-        self._library.forward_status.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]   # type: ignore
-        self._library.forward_status.restype = ct.c_int    # type: ignore
-        self._library.forward_error_message.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]    # type: ignore
-        self._library.forward_error_message.restype = ct.c_int    # type: ignore
-        self._library.wait_for_command.argtypes = [ct.c_int, ct.c_void_p]    # type: ignore
-        self._library.wait_for_command.restype = ct.c_int    # type: ignore
-        self._library.pop_command.argtypes = [    # type: ignore
+        self._library.device_disconnected.restype = ct.c_int  # type: ignore
+        self._library.forward_status.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]  # type: ignore
+        self._library.forward_status.restype = ct.c_int  # type: ignore
+        self._library.forward_error_message.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]  # type: ignore
+        self._library.forward_error_message.restype = ct.c_int  # type: ignore
+        self._library.wait_for_command.argtypes = [ct.c_int, ct.c_void_p]  # type: ignore
+        self._library.wait_for_command.restype = ct.c_int  # type: ignore
+        self._library.pop_command.argtypes = [  # type: ignore
             ct.POINTER(Buffer),
             ct.POINTER(DeviceIdentification),
             ct.c_void_p,
         ]
-        self._library.pop_command.restype = ct.c_int   # type: ignore
-        self._library.command_ack.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]   # type: ignore
-        self._library.command_ack.restype = ct.c_int    # type: ignore
+        self._library.pop_command.restype = ct.c_int  # type: ignore
+        self._library.command_ack.argtypes = [Buffer, DeviceIdentification, ct.c_void_p]  # type: ignore
+        self._library.command_ack.restype = ct.c_int  # type: ignore
         self._library.destroy.argtypes = [ct.POINTER(ct.c_void_p)]  # type: ignore
-        self._library.destroy.restype = ct.c_int     # type: ignore
-        self._library.is_device_type_supported.argtypes = [ct.c_uint]    # type: ignore
-        self._library.is_device_type_supported.restype = ct.c_int    # type: ignore
+        self._library.destroy.restype = ct.c_int  # type: ignore
+        self._library.is_device_type_supported.argtypes = [ct.c_uint]  # type: ignore
+        self._library.is_device_type_supported.restype = ct.c_int  # type: ignore
 
     def destroy(self) -> int:
         """
@@ -142,7 +140,7 @@ class ExternalServerApiClient:
         """
         with self._lock:
             con = ct.c_void_p(self._context)
-            return self._library.destroy(ct.pointer(con))   # type: ignore
+            return self._library.destroy(ct.pointer(con))  # type: ignore
 
     def device_initialized(self) -> bool:
         """
@@ -193,7 +191,7 @@ class ExternalServerApiClient:
         """
         device_identification = self._create_device_identification(device)
         with self._lock:
-            code = self._library.device_disconnected(   # type: ignore
+            code = self._library.device_disconnected(  # type: ignore
                 disconnect_types, device_identification, self._context
             )
             self._check_device_disconnected_code(device.module, code)
@@ -268,7 +266,7 @@ class ExternalServerApiClient:
         device_identification = self._create_device_identification(device)
         status_buffer = Buffer(data=status_bytes, size=len(status_bytes))
         with self._lock:
-            code = self._library.forward_status(   # type: ignore
+            code = self._library.forward_status(  # type: ignore
                 status_buffer, device_identification, self._context
             )
             self._check_forward_status_code(device.module, code)
@@ -296,7 +294,7 @@ class ExternalServerApiClient:
         device_identification = self._create_device_identification(device)
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         with self._lock:
-            code = self._library.forward_error_message(   # type: ignore
+            code = self._library.forward_error_message(  # type: ignore
                 error_buffer, device_identification, self._context
             )
             self._check_forward_error_message_code(device.module, code)
@@ -316,9 +314,9 @@ class ExternalServerApiClient:
         int
             The result of the library function call.
         """
-        return self._library.wait_for_command(timeout, self._context)   # type: ignore
+        return self._library.wait_for_command(timeout, self._context)  # type: ignore
 
-    def pop_command(self) -> tuple[bytes,_Device, int]:
+    def pop_command(self) -> tuple[bytes, _Device, int]:
         """
         Gets a command from the library by creating the device identification and calling the library function.
 
@@ -336,7 +334,7 @@ class ExternalServerApiClient:
             0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0
         )
         with self._lock:
-            rc = self._library.pop_command(   # type: ignore
+            rc = self._library.pop_command(  # type: ignore
                 ct.byref(command_buffer), ct.byref(device_identification), self._context
             )
         device = self._create_protobuf_device(device_identification)
@@ -355,7 +353,7 @@ class ExternalServerApiClient:
         device_id = self._create_device_identification(device)
         with self._lock:
             command_buffer = Buffer(command_data, len(command_data))
-            code = self._library.command_ack(command_buffer, device_id, self._context)   # type: ignore
+            code = self._library.command_ack(command_buffer, device_id, self._context)  # type: ignore
             self._check_command_ack_code(device.module, code)
             return code
 
@@ -366,7 +364,7 @@ class ExternalServerApiClient:
         return self._library.get_module_number()  # type: ignore
 
     def is_device_type_supported(self, device_type: int) -> bool:
-        code = self._library.is_device_type_supported(ct.c_uint(device_type))   # type: ignore
+        code = self._library.is_device_type_supported(ct.c_uint(device_type))  # type: ignore
         return code == _GeneralErrorCodes.OK
 
     @staticmethod
