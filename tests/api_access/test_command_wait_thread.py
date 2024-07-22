@@ -19,9 +19,21 @@ class Test_Creating_Command_Waiting_Thread(unittest.TestCase):
         self.client.init()
         self.module_connected = False
         self.thread = CommandWaitingThread(self.client, lambda: self.module_connected)
+        self.thread.TIMEOUT = 500
 
-    def test_connection_is_initially_not_estabilished(self):
-        self.assertFalse(self.thread.connection_established)
+    def test_thread_is_initially_not_started(self):
+        self.assertFalse(self.thread._waiting_thread.is_alive())
+
+    def test_thread_is_started(self):
+        self.thread.start()
+        self.assertTrue(self.thread._waiting_thread.is_alive())
+
+    def test_thread_is_stopped_after_request_timeout_passes(self):
+        self.thread.start()
+        self.thread.stop()
+        self.assertTrue(self.thread._waiting_thread.is_alive())
+        time.sleep(self.thread.TIMEOUT/1000.0)
+        self.assertFalse(self.thread._waiting_thread.is_alive())
 
     def tearDown(self) -> None:
         self.thread.stop()
