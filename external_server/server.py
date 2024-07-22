@@ -371,7 +371,9 @@ class ExternalServer:
         self._log_new_status(status)
         if not self._message_session_id_matches_current_session(status):
             return
-        self._status_order_checker.check(status)
+        else:
+            self._reset_session_checker()
+            self._status_order_checker.check(status)
 
     def _forward_status(self, status: _Status, module: _ServerModule) -> None:
         device, data = status.deviceStatus.device, status.deviceStatus.statusData
@@ -620,7 +622,10 @@ class ExternalServer:
 
     def _reset_session_checker_if_session_id_matches_current_session(self, msg_session_id: str) -> None:
         if self._session.id == msg_session_id:
-            self._session.reset()
+            self._reset_session_checker()
+
+    def _reset_session_checker(self) -> None:
+        self._session.reset()
 
     @staticmethod
     def check_connecting_state(state_enum: _Status.DeviceState) -> None:
