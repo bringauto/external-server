@@ -40,14 +40,6 @@ class StatusChecker(_Checker):
         return self._checked_statuses
 
     @property
-    def missing_statuses(self) -> _PriorityQueue[QueuedTimer]:
-        return self._skipped
-
-    @property
-    def received_statuses(self) -> _PriorityQueue[QueuedStatus]:
-        return self._received_statuses
-
-    @property
     def missing_status_counter_vals(self) -> list[CounterValue]:
         return [status_counter for status_counter, _ in self._skipped.queue]
 

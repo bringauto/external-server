@@ -51,8 +51,3 @@ class Session:
                 self._timer.join()
             self._checker.timeout.clear()
             self._timer_running = False
-
-
-    def _clear_timeout(self) -> None:
-        self._checker.timeout.clear()
-        self.reset()
