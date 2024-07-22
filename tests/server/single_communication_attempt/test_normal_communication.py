@@ -140,7 +140,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
         self.es.mqtt.stop()
 
 
-class Test_Time_Out(unittest.TestCase):
+class Test_Session_Time_Out(unittest.TestCase):
 
     def setUp(self):
         self.es = get_test_server()
@@ -156,7 +156,7 @@ class Test_Time_Out(unittest.TestCase):
             self.broker.publish(topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
-    def test_session_timeout_is_raised_if_no_status_is_received_in_time(self):
+    def test_session_timeout_is_raised_if_no_message_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es.is_connected(self.device))
             future = ex.submit(self.es._normal_communication)
@@ -164,6 +164,34 @@ class Test_Time_Out(unittest.TestCase):
             self.assertTrue(self.es._session.timeout_event.is_set())
             with self.assertRaises(SessionTimeout):
                 future.result()
+
+    def test_session_timeout_is_not_raised_if_status_is_received_in_time(self):
+        with futures.ThreadPoolExecutor() as ex:
+            self.assertTrue(self.es.is_connected(self.device))
+            ex.submit(self.es._normal_communication)
+            time.sleep(self.es._session.timeout/2)
+            self.broker.publish(
+                self.es.mqtt.subscribe_topic,
+                status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device))
+            )
+            time.sleep(self.es._session.timeout/2+0.001)  # in total, the sleep time exceeds the timeout
+            self.assertFalse(self.es._session.timeout_event.is_set())
+
+    def test_session_timeout_is_not_raised_if_connect_message_is_received_in_time(self):
+        with futures.ThreadPoolExecutor() as ex:
+            self.assertTrue(self.es.is_connected(self.device))
+            ex.submit(self.es._normal_communication)
+            time.sleep(self.es._session.timeout/2)
+            self.broker.publish(
+                self.es.mqtt.subscribe_topic,
+                connect_msg("session_id", "company", "car", [self.device])
+            )
+            time.sleep(self.es._session.timeout/2+0.001)  # in total, the sleep time exceeds the timeout
+            self.assertFalse(self.es._session.timeout_event.is_set())
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+        self.es.mqtt.stop()
 
 
 if __name__=="__main__":  # pragma: no cover
