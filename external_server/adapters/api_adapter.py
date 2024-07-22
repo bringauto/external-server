@@ -40,7 +40,7 @@ class APIClientAdapter:
     and is_device_type_supported.
     """
 
-    def __init__(self, module_config: ModuleConfig, company_name: str, car_name: str) -> None:
+    def __init__(self, config: ModuleConfig, company: str, car: str) -> None:
         """Initializes API Wrapper for Module
 
         Parameters
@@ -54,9 +54,9 @@ class APIClientAdapter:
         car_name : str
             car name from Json config, which will be forwarded as second key-value to API
         """
-        self._lib_path = module_config.lib_path.absolute().as_posix()
-        self._config = {"company_name": company_name, "car_name": car_name}
-        self._config.update(module_config.config)
+        self._lib_path = config.lib_path.absolute().as_posix()
+        self._config = {"company_name": company, "car_name": car}
+        self._config.update(config.config)
         self._library = None
         self._context = None
         self._lock = threading.Lock()

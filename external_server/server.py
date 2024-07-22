@@ -1,4 +1,5 @@
 import logging.config
+from functools import partial
 import time
 import sys
 from logging import Logger as _Logger
@@ -107,7 +108,8 @@ class ExternalServer:
         for id_str, module_config in config.modules.items():
             module_id = int(id_str)
             car, company = config.car_name, config.company_name
-            self._modules[module_id] = _ServerModule(module_id, company, car, module_config)
+            connection_check = partial(self._devices.is_module_connected, module_id)
+            self._modules[module_id] = _ServerModule(module_id, company, car, module_config, connection_check=connection_check)
 
     @property
     def modules(self) -> dict[int, _ServerModule]:
@@ -244,12 +246,6 @@ class ExternalServer:
     def _add_not_connected_device(self, device: _Device) -> None:
         self._devices.not_connected(DevicePy.from_device(device))
 
-    def _adjust_connection_state_of_module_thread(self, module_id: int, connected: bool):
-        if self._devices.is_module_connected(module_id):
-            # There is connected device with same module, no need to adjust the module thread
-            return
-        self._modules[module_id].thread.connection_established = connected
-
     def _start_communication_loop(self) -> None:
         self._running = True
         while self._running:
@@ -304,7 +300,6 @@ class ExternalServer:
 
     def _connect_device(self, device: _Device) -> int:
         code = self._modules[device.module].api_client.device_connected(device)
-        self._adjust_connection_state_of_module_thread(device.module, True)
         if code == GeneralErrorCodes.OK:
             _logger.info(f"Connected device unique identificator: {device_repr(device)}")
         else:
@@ -331,8 +326,6 @@ class ExternalServer:
             self._modules[device.module_id].api_client.device_disconnected(
                 DisconnectTypes.timeout, device.to_device()
             )
-        for module in self._modules.values():
-            module.thread.connection_established = False
         self._devices.clear()
         self._event_queue.clear()
 
@@ -350,7 +343,6 @@ class ExternalServer:
         _logger.warning(f"Disconnecting device {device_repr(device)}.")
         self._devices.remove(DevicePy.from_device(device))
         self._modules[device.module].api_client.device_disconnected(disconnect_types, device)
-        self._adjust_connection_state_of_module_thread(device.module, False)
 
     def _handle_connect(self, msg_session_id: str) -> None:
         _logger.warning("Received Connect message when already connected")

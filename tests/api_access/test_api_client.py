@@ -27,14 +27,14 @@ class Test_API_Client_Loading_Shared_Library(unittest.TestCase):
 
     def test_client_library_and_context_is_initially_empty(self):
         client = APIClientAdapter(
-            module_config=self.module_config, company_name="BringAuto", car_name="Car1"
+            config=self.module_config, company="BringAuto", car="Car1"
         )
         self.assertIsNone(client.library)
         self.assertIsNone(client.context)
 
     def test_client_initializes_library_and_context(self):
         client = APIClientAdapter(
-            module_config=self.module_config, company_name="BringAuto", car_name="Car1"
+            config=self.module_config, company="BringAuto", car="Car1"
         )
         client.init()
         self.assertIsNotNone(client.library)
@@ -46,7 +46,7 @@ class Test_API_Client_Device_Connection(unittest.TestCase):
     def setUp(self):
         self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
         self.client = APIClientAdapter(
-            module_config=self.module_config, company_name="BringAuto", car_name="Car1"
+            config=self.module_config, company="BringAuto", car="Car1"
         )
         self.device = Device(
         module=Device.EXAMPLE_MODULE, deviceType=2, deviceRole="testing", deviceName="TestDevice", priority=1

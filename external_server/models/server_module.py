@@ -1,5 +1,6 @@
 import logging.config
 import json
+from typing import Callable
 
 from external_server.adapters.api_adapter import APIClientAdapter as _ApiAdapter
 from external_server.command_waiting_thread import CommandWaitingThread as _CommandWaitingThread
@@ -14,23 +15,28 @@ with open("./config/logging.json", "r") as f:
 
 class ServerModule:
 
-    def __init__(self, module_id: int, company: str, car: str, config: _ModuleConfig) -> None:
-        self._id = module_id
-        self._api_client = _ApiAdapter(module_config=config, company_name=company, car_name=car)
+    def __init__(
+        self,
+        id: int,
+        company: str,
+        car: str,
+        config: _ModuleConfig,
+        connection_check: Callable[[], bool],
+    ) -> None:
+
+        self._id = id
+        self._api_client = _ApiAdapter(config=config, company=company, car=car)
         self._api_client.init()
         if not self._api_client.device_initialized():
-            _logger.error(
-                f"Module {module_id}: Error occurred in init function. Check the configuration file."
-            )
-            raise RuntimeError(
-                f"Module {module_id}: Error occurred in init function. Check the configuration file."
-            )
-        real_mod_number = self._api_client.get_module_number()
-        if real_mod_number != module_id:
-            msg = f"Module number '{real_mod_number}' returned from API does not match module number {module_id} in config."
+            msg = f"Module {id}: Error in init function. Check the configuration file."
             _logger.error(msg)
             raise RuntimeError(msg)
-        self._thread = _CommandWaitingThread(api_client=self._api_client)
+        real_mod_number = self._api_client.get_module_number()
+        if real_mod_number != id:
+            msg = f"Module number '{real_mod_number}' returned from API does not match module number {id} in config."
+            _logger.error(msg)
+            raise RuntimeError(msg)
+        self._thread = _CommandWaitingThread(self._api_client, connection_check)
 
     @property
     def api_client(self) -> _ApiAdapter:
