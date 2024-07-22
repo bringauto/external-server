@@ -177,14 +177,14 @@ class Test_Session_Time_Out(unittest.TestCase):
             time.sleep(self.es._session.timeout/2+0.001)  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._session.timeout_event.is_set())
 
-    def test_session_timeout_is_not_raised_if_connect_message_is_received_in_time(self):
+    def test_session_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es.is_connected(self.device))
             ex.submit(self.es._normal_communication)
             time.sleep(self.es._session.timeout/2)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic,
-                connect_msg("session_id", "company", "car", [self.device])
+                cmd_response("session_id", 1, CommandResponse.OK)
             )
             time.sleep(self.es._session.timeout/2+0.001)  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._session.timeout_event.is_set())
