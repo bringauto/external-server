@@ -34,7 +34,7 @@ from external_server.adapters.mqtt_adapter import MQTTClientAdapter
 from external_server.utils import check_file_exists, device_repr
 from external_server.config import Config as Config
 from external_server.models.structures import (
-    GeneralErrorCodes,
+    GeneralErrorCode,
     DisconnectTypes,
     TimeoutType,
 )
@@ -300,7 +300,7 @@ class ExternalServer:
 
     def _connect_device(self, device: _Device) -> int:
         code = self._modules[device.module].api_client.device_connected(device)
-        if code == GeneralErrorCodes.OK:
+        if code == GeneralErrorCode.OK:
             _logger.info(f"Connected device unique identificator: {device_repr(device)}")
         else:
             _logger.error(f"Device {device_repr(device)} could not connect. Response code: {code}")
@@ -335,7 +335,7 @@ class ExternalServer:
         for module in self._modules.values():
             module.thread.wait_for_join()
             code = module.api_client.destroy()
-            if not code == GeneralErrorCodes.OK:
+            if not code == GeneralErrorCode.OK:
                 _logger.error(f"Module {module.id}: Error in destroy function. Return code: {code}")
         self._modules.clear()
 
@@ -479,7 +479,7 @@ class ExternalServer:
             if device.module in self._modules:
                 self._modules[device.module].warn_if_device_unsupported(device)
                 code = self._connect_device(device)
-                if code == GeneralErrorCodes.OK:
+                if code == GeneralErrorCode.OK:
                     self._add_connected_device(device)
             else:
                 ExternalServer.warn_module_not_supported(

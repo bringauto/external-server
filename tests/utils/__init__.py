@@ -9,8 +9,8 @@ from external_server import ExternalServer
 from external_server.config import Config as Config, ModuleConfig
 
 
-EXAMPLE_MODULE_SO_LIB_PATH = \
-    _os.path.abspath("tests/utils/example_module/_build/libexample-external-server-sharedd.so")
+EXAMPLE_MODULE_SO_LIB_PATH: FilePath = \
+    FilePath(_os.path.abspath("tests/utils/example_module/_build/libexample-external-server-sharedd.so"))
 
 
 ES_CONFIG_WITHOUT_MODULES = {

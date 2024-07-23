@@ -2,6 +2,9 @@ import ctypes as ct
 from enum import IntEnum
 
 
+ReturnCode = int
+
+
 class TimeoutType(IntEnum):
     SESSION_TIMEOUT = 0
     MESSAGE_TIMEOUT = 1
@@ -17,7 +20,7 @@ class TimeoutType(IntEnum):
 #   NOT_OK   = -1,  /// Routine execution does not succeed
 #   RESERVED = -10, /// Codes from -1 to RESERVED are reserved as General purpose errors
 # };
-class GeneralErrorCodes(IntEnum):
+class GeneralErrorCode(IntEnum):
     OK = 0
     NOT_OK = -1
     RESERVED = -10
@@ -31,9 +34,9 @@ class GeneralErrorCodes(IntEnum):
 # 	CONTEXT_INCORRECT = -11,
 # 	TIMEOUT_OCCURRED = -12,
 # };
-class EsErrorCodes(IntEnum):
-    CONTEXT_INCORRECT = GeneralErrorCodes.RESERVED - 1
-    TIMEOUT_OCCURRED = GeneralErrorCodes.RESERVED - 2
+class EsErrorCode(IntEnum):
+    CONTEXT_INCORRECT = GeneralErrorCode.RESERVED - 1
+    TIMEOUT = GeneralErrorCode.RESERVED - 2
 
 
 # Enum taken from external_server_structures.h in Fleet protocol,

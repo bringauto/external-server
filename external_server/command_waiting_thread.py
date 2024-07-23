@@ -4,10 +4,11 @@ from queue import Queue, Empty
 import logging.config
 import json
 import sys
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.models.structures import GeneralErrorCodes, EsErrorCodes
+from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api_adapter import APIClientAdapter  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
@@ -18,30 +19,40 @@ with open("./config/logging.json", "r") as f:
 
 
 class CommandWaitingThread:
-    TIMEOUT = 1000  # Timeout for wait_for_command in ms
+    """Instances of this class are responsible for retrieving commands from external server API.
+    These commands are then stored in a queue.
+    An event is added to the event queue when a command is available.
+    """
 
-    def __init__(self, api_client: APIClientAdapter, connection_check: Callable[[], bool]) -> None:
+    def __init__(
+        self,
+        api_client: APIClientAdapter,
+        connection_check: Callable[[], bool],
+        timeout_ms: int = 1000,
+    ) -> None:
+
         self._api_adapter: APIClientAdapter = api_client
-        self._event_queue = EventQueueSingleton()
+        self._events = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
         self._commands: Queue[tuple[bytes, _Device]] = Queue()
-        self._connection_established = connection_check
+        self._connection_established: Callable[[], bool] = connection_check
         self._commands_lock = threading.Lock()
         self._connection_established_lock = threading.Lock()
         self._continue_thread = True
+        self._timeout_ms = timeout_ms
 
     @property
-    def connection_established(self) -> bool:
-        with self._connection_established_lock:
-            return self._connection_established()
+    def timeout_ms(self) -> int:
+        return self._timeout_ms
 
     def start(self) -> None:
         """Starts the thread for obtaining command from external server API."""
         self._waiting_thread.start()
 
     def stop(self) -> None:
-        """Stops the thread."""
+        """Stops the thread after """
         self._continue_thread = False
+        self.wait_for_join()
 
     def wait_for_join(self) -> None:
         """Waits for join with calling thread."""
@@ -60,6 +71,23 @@ class CommandWaitingThread:
                 return None
             return command
 
+    def poll_commands(self) -> None:
+        """Polls for a single command from the API.
+
+        If commands are avaiable, they are saved in the queue.
+        If no commands are available before the timeout, no action is taken.
+        If an error occurs, an error message is logged.
+        """
+
+        # The function is made public in order to be used in unit tests
+        rc = self._api_adapter.wait_for_command(self._timeout_ms)
+        if rc == GeneralErrorCode.OK:
+            self._save_available_commands()
+        elif rc == EsErrorCode.TIMEOUT:
+            pass
+        else:
+            _logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
+
     def _save_available_commands(self) -> None:
         remaining_commands = 1
         while remaining_commands > 0:
@@ -73,16 +101,11 @@ class CommandWaitingThread:
                             self._commands.get()
                     self._commands.put((command, device))
         if self._connection_established():
-            self._event_queue.add_event(
-                event_type=EventType.COMMAND_AVAILABLE, data=self._api_adapter.get_module_number()
-            )
+            module_id = self._api_adapter.get_module_number()
+            self._events.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
+        else:
+            pass
 
     def _main_thread(self) -> None:
         while self._continue_thread:
-            rc = self._api_adapter.wait_for_command(self.TIMEOUT)
-            if rc == GeneralErrorCodes.OK:
-                self._save_available_commands()
-            elif rc == EsErrorCodes.TIMEOUT_OCCURRED:
-                continue
-            else:
-                _logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
+            self.poll_commands()

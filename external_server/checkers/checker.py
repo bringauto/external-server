@@ -37,4 +37,4 @@ class Checker:
     def _timeout_occurred(self) -> None:
         """Puts the TIMEOUT_OCCURRED event to event queue. """
         self.timeout.set()
-        self._event_queue.add_event(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)
+        self._event_queue.add(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)

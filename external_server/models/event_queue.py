@@ -44,10 +44,11 @@ class EventQueueSingleton(metaclass=SingletonMeta):
     def __init__(self) -> None:
         self._queue: _Queue[Any] = _Queue()
 
-    def add_event(self, event_type: EventType, data: Any | None = None) -> None:
+    def add(self, event_type: EventType, data: Any = None) -> None:
         self._queue.put(Event(event=event_type, data=data))
 
     def empty(self) -> bool:
+        """Return True if the queue is empty, False otherwise."""
         return self._queue.empty()
 
     def get(self, *args, **kwargs) -> Event:

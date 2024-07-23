@@ -18,7 +18,10 @@ from external_server.models.structures import (
     DisconnectTypes,
 )
 from external_server.config import ModuleConfig
-from external_server.models.structures import GeneralErrorCodes as _GeneralErrorCodes
+from external_server.models.structures import (
+    GeneralErrorCode as _GeneralErrorCode,
+    ReturnCode,
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -153,7 +156,7 @@ class APIClientAdapter:
         """
         return self._context is not None
 
-    def device_connected(self, device: _Device) -> int:
+    def device_connected(self, device: _Device) -> ReturnCode:
         """Handles device connection by creating the device identification and calling
         the library function.
 
@@ -172,7 +175,7 @@ class APIClientAdapter:
         with self._lock:
             return self._library.device_connected(device_identification, self._context)  # type: ignore
 
-    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> int:
+    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> ReturnCode:
         """
         Handles device disconnection by creating the device identification and calling the library function.
 
@@ -245,7 +248,7 @@ class APIClientAdapter:
 
         return device
 
-    def forward_status(self, device: _Device, status_bytes: bytes) -> int:
+    def forward_status(self, device: _Device, status_bytes: bytes) -> ReturnCode:
         """
         Forwards a status update by creating the device identification and status buffer,
         and calling the library function.
@@ -272,7 +275,7 @@ class APIClientAdapter:
             self._check_forward_status_code(device.module, code)
             return code
 
-    def forward_error_message(self, device: _Device, error_bytes: bytes) -> int:
+    def forward_error_message(self, device: _Device, error_bytes: bytes) -> ReturnCode:
         """
         Forwards an error message by creating the device identification and status buffer,
         and calling the library function.
@@ -300,7 +303,7 @@ class APIClientAdapter:
             self._check_forward_error_message_code(device.module, code)
             return code
 
-    def wait_for_command(self, timeout: int) -> int:
+    def wait_for_command(self, timeout: int) -> ReturnCode:
         """
         Waits for a command from the library with the specified timeout.
 
@@ -316,7 +319,7 @@ class APIClientAdapter:
         """
         return self._library.wait_for_command(timeout, self._context)  # type: ignore
 
-    def pop_command(self) -> tuple[bytes, _Device, int]:
+    def pop_command(self) -> tuple[bytes, _Device, ReturnCode]:
         """
         Gets a command from the library by creating the device identification and calling the library function.
 
@@ -348,7 +351,7 @@ class APIClientAdapter:
 
         return command_bytes, device, rc
 
-    def command_ack(self, command_data: bytes, device: _Device) -> int:
+    def command_ack(self, command_data: bytes, device: _Device) -> ReturnCode:
         """Calls command_ack function from API"""
         device_id = self._create_device_identification(device)
         with self._lock:
@@ -365,28 +368,28 @@ class APIClientAdapter:
 
     def is_device_type_supported(self, device_type: int) -> bool:
         code = self._library.is_device_type_supported(ct.c_uint(device_type))  # type: ignore
-        return code == _GeneralErrorCodes.OK
+        return code == _GeneralErrorCode.OK
 
     @staticmethod
     def _check_forward_status_code(module_id: int, code: int) -> None:
-        if code != _GeneralErrorCodes.OK:
+        if code != _GeneralErrorCode.OK:
             _logger.error(f"Module {module_id}: Error in forward_status function, code: {code}")
 
     @staticmethod
     def _check_forward_error_message_code(module_id: int, code: int) -> None:
-        if code != _GeneralErrorCodes.OK:
+        if code != _GeneralErrorCode.OK:
             _logger.error(
                 f"Module {module_id}: Error in forward_error_message function, code: {code}"
             )
 
     @staticmethod
     def _check_device_disconnected_code(module_id: int, code: int) -> None:
-        if code != _GeneralErrorCodes.OK:
+        if code != _GeneralErrorCode.OK:
             _logger.error(
                 f"Module {module_id}: Error in device_disconnected function, code: {code}"
             )
 
     @staticmethod
     def _check_command_ack_code(module_id: int, code: int) -> None:
-        if code != _GeneralErrorCodes.OK:
+        if code != _GeneralErrorCode.OK:
             _logger.error(f"Module {module_id}: Error in command_ack function, code: {code}")
