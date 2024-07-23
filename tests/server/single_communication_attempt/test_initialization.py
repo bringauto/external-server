@@ -218,6 +218,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
             broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
             broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
             broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
+            time.sleep(0.01)
             with self.assertRaises(ConnectSequenceFailure):
                 future.result()
         self.assertEqual(self.es.state, ServerState.ERROR)

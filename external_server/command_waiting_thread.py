@@ -27,7 +27,7 @@ class CommandWaitingThread:
     def __init__(
         self,
         api_client: APIClientAdapter,
-        connection_check: Callable[[], bool],
+        module_connection_check: Callable[[], bool],
         timeout_ms: int = 1000,
     ) -> None:
 
@@ -35,7 +35,7 @@ class CommandWaitingThread:
         self._events = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
         self._commands: Queue[tuple[bytes, _Device]] = Queue()
-        self._connection_established: Callable[[], bool] = connection_check
+        self._module_connected: Callable[[], bool] = module_connection_check
         self._commands_lock = threading.Lock()
         self._connection_established_lock = threading.Lock()
         self._continue_thread = True
@@ -96,15 +96,18 @@ class CommandWaitingThread:
                 _logger.error(f"Error in pop_command function in API. Code: {remaining_commands}")
             else:
                 with self._commands_lock, self._connection_established_lock:
-                    if not self._connection_established():
-                        while not self._commands.empty():
-                            self._commands.get()
+                    if not self._module_connected():
+                        self._clear_stored_commands()
                     self._commands.put((command, device))
-        if self._connection_established():
+        if self._module_connected():
             module_id = self._api_adapter.get_module_number()
             self._events.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
         else:
             pass
+
+    def _clear_stored_commands(self) -> None:
+        while not self._commands.empty():
+            self._commands.get()
 
     def _main_thread(self) -> None:
         while self._continue_thread:
