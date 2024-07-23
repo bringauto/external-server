@@ -25,7 +25,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
             f.write("test")
         config = ModuleConfig(lib_path="test_file.so", config={})
         os.remove("test_file.so")
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(RuntimeError):
             ServerModule(1000, "company", "car", config, lambda: True)  # pragma: no cover
 
 
