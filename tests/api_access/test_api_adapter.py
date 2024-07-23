@@ -1,5 +1,6 @@
 import unittest
 import sys
+import os
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -18,6 +19,15 @@ class Test_Module_Config_Validation(unittest.TestCase):
     def test_invalid_path_raises_validation_error(self):
         with self.assertRaises(ValueError):
             self.module_config = ModuleConfig(lib_path="invalid_path", config={})
+
+    def test_error_is_raised_when_file_does_not_exists(self):
+        with open("test_file.so", "w") as f:
+            f.write("test")
+        self.module_config = ModuleConfig(lib_path="test_file.so", config={})
+        os.remove("test_file.so")
+        with self.assertRaises(FileNotFoundError):
+            adapter = APIClientAdapter(config=self.module_config, company="BringAuto", car="Car1")
+            adapter.init()
 
 
 class Test_API_Client_Loading_Shared_Library(unittest.TestCase):

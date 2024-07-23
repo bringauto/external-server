@@ -73,37 +73,34 @@ class APIClientAdapter:
         return self._context
 
     def init(self) -> None:
-        """Initializes the library and sets the context."""
+        """Initializes the library and sets the context.
+
+        Error is raised if the library is not found or the context is not set.
+        """
         if not check_file_exists(self._lib_path):
             raise FileNotFoundError(self._lib_path)
         self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
         self._type_all_function()
         self._set_context()
+        if not self._context:
+            raise RuntimeError("API Client initialization failed.")
 
     def _set_context(self):
         """Sets the context based on the module configuration."""
-        if self._config is not None and len(self._config):
-            key_value_array = (KeyValue * len(self._config))()
-
-            for i, key in enumerate(self._config):
-                key_bytes = key.encode("utf-8")
-                value_bytes = self._config[key].encode("utf-8")
-                key_value_array[i] = KeyValue(
-                    Buffer(data=ct.c_char_p(key_bytes), size=len(key_bytes)),
-                    Buffer(data=ct.c_char_p(value_bytes), size=len(value_bytes)),
-                )
-
-            config_struct = Config(key_value_array, len(self._config))
-        else:
-            config_struct = Config(None, 0)
-
+        key_value_array = (KeyValue * len(self._config))()
+        for i, key in enumerate(self._config):
+            key_bytes = key.encode("utf-8")
+            value_bytes = self._config[key].encode("utf-8")
+            key_value_array[i] = KeyValue(
+                Buffer(data=ct.c_char_p(key_bytes), size=len(key_bytes)),
+                Buffer(data=ct.c_char_p(value_bytes), size=len(value_bytes)),
+            )
+        config_struct = Config(key_value_array, len(self._config))
         with self._lock:
             self._context = self._library.init(config_struct)
 
     def _type_all_function(self) -> None:  # type: ignore
-        """
-        Defines the argument types and return types for all the library functions.
-        """
+        """Defines the argument types and return types for all the library functions."""
         self._library.get_module_number.argtypes = []  # type: ignore
         self._library.get_module_number.restype = ct.c_int  # type: ignore
         self._library.deallocate.argtypes = [ct.POINTER(Buffer)]  # type: ignore

@@ -62,12 +62,12 @@ class Test_Server_Checks(unittest.TestCase):
 class Test_Connecting_State(unittest.TestCase):
 
     def test_connecting_state_returns_without_exception(self):
-        ES.check_connecting_state(_Status.CONNECTING)
+        ES.check_device_is_in_connecting_state(_Status.CONNECTING)
 
     def test_other_than_connecting_state_returns_exception(self):
         for state in [_Status.DISCONNECT, _Status.ERROR, _Status.RUNNING]:
             with self.assertRaises(ConnectSequenceFailure):
-                ES.check_connecting_state(state)
+                ES.check_device_is_in_connecting_state(state)
 
 
 class Test_Logging_Warning_For_Status_From_Not_Connected_Device(unittest.TestCase):

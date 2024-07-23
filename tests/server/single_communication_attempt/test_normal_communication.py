@@ -29,7 +29,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
             self.broker.publish(topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
-        self.assertTrue(self.es.is_connected(self.device_1))
+        self.assertTrue(self.es.is_supported(self.device_1))
         # the server is now initialized with mqtt client connected to broker
 
     def test_disconnect_state_from_connected_device_removes_it_from_connected_devices(self):
@@ -38,7 +38,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             ex.submit(self.es._normal_communication)
             self.broker.publish(topic, status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)))
             time.sleep(0.2)
-            self.assertFalse(self.es.is_connected(self.device_1))
+            self.assertFalse(self.es.is_supported(self.device_1))
 
     def test_disconnect_state_from_diconnected_device_has_no_effect(self):
         topic = self.es.mqtt.subscribe_topic
@@ -48,7 +48,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             time.sleep(0.3)
             self.broker.publish(topic, status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)))
             time.sleep(0.5)
-            self.assertFalse(self.es.is_connected(self.device_1))
+            self.assertFalse(self.es.is_supported(self.device_1))
 
     def test_sending_disconnect_state_from_the_only_connected_device_produces_status_response(self):
         topic = self.es.mqtt.subscribe_topic
@@ -90,7 +90,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(topic, status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)))
-            self.assertTrue(self.es.is_connected(self.device))
+            self.assertTrue(self.es.is_supported(self.device))
             self.assertEqual(
                 future.result()[0].payload,
                 status_response("session_id", 1).SerializeToString()
@@ -158,7 +158,7 @@ class Test_Session_Time_Out(unittest.TestCase):
 
     def test_session_timeout_is_raised_if_no_message_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
-            self.assertTrue(self.es.is_connected(self.device))
+            self.assertTrue(self.es.is_supported(self.device))
             future = ex.submit(self.es._normal_communication)
             time.sleep(self.es._session.timeout + 0.001)
             self.assertTrue(self.es._session.timeout_event.is_set())
@@ -167,7 +167,7 @@ class Test_Session_Time_Out(unittest.TestCase):
 
     def test_session_timeout_is_not_raised_if_status_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
-            self.assertTrue(self.es.is_connected(self.device))
+            self.assertTrue(self.es.is_supported(self.device))
             ex.submit(self.es._normal_communication)
             time.sleep(self.es._session.timeout/2)
             self.broker.publish(
@@ -179,14 +179,14 @@ class Test_Session_Time_Out(unittest.TestCase):
 
     def test_session_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
-            self.assertTrue(self.es.is_connected(self.device))
+            self.assertTrue(self.es.is_supported(self.device))
             ex.submit(self.es._normal_communication)
             time.sleep(self.es._session.timeout/2)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic,
                 cmd_response("session_id", 1, CommandResponse.OK)
             )
-            time.sleep(self.es._session.timeout/2+0.001)  # in total, the sleep time exceeds the timeout
+            time.sleep(self.es._session.timeout/2+0.01)  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._session.timeout_event.is_set())
 
     def tearDown(self) -> None:

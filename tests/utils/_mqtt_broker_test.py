@@ -27,12 +27,14 @@ class MQTTBrokerTest:
     _DEFAULT_PORT = 1883
 
     def __init__(self, start: bool = False, port: int = _DEFAULT_PORT, kill_others: bool = True):
-        if kill_others:
+        if kill_others:  # pragma: no cover
             MQTTBrokerTest.kill_all_test_brokers()
         self._process: None | subprocess.Popen = None
         self._port = port
         self._host = self._DEFAULT_HOST
-        self._script_path = os.path.join(_EXTERNAL_SERVER_PATH, "lib/mqtt-testing/interoperability/startbroker.py")
+        self._script_path = os.path.join(
+            _EXTERNAL_SERVER_PATH, "lib/mqtt-testing/interoperability/startbroker.py"
+        )
         if start:
             self.start()
 
@@ -41,7 +43,7 @@ class MQTTBrokerTest:
         return cls._running_broker_processes
 
     @classmethod
-    def kill_all_test_brokers(cls):
+    def kill_all_test_brokers(cls):  # pragma: no cover
         for process in cls._running_broker_processes:
             print(f"Killing test broker process '{process.pid}'.")
             process.kill()
@@ -60,31 +62,29 @@ class MQTTBrokerTest:
         `n` is the number of messages to wait for and return.
         """
         logger.debug(f"Waiting for {n} messages on topic {topic}")
-        result = subscribe.simple(
-            [topic], hostname=self._host, port=self._port, msg_count=n
-        )
+        result = subscribe.simple([topic], hostname=self._host, port=self._port, msg_count=n)
         if n == 1:
             return [result]
         else:
             return result
 
     def publish(self, topic: str, *payload: str | bytes) -> None:
+        if not payload:  # pragma: no cover
+            return
         payload_list = []
         for p in payload:
             if isinstance(p, Ex):
                 payload_list.append(p.SerializeToString())
             else:
                 payload_list.append(p)
-        if len(payload_list) == 0:
-            return
-        elif len(payload_list) == 1:
+        if len(payload_list) == 1:
             publish.single(topic, payload_list[0], hostname=self._host, port=self._port)
         else:
             try:
                 payload_list = [(topic, p) for p in payload_list]
                 publish.multiple(payload_list, hostname=self._host, port=self._port)
                 logger.debug(f"Published messages to topic {topic}: {payload_list}")
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 print(e)
                 raise e
 
@@ -102,7 +102,7 @@ class MQTTBrokerTest:
             self._process.terminate()
             self._process.wait()
             assert self._process.poll() is not None
-            if self._process in self._running_broker_processes:
+            if self._process in self._running_broker_processes:  # pragma: no cover
                 self._running_broker_processes.remove(self._process)
             self._process = None
             MQTTBrokerTest.kill_all_test_brokers()

@@ -26,8 +26,9 @@ class ServerModule:
 
         self._id = id
         self._api_client = _ApiAdapter(config=config, company=company, car=car)
-        self._api_client.init()
-        if not self._api_client.device_initialized():
+        try:
+            self._api_client.init()
+        except:
             msg = f"Module {id}: Error in init function. Check the configuration file."
             _logger.error(msg)
             raise RuntimeError(msg)

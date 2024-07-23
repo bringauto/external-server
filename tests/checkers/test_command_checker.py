@@ -5,7 +5,7 @@ import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import Command
+from ExternalProtocol_pb2 import Command  # type: ignore
 from external_server.checkers.command_checker import CommandChecker
 
 

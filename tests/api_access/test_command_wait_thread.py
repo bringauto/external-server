@@ -29,7 +29,7 @@ class APIClientAdapterTest(APIClientAdapter):
     def define_commands(self, api_commands: list[tuple[bytes, Device, ReturnCode]]) -> None:
         self._commands_list = api_commands.copy()
 
-    def pop_command(self) -> tuple[bytes, Device, ReturnCode]:
+    def pop_command(self) -> tuple[bytes, Device, ReturnCode]:  # pragma: no cover
         if self._commands_list:
             cmd = self._commands_list.pop(0)
             cmd = (cmd[0], cmd[1], len(self._commands_list))
@@ -61,10 +61,10 @@ class Test_Creating_Command_Waiting_Thread(unittest.TestCase):
             config=self.module_config, company="BringAuto", car="Car1", module_id=4
         )
         self.client.init()
-        self.module_connected = False
+        self.connected = False
         self.thread = CommandWaitingThread(
-            self.client, lambda: self.module_connected, timeout_ms=100
-        )
+            self.client, lambda: self.connected, timeout_ms=100
+        )  # pragma: no cover
 
     def test_thread_is_initially_not_started(self):
         self.assertFalse(self.thread._waiting_thread.is_alive())
@@ -89,10 +89,8 @@ class Test_Uninitialized_API_Client(unittest.TestCase):
 
     def test_polling_commands_from_uninitialized_api_logs_error(self):
         module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
-        client = APIClientAdapterTest(
-            config=module_config, company="BringAuto", car="Car1", module_id=4
-        )
-        thread = CommandWaitingThread(client, lambda: True, timeout_ms=1000)
+        client = APIClientAdapterTest(module_config, "BringAuto", "Car1", module_id=4)
+        thread = CommandWaitingThread(client, lambda: True, timeout_ms=1000)  # pragma: no cover
         with self.assertLogs(logger=_logger, level=logging.ERROR):
             thread.poll_commands()
 
