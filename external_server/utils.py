@@ -62,6 +62,7 @@ def status(
     error_message: Optional[bytes] = None,
 ) -> _ExternalClientMsg:
 
+    assert isinstance(error_message, bytes) or error_message is None
     status=_Status(
         sessionId=session_id,
         deviceState=state,

@@ -360,10 +360,11 @@ class ExternalServer:
     def _message_session_id_matches_current_session(
         self, message: _Connect | _Status | _CommandResponse
     ) -> bool:
+
         if message.sessionId != self._session.id:
             _logger.debug(
-                f"Received status message with session ID {message.sessionId}"
-                f" not matching current session ID '{self.session_id}'"
+                f"Received status with session ID {message.sessionId}"
+                f"does not match current session ID '{self.session_id}'"
             )
             return False
         return True
@@ -379,7 +380,8 @@ class ExternalServer:
     def _forward_status(self, status: _Status, module: _ServerModule) -> None:
         device, data = status.deviceStatus.device, status.deviceStatus.statusData
         module.api_client.forward_status(device, data)
-        self._check_status_error_and_respond(status, device)
+        self._log_status_error(status, device)
+        self._publish_status_response(status)
 
     def _handle_status(self, received_status: _Status) -> None:
         self._check_received_status(received_status)
@@ -410,7 +412,8 @@ class ExternalServer:
                 else:
                     _logger.error(f"Device {device_repr(device)} is not connected.")
             else:
-                self._check_status_error_and_respond(status, device)
+                self._log_status_error(status, device)
+                self._publish_status_response(status)
 
     def _check_at_least_one_device_is_connected(self) -> None:
         if self._devices.n_supported == 0:
@@ -418,12 +421,15 @@ class ExternalServer:
             _logger.warning(msg)
             raise CommunicationException(msg)
 
-    def _check_status_error_and_respond(self, status: _Status, device: _Device) -> None:
-        if len(status.errorMessage) > 0:
+    def _log_status_error(self, status: _Status, device: _Device) -> None:
+        try:
+            error_str = status.errorMessage.decode("utf-8")
+        except:
+            error_str = status.errorMessage
+        if error_str:
             _logger.error(
                 f"Status for device {device_repr(device)} contains error message: {status.errorMessage}"
             )
-        self._publish_status_response(status)
 
     def _publish_status_response(self, status: _Status) -> None:
         status_response = self._status_response(status)
