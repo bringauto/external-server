@@ -8,12 +8,7 @@ from external_server.models.structures import TimeoutType as _TimeoutType
 
 
 class Session:
-    """Checks if connected session did not timed out.
-
-    Messages can come from not connected session and connected session would have never
-    been timed out. This class takes care that, if connected session did not send any
-    message in given timeout, then connected session is timed out
-    """
+    """Checks if connected session did not timed out."""
 
     def __init__(self, timeout: int) -> None:
         self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT)
