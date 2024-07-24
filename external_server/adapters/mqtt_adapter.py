@@ -7,7 +7,7 @@ import sys
 import ssl
 from typing import Optional, Any
 import time
-
+import os
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -265,6 +265,7 @@ class MQTTClientAdapter:
         `certfile` - path to the client certificate file.
         `keyfile` - path to the client private key file.
         """
+        self._check_tls_files_existence(ca_certs, certfile, keyfile)
         self._mqtt_client.tls_set(
             ca_certs=ca_certs,
             certfile=certfile,
@@ -273,6 +274,13 @@ class MQTTClientAdapter:
         )
         self._mqtt_client.tls_insecure_set(False)
 
+    def _check_tls_files_existence(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+        if not os.path.isfile(ca_certs):
+            raise FileNotFoundError(ca_certs)
+        if not os.path.isfile(certfile):
+            raise FileNotFoundError(certfile)
+        if not os.path.isfile(keyfile):
+            raise FileNotFoundError(keyfile)
 
     def _get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
         """Returns message from MQTTClient.

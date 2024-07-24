@@ -3,13 +3,13 @@ import threading
 import sys
 import logging.config
 import json
+import os
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
 )
-from external_server.utils import check_file_exists
 from external_server.models.structures import (
     Config,
     KeyValue,
@@ -77,7 +77,7 @@ class APIClientAdapter:
 
         Error is raised if the library is not found or the context is not set.
         """
-        if not check_file_exists(self._lib_path):
+        if not os.path.isfile(self._lib_path):
             raise FileNotFoundError(self._lib_path)
         self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
         self._type_all_function()

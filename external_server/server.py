@@ -31,7 +31,7 @@ from external_server.server_messages import (
     external_command as _external_command,
 )
 from external_server.adapters.mqtt_adapter import MQTTClientAdapter
-from external_server.utils import check_file_exists, device_repr
+from external_server.utils import device_repr
 from external_server.config import Config as Config
 from external_server.models.structures import (
     GeneralErrorCode,
@@ -217,12 +217,6 @@ class ExternalServer:
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to mqtt client"
-        if not check_file_exists(ca_certs):
-            raise FileNotFoundError(ca_certs)
-        if not check_file_exists(certfile):
-            raise FileNotFoundError(certfile)
-        if not check_file_exists(keyfile):
-            raise FileNotFoundError(keyfile)
         self._mqtt.tls_set(ca_certs, certfile, keyfile)
 
     def start(self) -> None:

@@ -34,10 +34,6 @@ def argparse_init() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def check_file_exists(path: str) -> bool:
-    return os.path.isfile(path)
-
-
 def device_repr(device: _Device) -> str:
     return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
 
