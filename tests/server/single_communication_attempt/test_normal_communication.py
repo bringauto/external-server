@@ -232,7 +232,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             self.broker.publish(
                 self.es.mqtt.subscribe_topic, cmd_response("session_id", 1, CommandResponse.OK)
             )
-            time.sleep(self.es._session.timeout / 2 + 0.01)  # in total, the sleep time exceeds the timeout
+            time.sleep(self.es._session.timeout / 2 + 0.02)  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._session.timeout_event.is_set())
 
     def tearDown(self) -> None:
