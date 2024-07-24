@@ -215,7 +215,7 @@ class ExternalServer:
                 _logger.error(msg)
                 raise ConnectSequenceFailure(msg)
 
-    def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+    def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to mqtt client"
         self._mqtt.tls_set(ca_certs, certfile, keyfile)
 

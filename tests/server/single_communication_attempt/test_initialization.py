@@ -12,6 +12,10 @@ from external_server.models.exceptions import ConnectSequenceFailure
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
 
+from external_server.server import _logger
+
+_logger.setLevel("DEBUG")
+
 
 class Test_Initial_State(unittest.TestCase):
 
@@ -96,6 +100,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._initialize)
+            time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
@@ -149,6 +154,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._initialize)
+            time.sleep(0.2)
             broker.publish(
                 topic,
                 connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
@@ -172,6 +178,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._initialize)
+            time.sleep(0.2)
             broker.publish(
                 topic,
                 connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
@@ -221,6 +228,10 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
             with self.assertRaises(ConnectSequenceFailure):
                 future.result()
         self.assertEqual(self.es.state, ServerState.ERROR)
+
+    def tearDown(self) -> None:
+        self.es.mqtt.stop()
+        self.broker.stop()
 
 
 if __name__=="__main__":  # pragma: no cover

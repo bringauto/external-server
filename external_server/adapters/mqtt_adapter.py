@@ -264,6 +264,8 @@ class MQTTClientAdapter:
         `ca_certs` - path to the CA certificates file.
         `certfile` - path to the client certificate file.
         `keyfile` - path to the client private key file.
+
+        All the files must exist, otherwise an exception is raised.
         """
         self._check_tls_files_existence(ca_certs, certfile, keyfile)
         self._mqtt_client.tls_set(
@@ -272,9 +274,9 @@ class MQTTClientAdapter:
             keyfile=keyfile,
             tls_version=ssl.PROTOCOL_TLS_CLIENT,
         )
-        self._mqtt_client.tls_insecure_set(False)
 
     def _check_tls_files_existence(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+        """Raise an exception if any of the given files does not exist."""
         if not os.path.isfile(ca_certs):
             raise FileNotFoundError(ca_certs)
         if not os.path.isfile(certfile):

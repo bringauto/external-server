@@ -54,7 +54,7 @@ def main() -> None:
                 "TLS requires ca certificate, PEM encoded client certificate and private key to this certificate"
             )
             sys.exit(1)
-        server.set_tls(args.ca, args.cert, args.key)
+        server.tls_set(args.ca, args.cert, args.key)
 
     try:
         server.start()
