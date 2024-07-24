@@ -111,6 +111,4 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    runner = unittest.TextTestRunner(verbosity=2)
-    runner.run(Test_No_Commands_Stored_By_Checker("test_pop_commands_yields_empty_list_of_commands"))
-    # unittest.main(buffer=True, verbosity=2)
+    unittest.main(buffer=True, verbosity=2)

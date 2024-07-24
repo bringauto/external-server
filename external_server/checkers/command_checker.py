@@ -83,11 +83,9 @@ class CommandChecker(_Checker):
             number of command, which was acknowledged by received commandResponse
         """
         popped: list[_ExternalCommand] = list()
-        if self._commands.newest_counter is not None:
+        if self._commands.newest_counter != counter:
             self._received_acks.append(counter)
-            self._logger.warning(
-                f"Command response has been received in wrong order: {counter}"
-            )
+            self._logger.warning(f"Command response received in wrong order. Counter={counter}")
             return popped
 
         queued_command = self._commands.get()
