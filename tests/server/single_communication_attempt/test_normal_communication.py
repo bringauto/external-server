@@ -218,7 +218,7 @@ class Test_Session_Time_Out(unittest.TestCase):
                 status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)),
             )
             time.sleep(
-                self.es._session.timeout / 2 + 0.001
+                self.es._session.timeout / 2 + 0.01
             )  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._session.timeout_event.is_set())
 
@@ -262,22 +262,23 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
 
     def test_nonempty_error_msg_from_status_is_logged(self):
         topic = self.es.mqtt.subscribe_topic
-        with futures.ThreadPoolExecutor() as ex, self.assertLogs(_eslogger, logging.ERROR):
-            ex.submit(self.es._normal_communication)
-            future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            self.broker.publish(
-                topic,
-                status(
-                    "id",
-                    Status.RUNNING,
-                    1,
-                    DeviceStatus(device=self.device),
-                    error_message=b"error",
-                ),
-            )
-            self.assertEqual(
-                future.result()[0].payload, status_response("id", 1).SerializeToString()
-            )
+        with self.assertLogs(_eslogger, logging.ERROR):
+            with futures.ThreadPoolExecutor() as ex:
+                ex.submit(self.es._normal_communication)
+                future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+                self.broker.publish(
+                    topic,
+                    status(
+                        "session_id",
+                        Status.RUNNING,
+                        1,
+                        DeviceStatus(device=self.device),
+                        error_message=b"error",
+                    ),
+                )
+                self.assertEqual(
+                    future.result()[0].payload, status_response("session_id", 1).SerializeToString()
+                )
 
     def tearDown(self) -> None:
         self.broker.stop()
