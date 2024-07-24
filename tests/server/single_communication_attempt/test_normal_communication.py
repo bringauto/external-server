@@ -115,6 +115,27 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
                 future.result()[0].payload, status_response("session_id", 1).SerializeToString()
             )
 
+    def test_status_containing_error_message_forwards_error(self):
+        topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._normal_communication)
+            future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+            self.broker.publish(
+                topic,
+                status(
+                    "session_id",
+                    Status.RUNNING,
+                    1,
+                    DeviceStatus(device=self.device),
+                    error_message=b"error"
+                )
+            )
+            self.assertTrue(self.es.is_supported(self.device))
+            self.assertEqual(
+                future.result()[0].payload, status_response("session_id", 1).SerializeToString()
+            )
+
+
     def test_multiple_statuses_sent_by_connected_device_publishes_status_responses_with_corresponding_counter_values(
         self,
     ):
@@ -281,6 +302,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
     def tearDown(self) -> None:
         self.broker.stop()
         self.es.mqtt.stop()
+
 
 
 if __name__ == "__main__":  # pragma: no cover

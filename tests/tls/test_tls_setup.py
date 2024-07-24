@@ -49,6 +49,10 @@ class Test_Setting_Up_TLS_In_MQTT_Client(unittest.TestCase):
     def test_using_nonexistent_file_for_tls_setup_raises_exception(self):
         with self.assertRaises(FileNotFoundError):
             self.adapter.tls_set("nonexistent.pem", "certfile.pem", "keyfile.pem")
+        with self.assertRaises(FileNotFoundError):
+            self.adapter.tls_set("ca.pem", "nonexistent.pem", "keyfile.pem")
+        with self.assertRaises(FileNotFoundError):
+            self.adapter.tls_set("ca.pem", "certfile.pem", "nonexistent.pem")
 
     def tearDown(self) -> None:  # pragma: no cover
         if os.path.isfile("ca.pem"):

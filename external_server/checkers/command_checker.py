@@ -100,7 +100,6 @@ class CommandChecker(_Checker):
             counter = self._commands.oldest_counter
             if (counter is not None) and (counter in self._missed_counter_vals):
                 command = self._commands.get()
-                command.stop_timer()
                 popped.append((command.command, command.from_api))
                 self._missed_counter_vals.remove(counter)
                 self._logger.info(f"Older Command response acknowledged, counter={counter}")

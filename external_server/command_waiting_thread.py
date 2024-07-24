@@ -20,6 +20,7 @@ with open("./config/logging.json", "r") as f:
 
 class CommandWaitingThread:
     """Instances of this class are responsible for retrieving commands from external server API.
+
     These commands are then stored in a queue.
     An event is added to the event queue when a command is available.
     """

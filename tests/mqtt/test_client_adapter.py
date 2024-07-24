@@ -26,14 +26,12 @@ from InternalProtocol_pb2 import (  # type: ignore
     DeviceStatus,
 )
 from ExternalProtocol_pb2 import (  # type: ignore
-    Command,
     CommandResponse,
     ConnectResponse,
     Connect,
     Status,
     StatusResponse,
     ExternalClient,
-    ExternalServer as ExternalServerMsg,
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
@@ -81,13 +79,14 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
 class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
 
     def test_sets_up_subscribe_and_publish_topics_including_company_and_car_name(self):
-        adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", broker_port=0)
+        adapter = MQTTClientAdapter("company", "car", 2, broker_host="127.0.0.1", broker_port=1883)
         self.assertEqual(
             adapter.subscribe_topic, f"company/car/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         )
         self.assertEqual(
             adapter.publish_topic, f"company/car/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
         )
+        self.assertEqual(adapter.broker_address, "127.0.0.1:1883")
 
     def test_creates_empty_received_message_queue(self) -> None:
         adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", broker_port=0)

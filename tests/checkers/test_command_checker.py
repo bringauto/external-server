@@ -37,13 +37,13 @@ class Test_Pop_Command(unittest.TestCase):
         self.assertEqual(self.checker.pop_commands(counter=1)[0][0], self.cmd_1)
         self.assertEqual(self.checker.pop_commands(counter=2)[0][0], self.cmd_3)
 
-    def test_without_matching_counter_yields_single_command_each_time(self):
+    def test_without_matching_counter_yields_empty_command_list(self):
         self.assertEqual(self.checker.pop_commands(counter=1), [])
         self.assertEqual(self.checker.pop_commands(counter=2), [])
 
     def test_with_matching_counter_yields_all_previous_commands_without_maching_counter(self):
-        self.checker.pop_commands(counter=1)
-        self.checker.pop_commands(counter=2)
+        self.assertEqual(self.checker.pop_commands(counter=1), [])
+        self.assertEqual(self.checker.pop_commands(counter=2), [])
         # the correct message counter value is 0, after popping cmd with this counter value
         # all three popped commands are returned in the correct order
         self.assertEqual(

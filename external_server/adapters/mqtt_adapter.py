@@ -301,15 +301,13 @@ class MQTTClientAdapter:
             return None
 
     def _log_connection_result(self, code: int) -> None:
-        address = f"{self._broker_host}:{self._broker_port}"
         if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to a MQTT broker ({address}).")
+            _logger.info(f"Connected to a MQTT broker ({self.broker_address}).")
         elif code == mqtt.MQTT_ERR_INVAL:
-            _logger.info(
-                f"Connecting to a MQTT broker ({address}). MQTT client has been already connected."
-            )
+            _logger.info(f"MQTT client already connected to broker ({self.broker_address}).")
         else:
-            _logger.error(f"Failed to to a MQTT broker ({address}). {mqtt_error_from_code(code)}")
+            _logger.error(f"Cannot connect to broker ({self.broker_address})."
+                          f"{mqtt_error_from_code(code)}")
 
     def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:
         """Callback function for handling connection events.
@@ -336,7 +334,7 @@ class MQTTClientAdapter:
             _logger.info("Server disconnected from MQTT broker")
             self._received_msgs.put(False)
             self._event_queue.add(event_type=EventType.MQTT_BROKER_DISCONNECTED)
-        except:
+        except:  # pragma: no cover
             _logger.error("MQTT on disconnect callback: Failed to disconnect from the broker")
 
     def _on_message(self, client: _Client, data, message: MQTTMessage) -> None:
@@ -355,7 +353,7 @@ class MQTTClientAdapter:
                 _logger.debug(f"Received message on topic '{self._subscribe_topic}'")
                 self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
                 self._event_queue.add(event_type=EventType.RECEIVED_MESSAGE)
-        except:
+        except: # pragma: no cover
             _logger.error("MQTT on message callback: Failed to parse the received message")
 
     def _set_up_callbacks(self) -> None:
@@ -370,7 +368,7 @@ class MQTTClientAdapter:
         else:
             _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}")
 
-    def _wait_for_connection(self, timeout: float) -> bool:
+    def _wait_for_connection(self, timeout: float) -> bool:  # pragma: no cover
         """Wait for the connection to be established.
 
         Returns `True` if the connection is established within the given timeout,

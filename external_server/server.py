@@ -85,11 +85,14 @@ class ExternalServer:
     def __init__(self, config: Config) -> None:
         self._running = False
         self._config = config
+
         self._event_queue = EventQueueSingleton()
-        self._session = Session(self._config.mqtt_timeout)
-        self._command_checker = CommandChecker(self._config.timeout)
-        self._status_checker = StatusChecker(self._config.timeout)
         self._devices = KnownDevices()
+
+        self._session = Session(self._config.mqtt_timeout)
+        self._status_checker = StatusChecker(self._config.timeout)
+
+        self._command_checker = CommandChecker(self._config.timeout)
         self._mqtt = MQTTClientAdapter(
             config.company_name,
             config.car_name,
@@ -134,9 +137,6 @@ class ExternalServer:
 
     def is_unsupported(self, device: _Device | DevicePy) -> bool:
         return self._devices.is_unsupported(device)
-
-    def is_unknown(self, device: _Device | DevicePy) -> bool:
-        return self._devices.is_unknown(device)
 
     def send_first_commands_and_check_responses(self) -> None:
         """Send command to all connected devices and check responses are returned."""
@@ -196,14 +196,13 @@ class ExternalServer:
             _logger.info(f"Received Command response message")
             response = received_msg.commandResponse
             commands = self._command_checker.pop_commands(response.messageCounter)
-            for command, was_returned_from_api in commands:
+            for command, from_api in commands:
                 device = command.deviceCommand.device
                 device_connected = self._devices.is_supported(device)
-                if device_connected and was_returned_from_api:
+                if device_connected and from_api:
                     cmd = command.deviceCommand
-                    self._modules[cmd.device.module].api_client.command_ack(
-                        cmd.commandData, cmd.device
-                    )
+                    module_id = cmd.device.module
+                    self._modules[module_id].api_client.command_ack(cmd.commandData, cmd.device)
 
     def _check_command_response(self, response: _ExternalClientMsg) -> None:
             if response is None or response == False:
@@ -412,14 +411,9 @@ class ExternalServer:
             raise CommunicationException(msg)
 
     def _log_status_error(self, status: _Status, device: _Device) -> None:
-        try:
-            error_str = status.errorMessage.decode("utf-8")
-        except:
-            error_str = status.errorMessage
-        if error_str:
-            _logger.error(
-                f"Status for device {device_repr(device)} contains error message: {status.errorMessage}"
-            )
+        if status.errorMessage:
+            error_str = status.errorMessage.decode()
+            _logger.error(f"Status for device {device_repr(device)} contains error: {error_str}.")
 
     def _publish_status_response(self, status: _Status) -> None:
         status_response = self._status_response(status)
@@ -441,9 +435,7 @@ class ExternalServer:
             module.api_client.command_ack(dev_cmd.commandData, dev_cmd.device)
             if device_not_connected and command.messageCounter == command_response.messageCounter:
                 self._disconnect_device(DisconnectTypes.announced, dev_cmd.device)
-                _logger.warning(
-                    f"Command response announces that device {dev_cmd.device.deviceName} was disconnected"
-                )
+                _logger.warning(f"Device {device_repr(dev_cmd.device)} disconnected.")
 
     def _handle_command(self, module_id: int) -> None:
         command_counter = self._command_checker.counter
