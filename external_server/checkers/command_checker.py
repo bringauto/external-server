@@ -1,6 +1,7 @@
 from queue import Queue
 from threading import Timer as _Timer
 import sys
+import dataclasses
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -11,6 +12,42 @@ from external_server.models.structures import TimeoutType as _TimeoutType
 
 _ReturnedFromAPIFlag = bool
 _ExternalCommand = tuple[_Command, _ReturnedFromAPIFlag]
+_Counter = int
+
+
+@dataclasses.dataclass(frozen=True)
+class QueuedCommand:
+    command: _Command
+    counter: _Counter
+    from_api: _ReturnedFromAPIFlag
+    timer: _Timer
+
+    def stop_timer(self) -> None:
+        self.timer.cancel()
+        self.timer.join()
+
+
+class CommandQueue:
+    def __init__(self) -> None:
+        self._queue: Queue[QueuedCommand] = Queue()
+
+    @property
+    def newest_counter(self) -> _Counter | None:
+        return None if self._queue.empty() else self._queue.queue[0]
+
+    def clear(self) -> None:
+        while not self._queue.empty():
+            cmd = self._queue.get()
+            cmd.stop_timer()
+
+    def empty(self) -> bool:
+        return self._queue.empty()
+
+    def get(self) -> QueuedCommand:
+        return self._queue.get()
+
+    def put(self, command: QueuedCommand) -> None:
+        self._queue.put(command)
 
 
 class CommandChecker(_Checker):
@@ -25,11 +62,11 @@ class CommandChecker(_Checker):
     def __init__(self, timeout: int) -> None:
         super().__init__(_TimeoutType.COMMAND_TIMEOUT)
         self._timeout = timeout
-        self._commands: Queue[tuple[_Command, int, bool, _Timer]] = Queue()
-        self._received_acks: list[int] = []
+        self._commands = CommandQueue()
+        self._received_acks: list[_Counter] = []
         self._counter = 0
 
-    def acknowledge_and_pop_commands(self, msg_counter: int) -> list[_ExternalCommand]:
+    def pop_commands(self, counter: _Counter) -> list[_ExternalCommand]:
         """Pops commands from checker.
 
         Returns list of Command messages, which have been acknowledged with Command
@@ -45,34 +82,32 @@ class CommandChecker(_Checker):
         msg_counter : int
             number of command, which was acknowledged by received commandResponse
         """
-        command_list: list[_ExternalCommand] = list()
-        if self._commands.empty() or msg_counter != self._commands.queue[0][1]:
-            self._received_acks.append(msg_counter)
+        popped: list[_ExternalCommand] = list()
+        if self._commands.newest_counter is not None:
+            self._received_acks.append(counter)
             self._logger.warning(
-                f"Command response message has been received in bad order: {msg_counter}"
+                f"Command response has been received in wrong order: {counter}"
             )
-            return command_list
+            return popped
 
-        command, _, returned_from_api, timer = self._commands.get()
-        command_list.append((command, returned_from_api))
+        queued_command = self._commands.get()
+        popped.append((queued_command.command, queued_command.from_api))
 
-        self._stop_timer(timer)
+        self._stop_timer(queued_command.timer)
         self._logger.info(
-            f"Received Command response message was acknowledged, messageCounter: {msg_counter}"
+            f"Received Command response message was acknowledged, messageCounter: {counter}"
         )
         while self._received_acks:
-            counter = self._commands.queue[0][1]
-            if counter in self._received_acks:
-                command, _, returned_from_api, timer = self._commands.get()
-                command_list.append((command, returned_from_api))
-                self._stop_timer(timer)
-                self._received_acks.remove(counter)
-                self._logger.info(
-                    f"Older Command response message was acknowledged, messageCounter: {counter}"
-                )
-                continue
-            break
-        return command_list
+            c = self._commands.newest_counter
+            if (c is not None) and (c in self._received_acks):
+                command = self._commands.get()
+                popped.append((command.command, command.from_api))
+                self._stop_timer(command.timer)
+                self._received_acks.remove(c)
+                self._logger.info(f"Older Command response acknowledged, counter={c}")
+            else:
+                break
+        return popped
 
     def add_command(self, command: _Command, returned_from_api: _ReturnedFromAPIFlag) -> None:
         """Adds command to checker
@@ -83,14 +118,12 @@ class CommandChecker(_Checker):
         """
         timer = _Timer(self._timeout, self._timeout_occurred)
         timer.start()
-        self._commands.put((command, self._counter, returned_from_api, timer))
+        self._commands.put(QueuedCommand(command, self._counter, returned_from_api, timer))
         self._counter += 1
 
     def reset(self) -> None:
         """Stops all timers and clears command memory"""
-        while not self._commands.empty():
-            _, _, _, timer = self._commands.get()
-            self._stop_timer(timer)
+        self._commands.clear()
         self._received_acks.clear()
         self.timeout.clear()
 

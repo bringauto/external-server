@@ -195,7 +195,7 @@ class ExternalServer:
             assert received_msg is not None
             _logger.info(f"Received Command response message")
             response = received_msg.commandResponse
-            commands = self._command_checker.acknowledge_and_pop_commands(response.messageCounter)
+            commands = self._command_checker.pop_commands(response.messageCounter)
             for command, was_returned_from_api in commands:
                 device = command.deviceCommand.device
                 device_connected = self._devices.is_supported(device)
@@ -432,7 +432,7 @@ class ExternalServer:
         )
 
         device_not_connected = (command_response.type == _CommandResponse.DEVICE_NOT_CONNECTED)
-        commands = self._command_checker.acknowledge_and_pop_commands(
+        commands = self._command_checker.pop_commands(
             command_response.messageCounter
         )
         for command, _ in commands:
@@ -475,7 +475,7 @@ class ExternalServer:
                 self._mqtt.publish(external_command)
             else:
                 _logger.warning("The Command will not be sent")
-                self._command_checker.acknowledge_and_pop_commands(
+                self._command_checker.pop_commands(
                     external_command.command.messageCounter
                 )
         else:
