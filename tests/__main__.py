@@ -11,8 +11,8 @@ TEST_DIR_NAME = "tests"
 OMITTED_FILES = [
     "__init__.py",
     "tests/__main__.py",
-    "fleetman_integration/protocol/pclient/*",
-    "fleetman_integration/management/mclient/*",
+    "*_pb2.py"
+
 ]
 HTML_REPORT_FLAG = "-h"
 
