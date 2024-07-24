@@ -22,7 +22,6 @@ from external_server.models.exceptions import (
     ConnectSequenceFailure,
     CommunicationException,
     StatusTimeout,
-    ClientDisconnected,
     CommandResponseTimeout,
     SessionTimeout,
 )
@@ -87,9 +86,9 @@ class ExternalServer:
         self._running = False
         self._config = config
         self._event_queue = EventQueueSingleton()
-        self._session = Session(timeout=self._config.mqtt_timeout)
-        self._command_checker = CommandChecker(timeout=self._config.timeout)
-        self._status_order_checker = StatusChecker(self._config.timeout)
+        self._session = Session(self._config.mqtt_timeout)
+        self._command_checker = CommandChecker(self._config.timeout)
+        self._status_checker = StatusChecker(self._config.timeout)
         self._devices = KnownDevices()
         self._mqtt = MQTTClientAdapter(
             config.company_name,
@@ -191,7 +190,7 @@ class ExternalServer:
         _logger.info(f"Expecting {n_devices} command response messages")
         for iter in range(n_devices):
             _logger.info(f"Waiting for command response message {iter + 1} of {n_devices}")
-            received_msg = self._mqtt.get_message()
+            received_msg = self._mqtt._get_message()
             self._check_command_response(received_msg)
             assert received_msg is not None
             _logger.info(f"Received Command response message")
@@ -283,9 +282,6 @@ class ExternalServer:
         except ConnectionRefusedError as e:
             address = self._mqtt.broker_address
             _logger.error(f"Unable to connect to broker ({address}. Trying again.")
-        except ClientDisconnected as e:
-            # if no message has been received for given time
-            _logger.error("Client timed out")
         except StatusTimeout as e:
             _logger.error("Status messages have not been received in time")
         except CommandResponseTimeout as e:
@@ -326,7 +322,7 @@ class ExternalServer:
         self._mqtt.stop()
         self._command_checker.reset()
         self._session.stop()
-        self._status_order_checker.reset()
+        self._status_checker.reset()
         for device in self._devices.list_supported():
             self._modules[device.module_id].api_client.device_disconnected(
                 DisconnectTypes.timeout, device.to_device()
@@ -375,7 +371,7 @@ class ExternalServer:
             return
         else:
             self._reset_session_checker()
-            self._status_order_checker.check(status)
+            self._status_checker.check(status)
 
     def _forward_status(self, status: _Status, module: _ServerModule) -> None:
         device, data = status.deviceStatus.device, status.deviceStatus.statusData
@@ -389,7 +385,7 @@ class ExternalServer:
         self._check_at_least_one_device_is_connected()
 
     def _handle_checked_statuses(self) -> None:
-        while (status := self._status_order_checker.get()) is not None:
+        while (status := self._status_checker.get()) is not None:
             module_and_dev = self._module_and_device_referenced_by_status(status)
             if not module_and_dev:
                 continue
@@ -441,7 +437,7 @@ class ExternalServer:
             command_response.sessionId
         )
 
-        device_not_connected = command_response.type == _CommandResponse.DEVICE_NOT_CONNECTED
+        device_not_connected = (command_response.type == _CommandResponse.DEVICE_NOT_CONNECTED)
         commands = self._command_checker.acknowledge_and_pop_commands(
             command_response.messageCounter
         )
@@ -547,7 +543,7 @@ class ExternalServer:
             if status_obj is None:
                 raise ConnectSequenceFailure("First status from device has not been received.")
             if not _counter_initialized:
-                self._status_order_checker.initialize_counter(status_obj.messageCounter + 1)
+                self._status_checker.initialize_counter(status_obj.messageCounter + 1)
 
             ExternalServer.check_device_is_in_connecting_state(status_obj.deviceState)
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
@@ -591,7 +587,7 @@ class ExternalServer:
         while True:
             event = self._event_queue.get()
             if event.event == EventType.RECEIVED_MESSAGE:
-                received_msg = self._mqtt.get_message(ignore_timeout=False)
+                received_msg = self._mqtt._get_message(ignore_timeout=False)
                 if received_msg is not None:
                     if received_msg is False:
                         raise CommunicationException("Unexpected disconnection")

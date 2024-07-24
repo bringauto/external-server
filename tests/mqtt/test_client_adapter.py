@@ -3,18 +3,21 @@ import sys
 import time
 import concurrent.futures
 from unittest.mock import patch, Mock
+import logging
 
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
 
 from queue import Empty
 from external_server.adapters.mqtt_adapter import (  # type: ignore
     ClientConnectionState,
     create_mqtt_client,
     MQTTClientAdapter,
+    mqtt_error_from_code,
     _QOS,
+    _logger,
 )
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
@@ -23,20 +26,29 @@ from InternalProtocol_pb2 import (  # type: ignore
     DeviceStatus,
 )
 from ExternalProtocol_pb2 import (  # type: ignore
+    Command,
     CommandResponse,
     ConnectResponse,
     Connect,
     Status,
     StatusResponse,
     ExternalClient,
+    ExternalServer as ExternalServerMsg,
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
+from external_server.server_messages import external_command
 from tests.utils import MQTTBrokerTest  # type: ignore
 
 
 TEST_ADDRESS = "127.0.0.1"
 TEST_PORT = 1883
+
+
+class Test_Client_Error_From_Code(unittest.TestCase):
+
+    def test_empty_string_is_returned_for_unknown_error_code(self):
+        self.assertEqual(mqtt_error_from_code(-611561851), "")
 
 
 class Test_Creating_MQTT_Client(unittest.TestCase):
@@ -152,41 +164,28 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.broker = MQTTBrokerTest()
         MQTTBrokerTest.kill_all_test_brokers()
 
-    def test_client_immediatelly_after_connecting_to_started_broker_is_in_connecting_state(self):
-        self.broker.start()
-        self.assertTrue(self.broker.is_running)
-        self.adapter.connect()
-        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
-        self.assertFalse(self.adapter.is_connected)
-
     def test_connecting_to_not_running_broker_leaves_client_in_connecting_state(self):
         # the broker was not started
         self.adapter.connect()
-        time.sleep(0.2)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
         self.assertFalse(self.adapter.is_connected)
 
     def test_client_connecting_to_a_broker_ends_up_in_connected_state(self):
         self.broker.start()
         self.adapter.connect()
-        time.sleep(0.2)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
         self.assertTrue(self.adapter.is_connected)
 
     def test_repeated_connect_calls_have_no_effect_after_the_first_call(self):
         self.broker.start()
         self.adapter.connect()
-        time.sleep(0.1)
         self.adapter.connect()
-        time.sleep(0.1)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
 
     def test_repeated_connecting_to_broker_has_no_effect(self):
         self.broker.start()
         self.adapter.connect()
-        time.sleep(0.1)
         self.adapter.connect()
-        time.sleep(0.1)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
 
     def test_disconnecting_client_before_calling_connect_has_no_effect(self):
@@ -199,14 +198,12 @@ class Test_Connecting_To_Broker(unittest.TestCase):
     def test_client_after_disconnecting_is_in_disconnected_state(self):
         self.broker.start()
         self.adapter.connect()
-        time.sleep(0.1)
         self.adapter.disconnect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTED)
 
     def test_repeated_disconnect_calls_have_no_effect_after_the_first_cal(self):
         self.broker.start()
         self.adapter.connect()
-        time.sleep(0.1)
         self.adapter.disconnect()
         self.adapter.disconnect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTED)
@@ -221,16 +218,11 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
 
     def setUp(self) -> None:
         MQTTBrokerTest.kill_all_test_brokers()
-        self.adapter = MQTTClientAdapter(
-            "some_company", "test_car", timeout=1, broker_host="127.0.0.1", broker_port=1883
-        )
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 1, "127.0.0.1", 1883)
 
-    def test_client_loop_is_not_started_and_returns_connection_lost_state_if_broker_does_not_exist(
-        self,
-    ):
+    def test_client_loop_is_not_started_if_broker_does_not_exist(self):
         self.assertFalse(MQTTBrokerTest.running_processes())
         self.adapter.connect()
-        time.sleep(0.1)
         self.adapter.client.publish(self.adapter.publish_topic)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTING)
 
@@ -238,7 +230,6 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
         broker = MQTTBrokerTest(start=True, port=1883)
         time.sleep(0.1)
         self.adapter.connect()
-        time.sleep(0.1)
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
         broker.stop()
 
@@ -261,15 +252,19 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
         self.adapter.connect()
 
     def test_connecting_and_starting_client_marks_client_as_connected(self) -> None:
-        self.assertFalse(self.adapter.is_connected)
-        time.sleep(0.01)
         self.assertTrue(self.adapter.is_connected)
 
-    def test_stopped_client_is_still_connected(self) -> None:
-        self.assertFalse(self.adapter.is_connected)
-        time.sleep(0.02)
+    def test_stopped_client_is_still_connected_but_not_running(self) -> None:
         self.adapter.stop()
         self.assertTrue(self.adapter.is_connected)
+        self.assertFalse(self.adapter.is_running)
+
+    @patch("paho.mqtt.client.Client.connect")
+    def test_error_is_logged_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
+        mock.return_value = MQTT_ERR_SUCCESS + 1
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
+            self.adapter.connect()
+            self.assertIn(mqtt_error_from_code(MQTT_ERR_SUCCESS + 1), cm.output[-1])
 
     def tearDown(self) -> None:
         self.test_broker.stop()
@@ -407,7 +402,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
                     devices=[self.device],
                 )
             ).SerializeToString()
-            future = ex.submit(self.adapter.get_message)
+            future = ex.submit(self.adapter._get_message)
             ex.submit(self.broker.publish, self.adapter.subscribe_topic, msg)
             rec_msg = future.result()
             self.assertEqual(msg, rec_msg.SerializeToString())
@@ -432,19 +427,19 @@ class Test_Getting_Message(unittest.TestCase):
     @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_no_message_returns_none(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: None
-        self.assertIsNone(self.adapter.get_message())
+        self.assertIsNone(self.adapter._get_message())
 
     @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_equal_to_false_returns_False(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: False
-        self.assertFalse(self.adapter.get_message())
+        self.assertFalse(self.adapter._get_message())
 
     @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_with_some_nonempty_content_yields_the_message(
         self, mock: Mock
     ) -> None:
         mock.side_effect = lambda block, timeout: {"content": "some content"}
-        self.assertEqual(self.adapter.get_message(), {"content": "some content"})
+        self.assertEqual(self.adapter._get_message(), {"content": "some content"})
 
 
 class Test_On_Message_Callback(unittest.TestCase):
@@ -535,12 +530,9 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
                 )
             )
             ex.submit(self.adapter._start_client_loop)
-            time.sleep(0.5)
             ex.submit(self.adapter.stop)
-            time.sleep(1)
             ex.submit(self.adapter._start_client_loop)
-            time.sleep(0.2)
-            rec_msg = ex.submit(self.adapter.get_message)
+            rec_msg = ex.submit(self.adapter._get_message)
             ex.submit(self.broker.publish, self.adapter.subscribe_topic, msg)
             self.assertEqual(msg, rec_msg.result())
 
@@ -550,5 +542,84 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
         MQTTBrokerTest.kill_all_test_brokers()
 
 
+class Test_Unsuccessful_Connection_To_Broker(unittest.TestCase):
+
+    def test_error_logged_if_broker_does_not_exist(self):
+        adapter = MQTTClientAdapter(
+            "some_company", "test_car", timeout=0.5, broker_host="localhost", broker_port=1884
+        )
+        with self.assertLogs(logger=_logger, level="ERROR") as cm:
+            adapter.connect()
+
+
+class Test_MQTT_Client_Disconnected(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter(
+            "some_company",
+            "test_car",
+            timeout=5,
+            broker_host=TEST_ADDRESS,
+            broker_port=TEST_PORT,
+        )
+
+    def test_disconnecting_client_leaves_it_in_disconnected_state(self):
+        self.adapter.connect()
+        self.adapter.disconnect()
+        self.assertFalse(self.adapter.is_connected)
+
+    def test_disconnecting_client_twice_has_no_effect(self):
+        self.adapter.connect()
+        self.adapter.disconnect()
+        self.adapter.disconnect()
+        self.assertFalse(self.adapter.is_connected)
+
+    @patch("paho.mqtt.client.Client.disconnect")
+    def test_error_is_logged_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
+        mock.return_value = MQTT_ERR_SUCCESS + 1
+        self.adapter.connect()
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
+            self.adapter.disconnect()
+
+    def test_publishing_message_from_disconnected_client_logs_error(self):
+        msg = external_command("session_id", 0, Device(), b"some_command")
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
+            self.adapter.publish(msg)
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+        self.adapter.stop()
+        MQTTBrokerTest.kill_all_test_brokers()
+
+
+class Test_Stopping_MQTT_Client_Adapter(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 5, TEST_ADDRESS, TEST_PORT)
+
+    def test_stopping_mqtt_client_adapter_leaves_it_connected_but_not_running(self):
+        self.adapter.connect()
+        self.assertTrue(self.adapter.is_connected)
+        self.assertTrue(self.adapter.is_running)
+
+        self.adapter.stop()
+        self.assertTrue(self.adapter.is_connected)
+        self.assertFalse(self.adapter.is_running)
+
+    @patch("paho.mqtt.client.Client.loop_stop")
+    def test_error_is_logged_when_mqtt_client_loop_stop_returns_non_ok_code(self, mock: Mock):
+        some_non_ok_code = MQTT_ERR_SUCCESS + 2
+        mock.return_value = some_non_ok_code
+        self.adapter.connect()
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
+            self.adapter.stop()
+            self.assertIn(mqtt_error_from_code(some_non_ok_code), cm.output[-1])
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+
+
 if __name__ == "__main__":  # pragma: no cover
-    unittest.main()
+    unittest.main(verbosity=2)

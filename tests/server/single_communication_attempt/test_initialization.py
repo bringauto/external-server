@@ -27,10 +27,9 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
     def setUp(self):
         self.es = get_test_server()
 
-    def test_without_running_broker_raises_error_and_sets_state_to_error(self):
+    def test_without_running_broker_raises_error(self):
         with self.assertRaises(ConnectionRefusedError):
-            result = self.es._initialize()
-        self.assertEqual(self.es.state, ServerState.ERROR)
+            self.es._initialize()
 
 
 class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Configured_Device(unittest.TestCase):

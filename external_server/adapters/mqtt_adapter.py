@@ -6,6 +6,7 @@ from queue import Queue, Empty
 import sys
 import ssl
 from typing import Optional, Any
+import time
 
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -36,6 +37,8 @@ _MAX_QUEUED_MESSAGES = 20
 _KEEPALIVE = 15
 # Quality of Service used by Mqtt client
 _QOS = 1
+# Time in seconds to wait for the client to be connected
+_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT = 1.0
 
 
 ClientConnectionState = _ConnectionState
@@ -81,14 +84,6 @@ def mqtt_error_from_code(code: int) -> str:
         return ""
 
 
-def mqtt_connection_state_from_enum(state_enum: _ConnectionState) -> str:
-    """Return the connection state as a string based on the given code.
-
-    If the code is not recognized, an empty string is returned.
-    """
-    return _CONNECTION_STATES.get(state_enum, "")
-
-
 class MQTTClientAdapter:
     """Class binding together a MQTT client and queues for storing received messages and events.
 
@@ -118,26 +113,20 @@ class MQTTClientAdapter:
         """The address of the MQTT broker."""
         return f"{self._broker_host}:{self._broker_port}"
 
-    @broker_address.deleter
-    def broker_address(self) -> None:
-        """Delete the address of the MQTT broker."""
-        self._broker_host = ""
-        self._broker_port = -1
-
     @property
     def client(self) -> _Client:
         """The MQTT client instance."""
         return self._mqtt_client
 
     @property
-    def events(self) -> EventQueueSingleton:
-        """The event queue (singleton) for the MQTT client."""
-        return self._event_queue
-
-    @property
     def is_connected(self) -> bool:
         """Whether the MQTT client is connected to the broker with its loop started."""
         return self._mqtt_client.is_connected()
+
+    @property
+    def is_running(self) -> bool:
+        """Whether the MQTT client's loop is running."""
+        return self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive()
 
     @property
     def publish_topic(self) -> str:
@@ -153,11 +142,6 @@ class MQTTClientAdapter:
     def state(self) -> ClientConnectionState:
         """The state of the MQTT client."""
         return self._mqtt_client._state
-
-    @property
-    def state_str(self) -> str:
-        """The state of the MQTT client."""
-        return mqtt_connection_state_from_enum(self._mqtt_client._state)
 
     @property
     def subscribe_topic(self) -> str:
@@ -180,6 +164,7 @@ class MQTTClientAdapter:
                 self._set_up_callbacks()
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
+                self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
             else:
                 _logger.error(
                     f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
@@ -188,9 +173,11 @@ class MQTTClientAdapter:
             return None
         except ConnectionRefusedError as e:
             self.stop()
-            _logger.error(f"Cannot connect to a broker {self._broker_host}:{self._broker_port}: {e}")
+            _logger.error(
+                f"Cannot connect to a broker {self._broker_host}:{self._broker_port}: {e}"
+            )
             return e
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             _logger.error(f"Failed to connect to broker: {e}")
             return e
 
@@ -204,26 +191,47 @@ class MQTTClientAdapter:
                     f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}"
                 )
             else:
-                _logger.debug(
-                    "Trying to disconnect from MQTT broker, but not connected."
-                    f"{mqtt_error_from_code(code)}. No action is taken."
+                _logger.error(
+                    "Error when disconnecting from MQTT broker "
+                    f"({self._broker_host}:{self._broker_port}): {mqtt_error_from_code(code)}"
                 )
+        else:
+            _logger.debug(
+                "Trying to disconnect from MQTT broker, but not connected. No action is taken."
+            )
 
-    def get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
-        """Returns message from MQTTClient.
+    def get_connect_message(self) -> _Connect | None:
+        """Get expected connect message from mqtt client.
 
-        If `ignore_timeout` is `False`(default), the function blocks until message is available
-        or timeout is reached (then `None` is returned).
-
-        If `ignore_timeout` is set to `True`, the function will return only if a message is
-        available.
+        Raise an exception if the message is not received or is not a connect message.
         """
-        t = None if ignore_timeout else self._timeout
-        try:
-            message = self._received_msgs.get(block=True, timeout=t)
-            return message
-        except Empty:
+        _logger.info("Expecting a connect message")
+        msg = self._get_message()
+        while msg is False:
+            _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
+            msg = self._get_message()
+        if msg is None:
+            _logger.error("Connect message has not been received")
             return None
+        elif not msg.HasField("connect"):
+            _logger.error("Received message is not a connect message")
+            return None
+        _logger.info("Connect message has been received")
+        return msg.connect
+
+    def get_status(self) -> _Status | None:
+        """Get expected status message from mqtt client.
+
+        Raise an exception if the message is not received or is not a status message.
+        """
+        msg = self._get_message()
+        if msg is None or msg == False:
+            _logger.error("Status message has not been received")
+            return None
+        if not msg.HasField("status"):
+            _logger.error("Received message is not a status message")
+            return None
+        return msg.status
 
     def publish(self, msg: _ExternalServerMsg) -> None:
         """Publish a message to the MQTT broker."""
@@ -235,7 +243,9 @@ class MQTTClientAdapter:
             _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")
 
     def stop(self) -> None:
-        """Stop the MQTT client's event loop. Do nothing, if the loop is not running."""
+        """Stop the MQTT client's event loop. If the client is already stopped, no action
+        is taken.
+        """
         cli = self._mqtt_client
         if cli._thread and cli._thread.is_alive():
             code = self._mqtt_client.loop_stop()
@@ -245,6 +255,8 @@ class MQTTClientAdapter:
                 _logger.error(
                     f"Failed to stop MQTT client's event loop: {mqtt_error_from_code(code)}"
                 )
+        else:
+            _logger.debug("Trying to stop MQTT client's event loop, but it is already stopped.")
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -261,25 +273,31 @@ class MQTTClientAdapter:
         )
         self._mqtt_client.tls_insecure_set(False)
 
-    def update_broker_host_and_port(self, broker_host: str, broker_port: int) -> None:
-        self._broker_host = broker_host
-        self._broker_port = broker_port
 
-    def _start_client_loop(self) -> None:
-        code = self._mqtt_client.loop_start()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.debug("Started MQTT client's event loop")
-        else:
-            _logger.error(
-                f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}"
-            )
+    def _get_message(self, ignore_timeout: bool = False) -> _ExternalClientMsg | None:
+        """Returns message from MQTTClient.
+
+        If `ignore_timeout` is `False`(default), the function blocks until message is
+        available or timeout is reached (then `None` is returned).
+
+        If `ignore_timeout` is set to `True`, the function will return only if a message is
+        available.
+        """
+        t = None if ignore_timeout else self._timeout
+        try:
+            message = self._received_msgs.get(block=True, timeout=t)
+            return message
+        except Empty:
+            return None
 
     def _log_connection_result(self, code: int) -> None:
         address = f"{self._broker_host}:{self._broker_port}"
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Connected to a MQTT broker ({address}).")
         elif code == mqtt.MQTT_ERR_INVAL:
-            _logger.info(f"Connecting to a MQTT broker ({address}). MQTT client has been already connected.")
+            _logger.info(
+                f"Connecting to a MQTT broker ({address}). MQTT client has been already connected."
+            )
         else:
             _logger.error(f"Failed to to a MQTT broker ({address}). {mqtt_error_from_code(code)}")
 
@@ -335,35 +353,25 @@ class MQTTClientAdapter:
         self._mqtt_client.on_disconnect = self._on_disconnect
         self._mqtt_client.on_message = self._on_message
 
-    def get_connect_message(self) -> _Connect | None:
-        """Get expected connect message from mqtt client.
+    def _start_client_loop(self) -> None:
+        code = self._mqtt_client.loop_start()
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.debug("Started MQTT client's event loop")
+        else:
+            _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}")
 
-        Raise an exception if the message is not received or is not a connect message.
+    def _wait_for_connection(self, timeout: float) -> bool:
+        """Wait for the connection to be established.
+
+        Returns `True` if the connection is established within the given timeout,
+        otherwise `False`.
+
+        `timeout` - the maximum time to wait for the connection to be established in seconds.
         """
-        _logger.info("Expecting a connect message")
-        msg = self.get_message()
-        while msg is False:
-            _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
-            msg = self.get_message()
-        if msg is None:
-            _logger.error("Connect message has not been received")
-            return None
-        elif not msg.HasField("connect"):
-            _logger.error("Received message is not a connect message")
-            return None
-        _logger.info("Connect message has been received")
-        return msg.connect
-
-    def get_status(self) -> _Status | None:
-        """Get expected status message from mqtt client.
-
-        Raise an exception if the message is not received or is not a status message.
-        """
-        msg = self.get_message()
-        if msg is None or msg == False:
-            _logger.error("Status message has not been received")
-            return None
-        if not msg.HasField("status"):
-            _logger.error("Received message is not a status message")
-            return None
-        return msg.status
+        start = time.time()
+        timeout_ms = max(timeout, 0) * 1000
+        while time.time() - start < timeout_ms:
+            if self.is_connected:
+                return True
+            time.sleep(0.01)
+        return False

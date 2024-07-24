@@ -9,11 +9,6 @@ class CommunicationException(Exception):
     pass
 
 
-class ClientDisconnected(CommunicationException):
-    def __init__(self):
-        super().__init__("Unexpected disconnection")
-
-
 class SessionTimeout(CommunicationException):
     def __init__(self) -> None:
         super().__init__("Session has not been received in time")
