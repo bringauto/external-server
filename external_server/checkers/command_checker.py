@@ -33,7 +33,11 @@ class CommandQueue:
 
     @property
     def newest_counter(self) -> _Counter | None:
-        return None if self._queue.empty() else self._queue.queue[0]
+        if self._queue.empty():
+            return None
+        else:
+            cmd: QueuedCommand = self._queue.queue[0]
+            return cmd.counter
 
     def clear(self) -> None:
         while not self._queue.empty():
@@ -83,7 +87,8 @@ class CommandChecker(_Checker):
             number of command, which was acknowledged by received commandResponse
         """
         popped: list[_ExternalCommand] = list()
-        if self._commands.newest_counter != counter:
+        newest_counter = self._commands.newest_counter
+        if newest_counter != counter:
             self._received_acks.append(counter)
             self._logger.warning(f"Command response received in wrong order. Counter={counter}")
             return popped
