@@ -118,9 +118,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device_1 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_1")
-        self.device_2 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_2")
-        self.device_3 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_3")
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_3")
 
     def test_initialization_with_mutliple_supported_devices_connects_them_all(self):
         broker = self.broker

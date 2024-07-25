@@ -222,11 +222,13 @@ class MQTTClientAdapter:
             return None
         return msg.status
 
-    def publish(self, msg: _ExternalServerMsg) -> None:
+    def publish(self, msg: _ExternalServerMsg, log_msg: str = "") -> None:
         """Publish a message to the MQTT broker."""
         payload = msg.SerializeToString()
         code = self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS).rc
         if code == mqtt.MQTT_ERR_SUCCESS:
+            if log_msg:
+                _logger.info(log_msg)
             _logger.debug(f"Published message on topic '{self._publish_topic}'")
         else:
             _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")

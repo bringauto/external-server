@@ -10,7 +10,11 @@ from external_server.adapters.api_adapter import APIClientAdapter
 from external_server.command_waiting_thread import CommandWaitingThread
 from external_server.config import ModuleConfig
 from InternalProtocol_pb2 import Device  # type: ignore
-from external_server.models.structures import EsErrorCode, GeneralErrorCode, ReturnCode
+from external_server.models.structures import (
+    EsErrorCode,
+    GeneralErrorCode,
+    ReturnCode
+)
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from external_server.command_waiting_thread import _logger
 

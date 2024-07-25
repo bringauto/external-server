@@ -5,7 +5,7 @@ import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import Command  # type: ignore
+from external_server.models.structures import HandledCommand
 from external_server.checkers.command_checker import CommandChecker
 
 
@@ -25,17 +25,18 @@ class Test_Pop_Command(unittest.TestCase):
 
     def setUp(self):
         self.checker = CommandChecker(CHECKER_TIMEOUT)
-        self.cmd_1 = Command()
-        self.cmd_2 = Command()
-        self.cmd_3 = Command()
-        self.checker.add_command(self.cmd_2, returned_from_api=False)
-        self.checker.add_command(self.cmd_1, returned_from_api=False)
-        self.checker.add_command(self.cmd_3, returned_from_api=False)
+        self.cmd_1 = HandledCommand(b"")
+        self.cmd_2 = HandledCommand(b"")
+        self.cmd_3 = HandledCommand(b"")
+        self.checker.add(self.cmd_2)
+        self.checker.add(self.cmd_1)
+        self.checker.add(self.cmd_3)
 
     def test_with_matching_counter_yields_single_command_each_time(self):
-        self.assertEqual(self.checker.pop_commands(counter=0)[0][0], self.cmd_2)
-        self.assertEqual(self.checker.pop_commands(counter=1)[0][0], self.cmd_1)
-        self.assertEqual(self.checker.pop_commands(counter=2)[0][0], self.cmd_3)
+        self.assertEqual(self.checker.pop_commands(counter=0)[0], self.cmd_2)
+        self.assertEqual(self.checker.pop_commands(counter=1)[0], self.cmd_1)
+        self.assertEqual(self.checker.pop_commands(counter=2)[0], self.cmd_3)
+        print(self.cmd_3.counter)
 
     def test_without_matching_counter_yields_empty_command_list(self):
         self.assertEqual(self.checker.pop_commands(counter=1), [])
@@ -48,7 +49,7 @@ class Test_Pop_Command(unittest.TestCase):
         # all three popped commands are returned in the correct order
         self.assertEqual(
             self.checker.pop_commands(counter=0),
-            [(self.cmd_2, False), (self.cmd_1, False), (self.cmd_3, False)],
+            [self.cmd_2, self.cmd_1, self.cmd_3],
         )
 
     def test_with_matching_counter_isnt_affected_if_some_commands_popped_in_wrong_order_already_returned(
@@ -57,11 +58,11 @@ class Test_Pop_Command(unittest.TestCase):
         self.checker.pop_commands(counter=1)
         self.assertEqual(
             self.checker.pop_commands(counter=0),
-            [(self.cmd_2, False), (self.cmd_1, False)],
+            [self.cmd_2, self.cmd_1],
         )
         # previously, all commands that were popped in wrong order were returned and the next command
         # popped with matching msg_counter is returned as usual
-        self.assertEqual(self.checker.pop_commands(counter=2), [(self.cmd_3, False)])
+        self.assertEqual(self.checker.pop_commands(counter=2), [self.cmd_3])
 
     def test_with_counter_not_in_receivedf_acks_yields_empty_list(self):
         self.assertEqual(self.checker.pop_commands(counter=3), [])
@@ -71,8 +72,8 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
         self.checker = CommandChecker(CHECKER_TIMEOUT)
-        command = Command()
-        self.checker.add_command(command, False)
+        command = HandledCommand(b"")
+        self.checker.add(command)
 
     def test_exceeding_timeout_sets_checkers_timeout_is_set_flag_to_true(self):
         self.assertFalse(self.checker.timeout.is_set())
@@ -93,7 +94,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.assertFalse(self.checker.timeout.is_set())
 
     def test_timeout_is_not_set_when_all_commands_are_acknowledged(self):
-        self.checker.add_command(Command(), False)
+        self.checker.add(HandledCommand(b""))
         self.assertFalse(self.checker.timeout.is_set())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop_commands(counter=0)
@@ -102,7 +103,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.assertFalse(self.checker.timeout.is_set())
 
     def test_timeout_is_set_when_any_command_is_not_acknowledged(self):
-        self.checker.add_command(Command(), False)
+        self.checker.add(HandledCommand(b""))
         self.assertFalse(self.checker.timeout.is_set())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop_commands(counter=0)
@@ -112,3 +113,5 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main(buffer=True, verbosity=2)
+
+''

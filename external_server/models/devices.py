@@ -83,9 +83,11 @@ class KnownDevices:
         self._supported.append(device)
 
     def list_supported(self) -> list[DevicePy]:
+        """Return a copy of the supported devices list."""
         return self._supported.copy()
 
     def list_unsupported(self) -> list[DevicePy]:
+        """Return a copy of the unsupported devices list."""
         return self._unsupported.copy()
 
     def add_unsupported(self, device: DevicePy) -> None:
