@@ -4,4 +4,3 @@ protobuf==4.25.3
 rich==13.7.1
 pydantic==2.6.
 coverage>=7.5.4
-mqtt_test @ git+https://github.com/eclipse/paho.mqtt.testing.git

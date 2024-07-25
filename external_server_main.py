@@ -6,7 +6,7 @@ import sys
 from rich.logging import RichHandler
 
 from external_server.utils import argparse_init
-from external_server.server import ExternalServer
+from external_server.server import ExternalServer, _logger
 from external_server.config import load_config, InvalidConfigError
 
 
@@ -20,6 +20,7 @@ def main() -> None:
     try:
         config = load_config(args.config)
     except InvalidConfigError as exc:
+        _logger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
