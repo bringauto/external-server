@@ -142,9 +142,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
             broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
-        self.assertTrue(self.es.is_supported(self.device_1))
-        self.assertTrue(self.es.is_supported(self.device_2))
-        self.assertTrue(self.es.is_supported(self.device_3))
+        self.assertTrue(self.es._devices.is_supported(self.device_1))
+        self.assertTrue(self.es._devices.is_supported(self.device_2))
+        self.assertTrue(self.es._devices.is_supported(self.device_3))
 
     def test_initialization_with_mutliple_supported_devices_sending_first_statuses_in_wrong_order_connects_them_anyway(self):
         broker = self.broker
@@ -166,9 +166,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             broker.publish(topic, cmd_response("session_id", 1, CommandResponse.OK))
             broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
-        self.assertTrue(self.es.is_supported(self.device_1))
-        self.assertTrue(self.es.is_supported(self.device_2))
-        self.assertTrue(self.es.is_supported(self.device_3))
+        self.assertTrue(self.es._devices.is_supported(self.device_1))
+        self.assertTrue(self.es._devices.is_supported(self.device_2))
+        self.assertTrue(self.es._devices.is_supported(self.device_3))
 
     def test_initialization_with_mutliple_supported_devices_sending_command_responses_in_wrong_order_connects_them_anyway(self):
         broker = self.broker
@@ -190,9 +190,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             broker.publish(topic, cmd_response("session_id", 2, CommandResponse.OK))
             broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
-        self.assertTrue(self.es.is_supported(self.device_1))
-        self.assertTrue(self.es.is_supported(self.device_2))
-        self.assertTrue(self.es.is_supported(self.device_3))
+        self.assertTrue(self.es._devices.is_supported(self.device_1))
+        self.assertTrue(self.es._devices.is_supported(self.device_2))
+        self.assertTrue(self.es._devices.is_supported(self.device_3))
 
     def tearDown(self) -> None:
         self.es.mqtt.stop()

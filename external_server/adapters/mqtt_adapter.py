@@ -44,17 +44,6 @@ _MQTT_CONNECTION_STATE_UPDATE_TIMEOUT = 1.0
 ClientConnectionState = _ConnectionState
 
 
-_CONNECTION_STATES = {
-    ClientConnectionState.MQTT_CS_CONNECT_ASYNC: "Connected to a remote broker asynchronously",
-    ClientConnectionState.MQTT_CS_CONNECTED: "Client is connected to a broker.",
-    ClientConnectionState.MQTT_CS_CONNECTING: "Client is either connecting or reconnecting to a broker.",
-    ClientConnectionState.MQTT_CS_DISCONNECTED: "Client is disconnected from a broker",
-    ClientConnectionState.MQTT_CS_DISCONNECTING: "Client is disconnecting from a broker",
-    ClientConnectionState.MQTT_CS_NEW: "Client has been created or is creating asynchronous connection.",
-    ClientConnectionState.MQTT_CS_CONNECTION_LOST: "Client lost connection to a broker without purposeful disconnect.",
-}
-
-
 _logger = logging.getLogger(__name__)
 with open("./config/logging.json", "r") as f:
     logging.config.dictConfig(json.load(f))

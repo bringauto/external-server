@@ -132,12 +132,6 @@ class ExternalServer:
             _logger.info(f"Changing server's state from {self._state} to {state}")
             self._state = state
 
-    def is_supported(self, device: _Device | DevicePy) -> bool:
-        return self._devices.is_supported(device)
-
-    def is_unsupported(self, device: _Device | DevicePy) -> bool:
-        return self._devices.is_unsupported(device)
-
     def send_first_commands_and_check_responses(self) -> None:
         """Send command to all connected devices and check responses are returned."""
         no_cmd_devices = self._devices.list_supported()

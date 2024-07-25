@@ -60,23 +60,23 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
-            self.assertTrue(self.es.is_supported(device))
+            self.assertTrue(self.es._devices.is_supported(device))
 
     def test_from_supported_device_of_unsupported_type_adds_the_device_to_connected_devices(self):
         device = _Device(module=1000, deviceType=1251, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg(session_id="some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
-            self.assertTrue(self.es.is_supported(device))
-            self.assertFalse(self.es.is_unsupported(device))
+            self.assertTrue(self.es._devices.is_supported(device))
+            self.assertFalse(self.es._devices.is_unsupported(device))
 
     def test_from_device_in_unsupported_module_adds_the_device_to_not_connected_devices(self):
         device = _Device(module=1100, deviceType=0, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg(session_id="some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, payload)
-            self.assertFalse(self.es.is_supported(device))
-            self.assertTrue(self.es.is_unsupported(device))
+            self.assertFalse(self.es._devices.is_supported(device))
+            self.assertTrue(self.es._devices.is_unsupported(device))
 
     def test_from_multiple_devices_from_supported_module_adds_them_to_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
@@ -84,8 +84,8 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device_1, device_2])
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
-            self.assertTrue(self.es.is_supported(device_1))
-            self.assertTrue(self.es.is_supported(device_2))
+            self.assertTrue(self.es._devices.is_supported(device_1))
+            self.assertTrue(self.es._devices.is_supported(device_2))
 
     def test_from_supported_device_of_supported_module_makes_server_to_send_connect_response(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
