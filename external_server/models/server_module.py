@@ -17,24 +17,24 @@ class ServerModule:
 
     def __init__(
         self,
-        id: int,
+        module_id: int,
         company: str,
         car: str,
         config: _ModuleConfig,
         connection_check: Callable[[], bool],
     ) -> None:
 
-        self._id = id
+        self._id = module_id
         self._api_client = _ApiAdapter(config=config, company=company, car=car)
         try:
             self._api_client.init()
         except:
-            msg = f"Module {id}: Error in init function. Check the configuration file."
+            msg = f"Module {module_id}: Error in init function. Check the configuration file."
             _logger.error(msg)
             raise RuntimeError(msg)
         real_mod_number = self._api_client.get_module_number()
-        if real_mod_number != id:
-            msg = f"Module number '{real_mod_number}' returned from API does not match module number {id} in config."
+        if real_mod_number != module_id:
+            msg = f"Module number '{real_mod_number}' returned from API does not match module number {module_id} in config."
             _logger.error(msg)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(self._api_client, connection_check)
@@ -52,7 +52,7 @@ class ServerModule:
         return self._api_client._config.get("company_name", "")
 
     @property
-    def id(self) -> int:
+    def module_id(self) -> int:
         return self._id
 
     @property

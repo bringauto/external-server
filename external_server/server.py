@@ -324,7 +324,7 @@ class ExternalServer:
             module.thread.wait_for_join()
             code = module.api_client.destroy()
             if not code == GeneralErrorCode.OK:
-                _logger.error(f"Module {module.id}: Error in destroy function. Return code: {code}")
+                _logger.error(f"Module {module.module_id}: Error in destroy function. Return code: {code}")
         self._modules.clear()
 
     def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> None:
