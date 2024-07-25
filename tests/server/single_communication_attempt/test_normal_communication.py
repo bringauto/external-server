@@ -304,6 +304,27 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
         self.es.mqtt.stop()
 
 
+# class Test_Handling_Communication_Event(unittest.TestCase):
+
+#     def setUp(self):
+#         self.es = get_test_server()
+#         self.broker = MQTTBrokerTest(start=True)
+#         self.device = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+#         with futures.ThreadPoolExecutor() as ex:
+#             ex.submit(self.es._run_initial_sequence)
+#             time.sleep(0.2)
+#             device_status = DeviceStatus(device=self.device)
+#             topic = self.es.mqtt.subscribe_topic
+#             self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
+#             self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+#             self.broker.publish(
+#                 topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+#             )
+#         self.assertEqual(self.es.state, ServerState.INITIALIZED)
+
+#     def test_car_message_available_processes_
+
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main(verbosity=2)

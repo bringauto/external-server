@@ -103,7 +103,7 @@ class KnownDevices:
     def is_supported(self, device: DevicePy) -> bool:
         return device in self._supported
 
-    def any_supported_device_from_module(self, module_id: int) -> bool:
+    def any_supported_device(self, module_id: int) -> bool:
         return any(device.module_id == module_id for device in self._supported)
 
     def is_unsupported(self, device: DevicePy) -> bool:

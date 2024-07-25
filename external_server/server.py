@@ -23,8 +23,10 @@ from external_server.models.exceptions import (
     ConnectSequenceFailure,
     CommunicationException,
     StatusTimeout,
+    NoPublishedMessage,
     CommandResponseTimeout,
     SessionTimeout,
+    UnexpectedMQTTDisconnect
 )
 from external_server.server_messages import (
     connect_response as _connect_response,
@@ -86,6 +88,7 @@ class ExternalServer:
     def __init__(self, config: Config) -> None:
         self._running = False
         self._config = config
+        self._state: ServerState = ServerState.UNINITIALIZED
 
         self._event_queue = EventQueueSingleton()
         self._devices = KnownDevices()
@@ -102,13 +105,12 @@ class ExternalServer:
             config.mqtt_port,
         )
         self._modules: dict[int, _ServerModule] = dict()
-        self._state: ServerState = ServerState.UNINITIALIZED
         for id_str, module_config in config.modules.items():
             module_id = int(id_str)
             car, company = config.car_name, config.company_name
-            connection_check = partial(self._devices.any_supported_device_from_module, module_id)
+            connection_check = partial(self._devices.any_supported_device, module_id)
             self._modules[module_id] = _ServerModule(
-                module_id, company, car, module_config, connection_check=connection_check
+                module_id, company, car, module_config, connection_check
             )
 
     @property
@@ -147,15 +149,14 @@ class ExternalServer:
                     module_commands.append((cmd_bytes, device))
 
             for cmd_bytes, device in module_commands:
-                if not self.is_device_in_list(
-                    device, no_cmd_devices
-                ) and self._devices.is_supported(device):
+                if not self.is_device_in_list(device, no_cmd_devices) \
+                and self._devices.is_supported(device):
                     _logger.warning(
-                        f"Command for device '{device_repr(device)}' returned from API more than once."
+                        f"Command for '{device_repr(device)}' was returned from API more than once."
                     )
                 elif not self.is_device_in_list(device, no_cmd_devices):
                     _logger.warning(
-                        f"Command from API of module {module} does not relate to a connected device. "
+                        f"'{device_repr(device)}' related to command from API is not connected."
                         "Command will not be sent."
                     )
                 else:
@@ -436,9 +437,6 @@ class ExternalServer:
 
     def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
         _logger.info("Received command response")
-        self._reset_session_timeout_checker_if_session_id_matches_current_session(
-            cmd_response.sessionId
-        )
         device_not_connected = cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED
         commands = self._command_checker.pop_commands(cmd_response.messageCounter)
         for command in commands:
@@ -542,7 +540,14 @@ class ExternalServer:
     def _handle_communication_event(self, event: _Event) -> None:
         match event.event:
             case EventType.CAR_MESSAGE_AVAILABLE:
-                self._handle_car_message()
+                try:
+                    self._handle_car_message()
+                except NoPublishedMessage:
+                    _logger.error("No message from MQTT broker.")
+                except UnexpectedMQTTDisconnect:
+                    _logger.error("Unexpected disconnection of MQTT broker.")
+                except Exception as e:
+                    _logger.error(f"Error occurred when retrieving message from MQTT client. {e}")
             case EventType.COMMAND_AVAILABLE:
                 if isinstance(event.data, int):
                     self._handle_command(event.data)
@@ -564,26 +569,29 @@ class ExternalServer:
                 pass
 
     def _handle_car_message(self) -> None:
-        message = self._mqtt._get_message(ignore_timeout=False)
+        message = self._mqtt._get_message()
         if message is None:
-            return
+            raise NoPublishedMessage
         elif message is False:
-            raise CommunicationException("Unexpected disconnection")
-        elif message.HasField("connect"):
-            self._handle_connect(message.connect)
-        elif message.HasField("status"):
-            self._handle_status(message.status)
-        elif message.HasField("commandResponse"):
-            self._handle_command_response(message.commandResponse)
+            raise UnexpectedMQTTDisconnect
+        else:
+            assert isinstance(message, _ExternalClientMsg)
+            if message.HasField("connect"):
+                self._reset_session_timeout_for_session_id_match(message.connect.sessionId)
+                self._handle_connect(message.connect)
+            elif message.HasField("status"):
+                self._reset_session_timeout_for_session_id_match(message.status.sessionId)
+                self._handle_status(message.status)
+            elif message.HasField("commandResponse"):
+                self._reset_session_timeout_for_session_id_match(message.commandResponse.sessionId)
+                self._handle_command_response(message.commandResponse)
 
     def _publish_connect_response(self, response_type: int) -> None:
         _logger.info(f"Sending Connect respons. Response type: {response_type}")
         msg = _connect_response(self._session.id, response_type)
         self._mqtt.publish(msg)
 
-    def _reset_session_timeout_checker_if_session_id_matches_current_session(
-        self, msg_session_id: str
-    ) -> None:
+    def _reset_session_timeout_for_session_id_match(self, msg_session_id: str) -> None:
         if self._session.id == msg_session_id:
             self._reset_session_checker()
 

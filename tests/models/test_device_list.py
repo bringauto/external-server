@@ -146,9 +146,9 @@ class Test_Connected_Device_From_The_Same_Module(unittest.TestCase):
         test_device_2 = DevicePy(module_id_2, 0, "test", "Test", 0)
         self.devices.add_supported(test_device_1)
         self.devices.add_unsupported(test_device_2)
-        self.assertTrue(self.devices.any_supported_device_from_module(module_id_1))
-        self.assertFalse(self.devices.any_supported_device_from_module(module_id_2))
-        self.assertFalse(self.devices.any_supported_device_from_module(module_id_3))
+        self.assertTrue(self.devices.any_supported_device(module_id_1))
+        self.assertFalse(self.devices.any_supported_device(module_id_2))
+        self.assertFalse(self.devices.any_supported_device(module_id_3))
 
     def test_module_of_removed_device_is_unsupported(self):
         self.devices = KnownDevices()
@@ -156,7 +156,7 @@ class Test_Connected_Device_From_The_Same_Module(unittest.TestCase):
         test_device = DevicePy(module_id, 0, "test", "Test", 0)
         self.devices.add_supported(test_device)
         self.devices.remove(test_device)
-        self.assertFalse(self.devices.any_supported_device_from_module(module_id))
+        self.assertFalse(self.devices.any_supported_device(module_id))
 
 
 class Test_Connecting_Device_From_Internal_Proto(unittest.TestCase):

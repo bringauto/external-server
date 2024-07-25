@@ -32,7 +32,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
         self.es = get_test_server()
 
     def test_without_running_broker_raises_error(self):
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(ConnectSequenceFailure):
             self.es._run_initial_sequence()
 
 
