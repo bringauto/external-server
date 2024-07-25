@@ -27,7 +27,7 @@ class SingletonMeta(type):
 
 class EventType(Enum):
     COMMAND_AVAILABLE = auto()  # data = module number
-    RECEIVED_MESSAGE = auto()
+    CAR_MESSAGE_AVAILABLE = auto()
     MQTT_BROKER_DISCONNECTED = auto()
     TIMEOUT_OCCURRED = auto()  # data = TimeoutType
 

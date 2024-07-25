@@ -22,6 +22,7 @@ from paho.mqtt.client import (
 from paho.mqtt.enums import CallbackAPIVersion
 
 from ExternalProtocol_pb2 import (  # type: ignore
+    CommandResponse as _CommandResponse,
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
     ExternalServer as _ExternalServerMsg,
@@ -343,7 +344,7 @@ class MQTTClientAdapter:
             if message.topic == self._subscribe_topic:
                 _logger.debug(f"Received message on topic '{self._subscribe_topic}'")
                 self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
-                self._event_queue.add(event_type=EventType.RECEIVED_MESSAGE)
+                self._event_queue.add(event_type=EventType.CAR_MESSAGE_AVAILABLE)
         except: # pragma: no cover
             _logger.error("MQTT on message callback: Failed to parse the received message")
 

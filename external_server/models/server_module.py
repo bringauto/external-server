@@ -34,7 +34,7 @@ class ServerModule:
             raise RuntimeError(msg)
         real_mod_number = self._api_client.get_module_number()
         if real_mod_number != module_id:
-            msg = f"Module number '{real_mod_number}' returned from API does not match module number {module_id} in config."
+            msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
             _logger.error(msg)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(self._api_client, connection_check)
@@ -52,7 +52,7 @@ class ServerModule:
         return self._api_client._config.get("company_name", "")
 
     @property
-    def module_id(self) -> int:
+    def id(self) -> int:
         return self._id
 
     @property

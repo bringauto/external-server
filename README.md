@@ -25,7 +25,7 @@ following arguments are used if argument `tls` is set:
 
 ## Usage
 
-Prepare your shared library of module implementation (implementation of external_server_api.h). To use this library with External Server, you need to fill the module number and path to this library into the External Server config file.
+Prepare your shared library of module implementation (implementation of external_server_api.h). To use this library with External Server, you need to fill the module IDand path to this library into the External Server config file.
 
 ### Options in the config file
 

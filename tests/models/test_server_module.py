@@ -19,7 +19,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
         self.assertIsNotNone(module.api_client)
         self.assertEqual(module.car, "car")
         self.assertEqual(module.company, "company")
-        self.assertEqual(module.module_id, 1000)
+        self.assertEqual(module.id, 1000)
 
     def test_creating_server_module_with_nonexistent_so_lib_raises_error(self):
         with open("test_file.so", "w") as f:

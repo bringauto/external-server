@@ -33,7 +33,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
 
     def test_without_running_broker_raises_error(self):
         with self.assertRaises(ConnectionRefusedError):
-            self.es._initialize()
+            self.es._run_initial_sequence()
 
 
 class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Configured_Device(unittest.TestCase):
@@ -45,14 +45,14 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 
     def test_without_receiving_connect_message_sets_the_state_to_error(self):
         with self.assertRaises(ConnectSequenceFailure):
-            self.es._initialize()
+            self.es._run_initial_sequence()
         self.assertEqual(self.es.state, ServerState.ERROR)
 
     def test_without_receiving_first_statuses_sets_the_state_to_error(self):
         broker = self.broker
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
         self.assertEqual(self.es.state, ServerState.ERROR)
 
@@ -61,7 +61,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         device_status = DeviceStatus(device=self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
             broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
         self.assertEqual(self.es.state, ServerState.ERROR)
@@ -71,7 +71,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         device_status = DeviceStatus(device=self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
@@ -85,7 +85,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         device_status = DeviceStatus(device=self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
@@ -99,7 +99,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         device_status = DeviceStatus(device=self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
@@ -129,7 +129,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         device_status_3 = DeviceStatus(device=self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             broker.publish(
                 topic,
@@ -153,7 +153,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         device_status_3 = DeviceStatus(device=self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             broker.publish(
                 topic,
@@ -177,7 +177,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         device_status_3 = DeviceStatus(device=self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._initialize)
+            ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             broker.publish(
                 topic,
@@ -214,7 +214,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
         device_status_2 = DeviceStatus(device=self.device_2)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
-            future = ex.submit(self.es._initialize)
+            future = ex.submit(self.es._run_initial_sequence)
             broker.publish(
                 topic,
                 connect_msg("session_id", "company", "car", [self.device_1, self.device_2, self.device_3])
