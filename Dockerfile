@@ -36,5 +36,7 @@ COPY config/for_docker.json /home/bringauto/config/for_docker.json
 COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 COPY external_server_main.py /home/bringauto/external_server/
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
+COPY log /home/bringauto/external_server/log
+COPY config /home/bringauto/external_server/config
 
 RUN python3 -m pip install -r /home/bringauto/external_server/requirements.txt

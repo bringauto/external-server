@@ -24,39 +24,37 @@
   "loggers": {
     "external_server.server": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     },
     "external_server.adapters.mqtt_adapter": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     },
     "external_server.checkers.status_order_checker": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     },
     "external_server.adapters.api_client": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     },
     "CommandWaitingThread": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     },
     "tests.utils._mqtt_broker_test": {
       "level": "DEBUG",
-      "handlers": ["console"],
+      "handlers": ["console", "file"],
       "propagate": false
     }
   },
   "root": {
     "level": "INFO",
-    "handlers": [
-      "console"
-    ]
+    "handlers": ["console", "file"]
   }
 }
