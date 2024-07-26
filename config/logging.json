@@ -13,6 +13,12 @@
       "level": "DEBUG",
      "formatter": "simple",
        "stream": "ext://sys.stdout"
+    },
+    "file": {
+      "class": "logging.handlers.RotatingFileHandler",
+      "level": "DEBUG",
+      "formatter": "simple",
+      "filename": "log/external_server.log"
     }
   },
   "loggers": {
