@@ -271,14 +271,13 @@ class ExternalServer:
             _logger.error(e)
         except Exception as e:
             _logger.error(f"Unexpected error occurred: {e}")
-        time.sleep(self._config.mqtt_client_connection_retry_period)
+        time.sleep(self._config.sleep_duration_after_connection_refused)
 
     def _ensure_connection_to_broker(self) -> None:
-        if not self._mqtt.is_connected:
-            _logger.info("Connecting to MQTT broker")
-            e = self._mqtt.connect()
-            if e is not None:
-                raise ConnectionRefusedError(e)
+        _logger.info("Connecting to MQTT broker")
+        e = self._mqtt.connect()
+        if e is not None:
+            raise ConnectionRefusedError(e)
 
     def _connect_device(self, device: _Device) -> int:
         code = self._modules[device.module].api_client.device_connected(device)
@@ -520,6 +519,7 @@ class ExternalServer:
 
     def _init_sequence(self) -> None:
         _logger.info("Starting the connect sequence.")
+        self.state = ServerState.UNINITIALIZED
         try:
             self.get_connect_message_and_respond()
             self.get_all_first_statuses_and_respond()
@@ -528,7 +528,6 @@ class ExternalServer:
             _logger.info("Connect sequence has finished succesfully")
         except Exception as e:
             msg = f"Connection sequence has failed. {e}"
-            _logger.warning(msg)
             raise ConnectSequenceFailure(msg)
 
     def _log_new_status(self, status: _Status) -> None:
