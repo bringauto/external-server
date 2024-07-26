@@ -8,6 +8,7 @@ _tmp
 .pytest_cache
 external_server.egg-info
 *.
+/log/*.log
 .env
 *.coverage
 tests/utils/example_module
