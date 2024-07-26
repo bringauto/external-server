@@ -16,13 +16,13 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from external_server.config import Config, ModuleConfig
-from external_server.server import ExternalServer, _logger
+from external_server.server import ExternalServer, logger
 from external_server.utils import connect_msg, status, cmd_response  # type: ignore
 from external_server.server_messages import status_response as _status_response
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
-_logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 
 
 ES_CONFIG_WITHOUT_MODULES = {
@@ -33,7 +33,7 @@ ES_CONFIG_WITHOUT_MODULES = {
     "mqtt_timeout": 1,
     "timeout": 1,
     "send_invalid_command": False,
-    "mqtt_client_connection_retry_period": 2,
+    "sleep_duration_after_connection_refused": 2,
     "log_files_directory": ".",
     "log_files_to_keep": 5,
     "log_file_max_size_bytes": 100000,
@@ -207,6 +207,7 @@ class Test_Command_Response(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
+        self.es.stop()
 
 
 class Test_Connection_Sequence_Restarted(unittest.TestCase):

@@ -12,9 +12,9 @@ from external_server.models.exceptions import ConnectSequenceFailure
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
 
-from external_server.server import _logger
+from external_server.server import logger
 
-_logger.setLevel("DEBUG")
+logger.setLevel("DEBUG")
 
 
 class Test_Initial_State(unittest.TestCase):
@@ -32,7 +32,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
         self.es = get_test_server()
 
     def test_without_running_broker_raises_error(self):
-        with self.assertRaises(ConnectSequenceFailure):
+        with self.assertRaises(ConnectionRefusedError):
             self.es._run_initial_sequence()
 
 

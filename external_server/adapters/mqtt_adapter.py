@@ -22,7 +22,6 @@ from paho.mqtt.client import (
 from paho.mqtt.enums import CallbackAPIVersion
 
 from ExternalProtocol_pb2 import (  # type: ignore
-    CommandResponse as _CommandResponse,
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
     ExternalServer as _ExternalServerMsg,
@@ -84,18 +83,16 @@ class MQTTClientAdapter:
     _EXTERNAL_SERVER_SUFFIX = "external_server"
     _MODULE_GATEWAY_SUFFIX = "module_gateway"
 
-    def __init__(
-        self, company: str, car_name: str, timeout: float, broker_host: str, broker_port: int
-    ) -> None:
-        self._publish_topic = f"{company}/{car_name}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
-        self._subscribe_topic = f"{company}/{car_name}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
+    def __init__(self, company: str, car: str, timeout: float, broker_host: str, port: int) -> None:
+        self._publish_topic = f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
+        self._subscribe_topic = f"{company}/{car}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = create_mqtt_client()
         self._event_queue = EventQueueSingleton()
         self._timeout = timeout
         self._keepalive = _KEEPALIVE
         self._broker_host = broker_host
-        self._broker_port = broker_port
+        self._broker_port = port
         self._set_up_callbacks()
 
     @property
@@ -198,13 +195,16 @@ class MQTTClientAdapter:
         _logger.info("Expecting a connect message.")
         msg = self._get_message()
         while msg is False:
-            _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
+            if self.is_connected:
+                _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
             msg = self._get_message()
         if msg is None:
-            _logger.error("Connect message has not been received.")
+            if self.is_connected:
+                _logger.error("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
-            _logger.error("Received message is not a connect message.")
+            if self.is_connected:
+                _logger.error("Received message is not a connect message.")
             return None
         _logger.info("Connect message has been received.")
         return msg.connect
@@ -230,7 +230,6 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             if log_msg:
                 _logger.info(log_msg)
-            _logger.debug(f"Published message on topic '{self._publish_topic}': {msg}.")
         else:
             _logger.error(f"Failed to publish message. {mqtt_error_from_code(code)}.")
 
@@ -242,11 +241,9 @@ class MQTTClientAdapter:
         if cli._thread and cli._thread.is_alive():
             code = self._mqtt_client.loop_stop()
             if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.debug("Stopped MQTT client's event loop.")
+                _logger.debug("Stopped MQTT client's loop.")
             else:
-                _logger.error(
-                    f"Failed to stop MQTT client's event loop: {mqtt_error_from_code(code)}"
-                )
+                _logger.error(f"Failed to stop MQTT client's loop: {mqtt_error_from_code(code)}")
         else:
             _logger.debug("Trying to stop MQTT client's event loop, but it is already stopped.")
 
@@ -298,8 +295,9 @@ class MQTTClientAdapter:
         elif code == mqtt.MQTT_ERR_INVAL:
             _logger.info(f"MQTT client already connected to broker ({self.broker_address}).")
         else:
-            _logger.error(f"Cannot connect to broker ({self.broker_address})."
-                          f"{mqtt_error_from_code(code)}")
+            _logger.error(
+                f"Cannot connect to broker ({self.broker_address})." f"{mqtt_error_from_code(code)}"
+            )
 
     def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:
         """Callback function for handling connection events.
@@ -323,7 +321,6 @@ class MQTTClientAdapter:
         - `properties` The properties associated with the disconnection event.
         """
         try:
-            _logger.info("Server disconnected from MQTT broker")
             self._received_msgs.put(False)
             self._event_queue.add(event_type=EventType.MQTT_BROKER_DISCONNECTED)
         except:  # pragma: no cover
@@ -344,9 +341,8 @@ class MQTTClientAdapter:
             if message.topic == self._subscribe_topic:
                 msg = _ExternalClientMsg().FromString(message.payload)
                 self._received_msgs.put(msg)
-                _logger.debug(f"Received message: {msg}")
                 self._event_queue.add(event_type=EventType.CAR_MESSAGE_AVAILABLE)
-        except: # pragma: no cover
+        except:  # pragma: no cover
             _logger.error("MQTT on message callback: Failed to parse the received message")
 
     def _set_up_callbacks(self) -> None:

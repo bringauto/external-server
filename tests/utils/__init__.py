@@ -21,7 +21,7 @@ ES_CONFIG_WITHOUT_MODULES = {
     "mqtt_timeout": 2,
     "timeout": 2,
     "send_invalid_command": False,
-    "mqtt_client_connection_retry_period": 2,
+    "sleep_duration_after_connection_refused": 2,
     "log_files_directory": ".",
     "log_files_to_keep": 5,
     "log_file_max_size_bytes": 100000,

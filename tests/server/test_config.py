@@ -21,7 +21,7 @@ class Test_Config_Validation(unittest.TestCase):
             "mqtt_timeout": 4,
             "timeout": 5,
             "send_invalid_command": False,
-            "mqtt_client_connection_retry_period": 7,
+            "sleep_duration_after_connection_refused": 7,
             "log_files_directory": ".",
             "log_files_to_keep": 5,
             "log_file_max_size_bytes": 100000,
@@ -87,17 +87,17 @@ class Test_Config_Validation(unittest.TestCase):
                 config_dict["timeout"] = timeout
                 Config(**config_dict)
 
-    def test_mqtt_client_connection_retry_period_must_be_nonegative_float(self):
+    def test_sleep_duration_after_connection_refused_must_be_nonegative_float(self):
         for duration in [0, 1, 1000, 0.1]:
             with self.subTest(duration=duration):
                 config_dict = self.valid_config_dict.copy()
-                config_dict["mqtt_client_connection_retry_period"] = duration
+                config_dict["sleep_duration_after_connection_refused"] = duration
                 Config(**config_dict)
 
         for duration in [-1, -1000, ""]:
             with self.subTest(duration=duration), self.assertRaises(pydantic.ValidationError):
                 config_dict = self.valid_config_dict.copy()
-                config_dict["mqtt_client_connection_retry_period"] = duration
+                config_dict["sleep_duration_after_connection_refused"] = duration
                 Config(**config_dict)
 
     def test_log_file_directory_must_exist(self):

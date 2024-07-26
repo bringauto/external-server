@@ -6,7 +6,7 @@ import logging
 
 sys.path.append(".")
 
-from external_server.server import ServerState, _logger as _eslogger
+from external_server.server import ServerState, logger as _eslogger
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from tests.utils import MQTTBrokerTest, get_test_server
@@ -21,7 +21,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(
-            module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test_1"
+            module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1"
         )
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
@@ -68,7 +68,9 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
+            time.sleep(0.1)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+            time.sleep(0.3)
             self.broker.publish(
                 topic,
                 status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
@@ -88,7 +90,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
@@ -207,7 +209,7 @@ class Test_Session_Time_Out(unittest.TestCase):
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
@@ -218,6 +220,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             self.broker.publish(
                 topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
+            time.sleep(0.01)
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
     def test_session_timeout_is_raised_if_no_message_from_module_gateway_is_received_in_time(self):
@@ -266,7 +269,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
@@ -302,28 +305,6 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
     def tearDown(self) -> None:
         self.broker.stop()
         self.es.mqtt.stop()
-
-
-# class Test_Handling_Communication_Event(unittest.TestCase):
-
-#     def setUp(self):
-#         self.es = get_test_server()
-#         self.broker = MQTTBrokerTest(start=True)
-#         self.device = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
-#         with futures.ThreadPoolExecutor() as ex:
-#             ex.submit(self.es._run_initial_sequence)
-#             time.sleep(0.2)
-#             device_status = DeviceStatus(device=self.device)
-#             topic = self.es.mqtt.subscribe_topic
-#             self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-#             self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
-#             self.broker.publish(
-#                 topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
-#             )
-#         self.assertEqual(self.es.state, ServerState.INITIALIZED)
-
-#     def test_car_message_available_processes_
-
 
 
 if __name__ == "__main__":  # pragma: no cover
