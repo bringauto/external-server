@@ -144,7 +144,7 @@ class Test_Resetting_Checker(unittest.TestCase):
         self.assertEqual(self.checker.counter, 1)
 
     def test_resetting_checker_clears_timeout(self):
-        self.checker.check(Status(messageCounter=5000))
+        self.checker.check(Status(messageCounter=6))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
         self.assertTrue(self.checker.timeout.is_set())
         self.checker.reset()

@@ -51,7 +51,6 @@ class EventQueueSingleton(metaclass=SingletonMeta):
         self._queue: _Queue[Any] = _Queue()
 
     def add(self, event_type: EventType, data: Any = None) -> None:
-        logger.debug(f"Adding event to the queue: {event_type}")
         self._queue.put(Event(event=event_type, data=data))
 
     def empty(self) -> bool:

@@ -353,7 +353,6 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
                     connect_response("session_id", 1).SerializeToString()
                 )
 
-
     def tearDown(self) -> None:
         self.broker.stop()
         self.es.stop()
