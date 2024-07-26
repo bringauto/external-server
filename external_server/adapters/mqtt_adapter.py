@@ -195,18 +195,18 @@ class MQTTClientAdapter:
 
         Raise an exception if the message is not received or is not a connect message.
         """
-        _logger.info("Expecting a connect message")
+        _logger.info("Expecting a connect message.")
         msg = self._get_message()
         while msg is False:
             _logger.debug("Disconnect message from connected client. Repeating message retrieval.")
             msg = self._get_message()
         if msg is None:
-            _logger.error("Connect message has not been received")
+            _logger.error("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
-            _logger.error("Received message is not a connect message")
+            _logger.error("Received message is not a connect message.")
             return None
-        _logger.info("Connect message has been received")
+        _logger.info("Connect message has been received.")
         return msg.connect
 
     def get_status(self) -> _Status | None:
@@ -216,10 +216,10 @@ class MQTTClientAdapter:
         """
         msg = self._get_message()
         if msg is None or msg == False:
-            _logger.error("Status message has not been received")
+            _logger.error("Status message has not been received.")
             return None
         if not msg.HasField("status"):
-            _logger.error("Received message is not a status message")
+            _logger.error("Received message is not a status message.")
             return None
         return msg.status
 
@@ -230,9 +230,9 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             if log_msg:
                 _logger.info(log_msg)
-            _logger.debug(f"Published message on topic '{self._publish_topic}'")
+            _logger.debug(f"Published message on topic '{self._publish_topic}': {msg}.")
         else:
-            _logger.error(f"Failed to publish message: {mqtt_error_from_code(code)}")
+            _logger.error(f"Failed to publish message. {mqtt_error_from_code(code)}.")
 
     def stop(self) -> None:
         """Stop the MQTT client's event loop. If the client is already stopped, no action
@@ -242,7 +242,7 @@ class MQTTClientAdapter:
         if cli._thread and cli._thread.is_alive():
             code = self._mqtt_client.loop_stop()
             if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.debug("Stopped MQTT client's event loop")
+                _logger.debug("Stopped MQTT client's event loop.")
             else:
                 _logger.error(
                     f"Failed to stop MQTT client's event loop: {mqtt_error_from_code(code)}"
@@ -342,8 +342,9 @@ class MQTTClientAdapter:
         """
         try:
             if message.topic == self._subscribe_topic:
-                _logger.debug(f"Received message on topic '{self._subscribe_topic}'")
-                self._received_msgs.put(_ExternalClientMsg().FromString(message.payload))
+                msg = _ExternalClientMsg().FromString(message.payload)
+                self._received_msgs.put(msg)
+                _logger.debug(f"Received message: {msg}")
                 self._event_queue.add(event_type=EventType.CAR_MESSAGE_AVAILABLE)
         except: # pragma: no cover
             _logger.error("MQTT on message callback: Failed to parse the received message")

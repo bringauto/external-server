@@ -132,8 +132,12 @@ class ExternalServer:
     @state.setter
     def state(self, state: ServerState) -> None:
         if state in StateTransitionTable[self._state]:
-            _logger.info(f"Changing server's state from {self._state} to {state}")
+            _logger.debug(f"Changing server's state from {self._state} to {state}")
             self._state = state
+        elif state==self.state:
+            pass
+        else:
+            _logger.debug(f"Cannot change server's state from {self._state} to {state}")
 
     def send_first_commands_and_check_responses(self) -> None:
         """Send command to all connected devices and check responses are returned."""
@@ -259,14 +263,14 @@ class ExternalServer:
         try:
             raise e
         except ConnectSequenceFailure as e:
-            _logger.error(f"Connection sequence has failed.")
+            _logger.error(e)
         except ConnectionRefusedError as e:
             address = self._mqtt.broker_address
-            _logger.error(f"Unable to connect to broker ({address}. Trying again.")
+            _logger.error(f"Unable to connect to broker ({address}. {e}. Trying again.")
         except StatusTimeout as e:
-            _logger.error("Status messages have not been received in time")
+            _logger.error(f"Status messages have not been received in time. {e}")
         except CommandResponseTimeout as e:
-            _logger.error("Command response message has not been received in time")
+            _logger.error(f"Command response message has not been received in time. {e}")
         except CommunicationException as e:
             _logger.error(e)
         except Exception as e:
@@ -274,10 +278,12 @@ class ExternalServer:
         time.sleep(self._config.sleep_duration_after_connection_refused)
 
     def _ensure_connection_to_broker(self) -> None:
-        _logger.info("Connecting to MQTT broker")
+        _logger.info("Connecting to MQTT broker.")
         e = self._mqtt.connect()
         if e is not None:
             raise ConnectionRefusedError(e)
+        else:
+            self.state = ServerState.CONNECTED
 
     def _connect_device(self, device: _Device) -> int:
         code = self._modules[device.module].api_client.device_connected(device)
@@ -468,7 +474,7 @@ class ExternalServer:
         if not module:
             _logger.warning(f"Received status for device from unknown module (ID={device.module}).")
             return None
-        elif module.api_client.is_device_type_supported(device.deviceType):
+        elif not module.api_client.is_device_type_supported(device.deviceType):
             _logger.error(
                 f"Device type {device.deviceType} not supported by module {device.module}"
             )
@@ -519,15 +525,18 @@ class ExternalServer:
 
     def _init_sequence(self) -> None:
         _logger.info("Starting the connect sequence.")
-        self.state = ServerState.UNINITIALIZED
         try:
+            if not self.state == ServerState.CONNECTED:
+                raise ConnectSequenceFailure("Cannot start connect sequence without connection to MQTT broker.")
             self.get_connect_message_and_respond()
             self.get_all_first_statuses_and_respond()
             self.send_first_commands_and_check_responses()
+            self.state = ServerState.INITIALIZED
             self._event_queue.clear()
             _logger.info("Connect sequence has finished succesfully")
         except Exception as e:
             msg = f"Connection sequence has failed. {e}"
+            _logger.error(msg)
             raise ConnectSequenceFailure(msg)
 
     def _log_new_status(self, status: _Status) -> None:
@@ -586,7 +595,7 @@ class ExternalServer:
                 self._handle_command_response(message.commandResponse)
 
     def _publish_connect_response(self, response_type: int) -> None:
-        _logger.info(f"Sending Connect respons. Response type: {response_type}")
+        _logger.info(f"Sending Connect response. Response type: {response_type}")
         msg = _connect_response(self._session.id, response_type)
         self._mqtt.publish(msg)
 
@@ -599,10 +608,9 @@ class ExternalServer:
 
     def _run_initial_sequence(self) -> None:
         try:
+            self.state = ServerState.UNINITIALIZED
             self._ensure_connection_to_broker()
-            self.state = ServerState.CONNECTED
             self._init_sequence()
-            self.state = ServerState.INITIALIZED
         except Exception as e:
             self.state = ServerState.ERROR
             raise e
@@ -615,6 +623,7 @@ class ExternalServer:
         while True:
             event = self._event_queue.get()
             try:
+                _logger.debug(f"Communication event: {str(event)}.")
                 self._handle_communication_event(event)
             except Exception as e:
                 self.state = ServerState.ERROR
