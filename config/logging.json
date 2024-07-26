@@ -42,6 +42,11 @@
       "handlers": ["console", "file"],
       "propagate": false
     },
+    "external_server.models.event_queue": {
+      "level": "DEBUG",
+      "handlers": ["console"],
+      "propagate": false
+    },
     "CommandWaitingThread": {
       "level": "DEBUG",
       "handlers": ["console", "file"],

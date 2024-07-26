@@ -324,24 +324,13 @@ class ExternalServer:
         if self._session.id == msg_session_id:
             msg = "Received connect message with ID of already existing session."
             logger.error(msg)
-            raise CommunicationException(msg)
+            return
         self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
-
-    def _message_session_id_matches_current_session(
-        self, message: _Connect | _Status | _CommandResponse
-    ) -> bool:
-
-        if message.sessionId != self._session.id:
-            logger.debug(
-                f"Received status with session ID {message.sessionId}"
-                f"does not match current session ID '{self.session_id}'"
-            )
-            return False
-        return True
 
     def _check_received_status(self, status: _Status) -> None:
         self._log_new_status(status)
-        if not self._message_session_id_matches_current_session(status):
+        if status.sessionId != self._session.id:
+            logger.warning("Received status with different session ID.")
             return
         else:
             self._reset_session_checker()
@@ -574,7 +563,6 @@ class ExternalServer:
         elif message is False:
             raise UnexpectedMQTTDisconnect
         else:
-            assert isinstance(message, _ExternalClientMsg)
             if message.HasField("connect"):
                 self._reset_session_timeout_for_session_id_match(message.connect.sessionId)
                 self._handle_connect(message.connect)
@@ -612,12 +600,11 @@ class ExternalServer:
         self._session.start()
         self.state = ServerState.RUNNING
         while self.state != ServerState.STOPPED:
-            logger.debug("Waiting for event.")
-            event = self._event_queue.get()
             try:
-                logger.debug(f"Communication event: {str(event)}.")
+                event = self._event_queue.get()
                 self._handle_communication_event(event)
             except Exception as e:
+                logger.error(e)
                 self.state = ServerState.ERROR
                 raise e
 

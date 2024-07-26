@@ -21,7 +21,7 @@ class NoPublishedMessage(CommunicationException):
 
 class SessionTimeout(CommunicationException):
     def __init__(self) -> None:
-        super().__init__("Session has not been received in time")
+        super().__init__("Message has not been received in time.")
 
 
 class CommandResponseTimeout(CommunicationException):
