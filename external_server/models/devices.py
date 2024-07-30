@@ -6,6 +6,11 @@ from InternalProtocol_pb2 import Device as _Device  # type: ignore
 
 @dataclasses.dataclass(frozen=True)
 class DevicePy:
+    """This class represents a device connected to the external server.
+
+    It contains the device identifiers and methods for assessing two devices are identical.
+    """
+
     module_id: int
     type: int
     role: str
@@ -29,6 +34,7 @@ class DevicePy:
             raise TypeError
 
     def to_device(self) -> _Device:
+        """Converts the DevicePy instance to the protobuf Device message."""
         return _Device(
             module=self.module_id,
             deviceType=self.type,
@@ -39,6 +45,7 @@ class DevicePy:
 
     @staticmethod
     def from_device(device: _Device) -> DevicePy:
+        """Creates a DevicePy instance from the protobuf Device message."""
         return DevicePy(
             module_id=device.module,
             type=device.deviceType,
@@ -50,25 +57,30 @@ class DevicePy:
 
 @dataclasses.dataclass
 class KnownDevices:
-    """ This class manages two parallel lists of DevicePy instances representing
+    """This class manages two parallel lists of DevicePy instances representing
     devices communicating with the external server.
     """
+
     _supported: list[DevicePy] = dataclasses.field(default_factory=list)
     _unsupported: list[DevicePy] = dataclasses.field(default_factory=list)
 
     @property
     def n_supported(self) -> int:
+        """Number of devices in supported devices list."""
         return len(self._supported)
 
     @property
     def n_unsupported(self) -> int:
+        """Number of devices in unsupported devices list."""
         return len(self._unsupported)
 
     @property
     def n_all(self) -> int:
+        """Total number of devices in both supported and unsupported devices lists."""
         return len(self._supported) + len(self._unsupported)
 
     def clear(self) -> None:
+        """Clear both supported and unsupported devices lists."""
         self._supported.clear()
         self._unsupported.clear()
 
@@ -101,12 +113,15 @@ class KnownDevices:
         self._unsupported.append(device)
 
     def is_supported(self, device: DevicePy) -> bool:
+        """`True` if device is in supported devices list, `False` otherwise."""
         return device in self._supported
 
     def any_supported_device(self, module_id: int) -> bool:
+        """`True` if any device with given module ID is in supported devices list, `False` otherwise."""
         return any(device.module_id == module_id for device in self._supported)
 
     def is_unsupported(self, device: DevicePy) -> bool:
+        """`True` if device is in unsupported devices list, `False` otherwise."""
         return device in self._unsupported
 
     def is_unknown(self, device: DevicePy) -> bool:

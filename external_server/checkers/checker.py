@@ -8,15 +8,15 @@ from external_server.models.event_queue import (
 )
 
 
-_DEFAULT_COUNTER_VALUE = 0
-
 
 class Checker:
     """
     A class that provides a mechanism to check for a timeout in a threaded operation.
     """
 
-    def __init__(self, timeout_type: _TimeoutType) -> None:
+    DEFAULT_COUNTER_VALUE = 0
+
+    def __init__(self, timeout_type: _TimeoutType, timeout: float) -> None:
         """
         Initializes a new instance of the Checker class with the specified timeout type to signal when timeout occurs.
 
@@ -25,16 +25,27 @@ class Checker:
         """
         self._logger = logging.getLogger(self.__class__.__name__)
 
-        self.timeout = threading.Event()  # to be removed?
-        self._event_queue = _EventQueueSingleton()
+        self._timeout_event = threading.Event()
         self._timeout_type = timeout_type
-        self._counter = _DEFAULT_COUNTER_VALUE
+        self._timeout = timeout
+        self._event_queue = _EventQueueSingleton()
+        self._counter = Checker.DEFAULT_COUNTER_VALUE
 
     @property
     def counter(self) -> int:
+        """Expected counter value of the next message to be received."""
         return self._counter
 
-    def _timeout_occurred(self) -> None:
-        """Puts the TIMEOUT_OCCURRED event to event queue. """
-        self.timeout.set()
+    @property
+    def timeout(self) -> float:
+        """Time period in seconds after which timeout is considered to occur."""
+        return self._timeout
+
+    def timeout_occured(self) -> bool:
+        """Returns True if timeout occured, False otherwise."""
+        return self._timeout_event.is_set()
+
+    def _create_timeout_event(self) -> None:
+        """Puts event to event queue. """
+        self._timeout_event.set()
         self._event_queue.add(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)

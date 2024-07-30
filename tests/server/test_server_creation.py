@@ -71,7 +71,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         self.assertTrue(1000 in self.es.modules)
 
     def test_all_devices_are_initialized(self):
-        self.assertTrue(self.es.modules[1000].api_client.device_initialized())
+        self.assertTrue(self.es.modules[1000].api_adapter.device_initialized())
 
     def test_session_id_is_empty(self):
         self.assertEqual(self.es.session_id, "")

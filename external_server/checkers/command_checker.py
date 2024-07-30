@@ -29,8 +29,7 @@ class QueuedCommand:
 
 
 class CommandQueue:
-    """This class serves as a wrapper for the `Queue` class from the `queue` module.
-    It stores instances of `QueuedCommand` and provides methods for adding and removing
+    """It stores instances of `QueuedCommand` and provides methods for adding and removing
     them from the queue.
     """
 
@@ -66,13 +65,14 @@ class CommandQueue:
 class CommandChecker(_Checker):
     """Checks for order of received Command responses and checks if duration between
     sending Command and receiving Command reponses do not exceeds timeout given in
-    constructor. Is also External Server's memory of commands, which didn't have
+    constructor.
+
+    Is also External Server's memory of commands, which didn't have
     received Command response yet.
     """
 
     def __init__(self, timeout: int) -> None:
-        super().__init__(_TimeoutType.COMMAND_TIMEOUT)
-        self._timeout = timeout
+        super().__init__(_TimeoutType.COMMAND_TIMEOUT, timeout=timeout)
         self._commands = CommandQueue()
         self._missed_counter_vals: list[_Counter] = []
         self._counter = 0
@@ -122,13 +122,13 @@ class CommandChecker(_Checker):
         return command
 
     def reset(self) -> None:
-        """Stops all timers and clears command memory"""
+        """"""
         self._commands.clear()
         self._missed_counter_vals.clear()
-        self.timeout.clear()
+        self._timeout_event.clear()
 
     def _get_started_timer(self) -> _Timer:
         """Get the timer object for the oldest command in the queue and start it."""
-        timer = _Timer(self._timeout, self._timeout_occurred)
+        timer = _Timer(self._timeout, self._create_timeout_event)
         timer.start()
         return timer

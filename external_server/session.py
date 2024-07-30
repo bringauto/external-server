@@ -11,23 +11,22 @@ class Session:
     """Checks if connected session did not timed out."""
 
     def __init__(self, timeout: int) -> None:
-        self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT)
-        self._timeout = timeout
+        self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout)
         self._timer: _Timer | None = None
         self._timer_running = False
         self.id: str = ""
 
     @property
-    def timeout(self) -> int:
+    def timeout(self) -> float:
         """Time period in seconds after which session is considered timed out."""
-        return self._timeout
+        return self._checker.timeout
 
     @property
     def timeout_event(self) -> _Event:
-        return self._checker.timeout
+        return self._checker._timeout_event
 
     def start(self) -> None:
-        self._timer = _Timer(self._timeout, self._checker._timeout_occurred)
+        self._timer = _Timer(self._checker.timeout, self._checker._create_timeout_event)
         self._timer.start()
         self._timer_running = True
 
@@ -44,5 +43,5 @@ class Session:
             if self._timer.is_alive():
                 self._timer.cancel()
                 self._timer.join()
-            self._checker.timeout.clear()
+            self._checker._timeout_event.clear()
             self._timer_running = False

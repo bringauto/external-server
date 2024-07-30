@@ -209,7 +209,7 @@ class ExternalServer:
                 device_connected = self._devices.is_supported(device)
                 if device_connected and command.from_api:
                     module_id = handled_cmd.device.module
-                    self._modules[module_id].api_client.command_ack(
+                    self._modules[module_id].api_adapter.command_ack(
                         command.data, handled_cmd.device
                     )
 
@@ -273,7 +273,7 @@ class ExternalServer:
             self.state = ServerState.CONNECTED
 
     def _connect_device(self, device: _Device) -> int:
-        code = self._modules[device.module].api_client.device_connected(device)
+        code = self._modules[device.module].api_adapter.device_connected(device)
         if code == GeneralErrorCode.OK:
             logger.info(f"Connected device unique identificator: {device_repr(device)}")
         else:
@@ -297,7 +297,7 @@ class ExternalServer:
         self._session.stop()
         self._status_checker.reset()
         for device in self._devices.list_supported():
-            self._modules[device.module_id].api_client.device_disconnected(
+            self._modules[device.module_id].api_adapter.device_disconnected(
                 DisconnectTypes.timeout, device.to_device()
             )
         self._devices.clear()
@@ -308,7 +308,7 @@ class ExternalServer:
             module.thread.stop()
         for module in self._modules.values():
             module.thread.wait_for_join()
-            code = module.api_client.destroy()
+            code = module.api_adapter.destroy()
             if not code == GeneralErrorCode.OK:
                 logger.error(f"Module {module.id}: Error in destroy function. Code: {code}")
         self._modules.clear()
@@ -316,7 +316,7 @@ class ExternalServer:
     def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> None:
         logger.warning(f"Disconnecting device {device_repr(device)}.")
         self._devices.remove(DevicePy.from_device(device))
-        self._modules[device.module].api_client.device_disconnected(disconnect_types, device)
+        self._modules[device.module].api_adapter.device_disconnected(disconnect_types, device)
 
     def _handle_connect(self, connect_msg: _Connect) -> None:
         logger.warning("Received connect message when already connected.")
@@ -338,7 +338,7 @@ class ExternalServer:
 
     def _forward_status(self, status: _Status, module: _ServerModule) -> None:
         device, data = status.deviceStatus.device, status.deviceStatus.statusData
-        module.api_client.forward_status(device, data)
+        module.api_adapter.forward_status(device, data)
         self._log_status_error(status, device)
         self._publish_status_response(status)
 
@@ -422,7 +422,7 @@ class ExternalServer:
         commands = self._command_checker.pop_commands(cmd_response.messageCounter)
         for command in commands:
             module = self._modules[command.device.module]
-            module.api_client.command_ack(command.data, command.device)
+            module.api_adapter.command_ack(command.data, command.device)
             if device_not_connected and command.counter == cmd_response.messageCounter:
                 self._disconnect_device(DisconnectTypes.announced, command.device)
                 logger.warning(f"Device {device_repr(command.device)} disconnected.")
@@ -450,7 +450,7 @@ class ExternalServer:
         if not module:
             logger.warning(f"Received status for device from unknown module (ID={device.module}).")
             return None
-        elif not module.api_client.is_device_type_supported(device.deviceType):
+        elif not module.api_adapter.is_device_type_supported(device.deviceType):
             logger.error(f"Device type {device.deviceType} not supported by module {device.module}")
             return None
         return module, device
@@ -495,8 +495,8 @@ class ExternalServer:
             if self._devices.is_unsupported(device):
                 module = self._modules[device.module]
                 if status_obj.errorMessage:
-                    module.api_client.forward_error_message(device, status_obj.errorMessage)
-                module.api_client.forward_status(device, status.statusData)
+                    module.api_adapter.forward_error_message(device, status_obj.errorMessage)
+                module.api_adapter.forward_status(device, status.statusData)
 
             self._publish_status_response(status_obj)
 
