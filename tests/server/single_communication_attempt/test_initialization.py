@@ -12,9 +12,9 @@ from external_server.models.exceptions import ConnectSequenceFailure
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
 
-from external_server.server import logger
+from external_server.server import eslogger
 
-logger.setLevel("DEBUG")
+eslogger.setLevel("DEBUG")
 
 
 class Test_Initial_State(unittest.TestCase):

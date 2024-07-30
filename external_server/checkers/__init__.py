@@ -8,4 +8,4 @@ __all__ = (
 from .command_checker import CommandChecker
 from .checker import Checker
 from .status_checker import StatusChecker
-from ..session import Session
+from .session import Session

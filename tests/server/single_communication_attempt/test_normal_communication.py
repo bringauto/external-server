@@ -6,7 +6,7 @@ import logging
 
 sys.path.append(".")
 
-from external_server.server import ServerState, logger as _eslogger
+from external_server.server import ServerState, eslogger as _eslogger
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from tests.utils import MQTTBrokerTest, get_test_server

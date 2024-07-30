@@ -1,10 +1,9 @@
 __all__ = (
-    "argparse_init",
+    "parsed_script_args",
     "ExternalServer",
 )
 
 import os
-from .utils import argparse_init
 from .server import ExternalServer
 
 
