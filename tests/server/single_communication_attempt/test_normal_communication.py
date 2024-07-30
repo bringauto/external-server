@@ -194,7 +194,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.broker.publish(
                 topic, status("session_id", Status.RUNNING, 2, DeviceStatus(device=self.device))
             )
-            msgs = future.result(timeout=5)
+            msgs = future.result(timeout=3)
             self.assertEqual(len(msgs), 2)
             self.assertEqual(msgs[0].payload, status_response("session_id", 1).SerializeToString())
             self.assertEqual(msgs[1].payload, status_response("session_id", 2).SerializeToString())

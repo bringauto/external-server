@@ -290,14 +290,11 @@ class MQTTClientAdapter:
             return None
 
     def _log_connection_result(self, code: int) -> None:
+        address = self.broker_address
         if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to a MQTT broker ({self.broker_address}).")
-        elif code == mqtt.MQTT_ERR_INVAL:
-            _logger.info(f"MQTT client already connected to broker ({self.broker_address}).")
+            _logger.info(f"Connected to a MQTT broker ({address}).")
         else:
-            _logger.error(
-                f"Cannot connect to broker ({self.broker_address})." f"{mqtt_error_from_code(code)}"
-            )
+            _logger.error(f"Cannot connect to broker ({address})." f"{mqtt_error_from_code(code)}")
 
     def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:
         """Callback function for handling connection events.

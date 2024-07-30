@@ -8,7 +8,7 @@ import logging
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, MQTT_ERR_INVAL
 
 from queue import Empty
 from external_server.adapters.mqtt_adapter import (  # type: ignore
@@ -35,6 +35,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
+from external_server.utils import connect_msg, status as status_msg, cmd_response
 from external_server.server_messages import external_command
 from tests.utils import MQTTBrokerTest  # type: ignore
 
@@ -558,7 +559,7 @@ class Test_MQTT_Client_Disconnected(unittest.TestCase):
         self.adapter = MQTTClientAdapter(
             "some_company",
             "test_car",
-            timeout=5,
+            timeout=2,
             broker_host=TEST_ADDRESS,
             port=TEST_PORT,
         )
@@ -596,7 +597,7 @@ class Test_Stopping_MQTT_Client_Adapter(unittest.TestCase):
 
     def setUp(self) -> None:
         self.broker = MQTTBrokerTest(start=True)
-        self.adapter = MQTTClientAdapter("some_company", "test_car", 5, TEST_ADDRESS, TEST_PORT)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 1, TEST_ADDRESS, TEST_PORT)
 
     def test_stopping_mqtt_client_adapter_leaves_it_connected_but_not_running(self):
         self.adapter.connect()
@@ -618,6 +619,108 @@ class Test_Stopping_MQTT_Client_Adapter(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.broker.stop()
+
+
+class Test_Expecting_Status(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
+        self.adapter.connect()
+
+    def test_without_any_message_published_yields_none(self):
+        result = self.adapter.get_status()
+        self.assertIsNone(result)
+
+    def test_receiving_status_yields_status_message(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            device_status = DeviceStatus(device=Device(), statusData=b"")
+            pub_msg = status_msg("id", 0, Status.RUNNING, device_status)
+            f = ex.submit(self.adapter.get_status)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), pub_msg.status)
+
+    def test_receiving_command_response_yields_none(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            pub_msg = cmd_response("id", 0, CommandResponse.OK)
+            f = ex.submit(self.adapter.get_status)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), None)
+
+    def test_receiving_connect_message_yields_none(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            pub_msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
+            f = ex.submit(self.adapter.get_status)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), None)
+
+    def tearDown(self) -> None:
+        self.adapter.stop()
+        self.broker.stop()
+
+
+class Test_Expecting_Connect_Message(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
+        self.adapter.connect()
+
+    def test_without_any_message_published_yields_none(self):
+        result = self.adapter.get_connect_message()
+        self.assertIsNone(result)
+
+    def test_receiving_connect_message_yields_connect_message(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            pub_msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
+            f = ex.submit(self.adapter.get_connect_message)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), pub_msg.connect)
+
+    def test_receiving_command_response_yields_none(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            pub_msg = cmd_response("id", 0, CommandResponse.OK)
+            f = ex.submit(self.adapter.get_connect_message)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), None)
+
+    def test_receiving_connect_message_yields_none(self):
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            device_status = DeviceStatus(device=Device(), statusData=b"")
+            pub_msg = status_msg("id", 0, Status.RUNNING, device_status)
+            f = ex.submit(self.adapter.get_connect_message)
+            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            self.assertEqual(f.result(), None)
+
+    def tearDown(self) -> None:
+        self.adapter.stop()
+        self.broker.stop()
+
+
+class Test_Logging_Connection_Result(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
+
+    def test_error_is_logged_when_connecting_to_broker_fails(self):
+        # broker does not exist
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
+            self.adapter.connect()
+
+    def test_info_is_logged_when_just_connected_to_broker(self):
+        broker = MQTTBrokerTest(start=True)
+        time.sleep(0.1)
+        with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
+            self.adapter.connect()
+
+    def test_info_is_logged_when_already_connected_to_broker(self):
+        broker = MQTTBrokerTest(start=True)
+        self.adapter.connect()
+        time.sleep(0.1)
+        with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
+            self.adapter.connect()
+
+
 
 
 if __name__ == "__main__":  # pragma: no cover
