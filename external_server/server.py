@@ -530,7 +530,7 @@ class ExternalServer:
             logger.warning(f"Received status for device from unknown module (ID={device.module}).")
             return None
         elif not module.api_adapter.is_device_type_supported(device.deviceType):
-            logger.error(f"Device type {device.deviceType} not supported by module {device.module}")
+            logger.warning(f"Device type {device.deviceType} not supported by module {device.module} and may not work properly.")
             return None
         return module, device
 

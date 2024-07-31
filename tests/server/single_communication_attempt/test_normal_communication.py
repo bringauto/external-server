@@ -358,5 +358,39 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.es.stop()
 
 
+class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_initial_sequence)
+            time.sleep(0.2)
+            device_status = DeviceStatus(device=self.device_1)
+            topic = self.es.mqtt.subscribe_topic
+            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device_1]))
+            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(
+                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+            )
+
+    def test_connecting_device_during_normal_communication_logs_error_and_produces_no_response(self):
+        sub_topic = self.es.mqtt.subscribe_topic
+        device_2 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_normal_communication)
+            time.sleep(0.1)
+            self.broker.publish(
+                sub_topic,
+                status("session_id", Status.CONNECTING, 1, DeviceStatus(device=device_2))
+            )
+            self.assertTrue(self.es._devices.is_supported(device_2))
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+        self.es.stop()
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main(verbosity=2)
