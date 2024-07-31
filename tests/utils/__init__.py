@@ -6,7 +6,7 @@ from pydantic import FilePath
 from tests.utils._mqtt_broker_test import MQTTBrokerTest
 from tests.utils._threads import ExternalServerThreadExecutor
 from external_server import ExternalServer
-from external_server.config import Config as Config, ModuleConfig
+from external_server.config import Config as ServerConfig, ModuleConfig
 
 
 EXAMPLE_MODULE_SO_LIB_PATH: FilePath = \
@@ -30,5 +30,5 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def get_test_server() -> ExternalServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+    config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
     return ExternalServer(config=config)

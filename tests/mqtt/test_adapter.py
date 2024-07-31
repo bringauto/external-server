@@ -482,21 +482,22 @@ class Test_On_Message_Callback(unittest.TestCase):
 class Test_On_Connect_Callback(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.client = MQTTClientAdapter(
+        self.adapter = MQTTClientAdapter(
             "some_company",
             "test_car",
             timeout=0.5,
             broker_host=TEST_ADDRESS,
             port=TEST_PORT,
         )
-        self.client._event_queue.clear()
+        self.adapter._event_queue.clear()
 
     def test_on_connect_callback_adds_no_event_to_queue(self):
-        self.client._on_connect(
-            client=self.client._mqtt_client, data=None, flags=None, rc=0, properties=None
+        self.adapter._on_connect(
+            client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
         )
         with self.assertRaises(Empty):
-            self.client._event_queue.get(block=True, timeout=0.1)
+            event = self.adapter._event_queue.get(block=True, timeout=0.1)
+            print(event)
 
 
 class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
@@ -719,8 +720,6 @@ class Test_Logging_Connection_Result(unittest.TestCase):
         time.sleep(0.1)
         with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
             self.adapter.connect()
-
-
 
 
 if __name__ == "__main__":  # pragma: no cover

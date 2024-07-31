@@ -7,7 +7,7 @@ import os
 
 from rich.logging import RichHandler
 
-from external_server.server import ExternalServer, eslogger
+from external_server.server import ExternalServer, logger as eslogger
 from external_server.config import load_config, InvalidConfigError
 
 
