@@ -353,7 +353,7 @@ class ExternalServer:
         else:
             self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
 
-    def _handle_status(self, received_status: _Status) -> None:
+    def _handle_received_status(self, received_status: _Status) -> None:
         self._check_received_status(received_status)
         while status := self._status_checker.get():
             self._handle_checked_status(status)
@@ -481,7 +481,7 @@ class ExternalServer:
                 self._handle_connect(message.connect)
             elif message.HasField("status"):
                 self._reset_session_timeout_for_session_id_match(message.status.sessionId)
-                self._handle_status(message.status)
+                self._handle_received_status(message.status)
             elif message.HasField("commandResponse"):
                 self._reset_session_timeout_for_session_id_match(message.commandResponse.sessionId)
                 self._handle_command_response(message.commandResponse)

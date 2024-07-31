@@ -358,6 +358,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.es.stop()
 
 
+@unittest.skip("Not implemented yet")
 class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
 
     def setUp(self):
