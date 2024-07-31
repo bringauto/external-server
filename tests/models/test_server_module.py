@@ -4,7 +4,7 @@ import os
 
 sys.path.append(".")
 
-from external_server.models.server_module import ServerModule
+from external_server.server_module.server_module import ServerModule
 from external_server.config import ModuleConfig
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 

@@ -36,7 +36,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
 from external_server.utils import connect_msg, status as status_msg, cmd_response
-from external_server.server_messages import external_command
+from external_server.models.server_messages import external_command
 from tests.utils import MQTTBrokerTest  # type: ignore
 
 
@@ -489,15 +489,26 @@ class Test_On_Connect_Callback(unittest.TestCase):
             broker_host=TEST_ADDRESS,
             port=TEST_PORT,
         )
-        self.adapter._event_queue.clear()
+        self.broker = MQTTBrokerTest()
 
-    def test_on_connect_callback_adds_no_event_to_queue(self):
-        self.adapter._on_connect(
-            client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
-        )
-        with self.assertRaises(Empty):
-            event = self.adapter._event_queue.get(block=True, timeout=0.1)
-            print(event)
+    def test_on_connect_callback_logs_info_if_connected_to_broker(self):
+        self.broker.start()
+        with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
+            self.adapter._on_connect(
+                client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
+            )
+            self.assertIn("Connected", cm.output[-1])
+
+    def test_on_connect_callback_logs_error_if_could_not_connect_to_broker(self):
+        with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
+            self.adapter._on_connect(
+                client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
+            )
+
+    def tearDown(self) -> None:
+        self.broker.stop()
+        self.adapter.stop()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):

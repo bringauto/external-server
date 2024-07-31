@@ -27,7 +27,7 @@ from external_server.models.exceptions import (
     SessionTimeout,
     UnexpectedMQTTDisconnect,
 )
-from external_server.server_messages import (
+from external_server.models.server_messages import (
     connect_response as _connect_response,
     status_response as _status_response,
 )
@@ -41,7 +41,7 @@ from external_server.models.structures import (
 )
 from external_server.models.devices import DevicePy, KnownDevices
 from external_server.models.event_queue import EventQueueSingleton, EventType, Event as _Event
-from external_server.models.server_module import ServerModule as _ServerModule
+from external_server.server_module.server_module import ServerModule as _ServerModule
 from external_server.models.structures import HandledCommand as _HandledCommand
 
 
@@ -257,6 +257,12 @@ class ExternalServer:
         self._mqtt.tls_set(ca_certs, certfile, keyfile)
 
     def start(self) -> None:
+        """Starts the external server.
+
+        This includes:
+        - starting thread waiting for commands for each of the supported modules,
+        - starting the MQTT connection.
+        """
         self._start_module_threads()
         self._start_communication_loop()
 
@@ -518,7 +524,7 @@ class ExternalServer:
     def _log_status_error(self, status: _Status, device: _Device) -> None:
         if status.errorMessage:
             error_str = status.errorMessage.decode()
-            logger.error(f"Status for device {device_repr(device)} contains error: {error_str}.")
+            logger.error(f"Status for {device_repr(device)} contains error: {error_str}.")
 
     def _module_and_device_referenced_by_status(
         self, message: _Status

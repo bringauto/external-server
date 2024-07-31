@@ -18,7 +18,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer, logger
 from external_server.utils import connect_msg, status, cmd_response  # type: ignore
-from external_server.server_messages import status_response as _status_response
+from external_server.models.server_messages import status_response as _status_response
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 

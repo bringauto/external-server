@@ -11,7 +11,7 @@ from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
-from external_server.server_messages import status_response, connect_response
+from external_server.models.server_messages import status_response, connect_response
 from external_server.models.exceptions import SessionTimeout
 
 
