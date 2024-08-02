@@ -61,7 +61,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         self.es = ExternalServer(config=self.config)
 
     def test_external_server_initially_has_no_connected_devices(self):
-        self.assertEqual(self.es._devices.n_supported, 0)
+        self.assertEqual(self.es._known_devices.n_connected, 0)
 
     def test_external_server_initially_has_mqtt_client_disconnected(self):
         self.assertFalse(self.es.mqtt.is_connected)

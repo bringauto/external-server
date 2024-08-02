@@ -74,11 +74,7 @@ class ServerModule:
         """Returns the command waiting thread used by the ServerModule."""
         return self._thread
 
-    def warn_if_device_unsupported(self, device: _Device) -> None:
-        """Logs a warning if the device is not supported by the module."""
-        if not self._api_adapter.is_device_type_supported(device.deviceType):
-            module_id = device.module
-            _logger.warning(
-                f"Device of type '{device.deviceType}' is not supported by module with ID={module_id}"
-                "and probably will not work properly."
-            )
+    def is_device_supported(self, device: _Device) -> bool:
+        """Return `True` if the device is not supported by the module, `False` otherwise."""
+        return self._api_adapter.is_device_type_supported(device.deviceType)
+

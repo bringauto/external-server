@@ -61,79 +61,88 @@ class KnownDevices:
     devices communicating with the external server.
     """
 
-    _supported: list[DevicePy] = dataclasses.field(default_factory=list)
-    _unsupported: list[DevicePy] = dataclasses.field(default_factory=list)
+    _connected: list[DevicePy] = dataclasses.field(default_factory=list)
+    _not_connected: list[DevicePy] = dataclasses.field(default_factory=list)
 
     @property
-    def n_supported(self) -> int:
-        """Number of devices in supported devices list."""
-        return len(self._supported)
+    def n_connected(self) -> int:
+        """Number of devices in connected devices list."""
+        return len(self._connected)
 
     @property
     def n_unsupported(self) -> int:
         """Number of devices in unsupported devices list."""
-        return len(self._unsupported)
+        return len(self._connected)
+
+    @property
+    def n_not_connected(self) -> int:
+        """Number of devices in not connected devices list."""
+        return len(self._not_connected)
 
     @property
     def n_all(self) -> int:
-        """Total number of devices in both supported and unsupported devices lists."""
-        return len(self._supported) + len(self._unsupported)
+        """Total number of devices in both connected and not connected devices lists."""
+        return len(self._connected) + len(self._not_connected)
 
     def clear(self) -> None:
-        """Clear both supported and unsupported devices lists."""
-        self._supported.clear()
-        self._unsupported.clear()
+        """Clear both connected and not connected devices lists."""
+        self._connected.clear()
+        self._not_connected.clear()
 
-    def add_supported(self, device: DevicePy) -> None:
-        """Add device to unsupported devices list.
+    def connected(self, device: DevicePy) -> None:
+        """Add device to connected devices list.
 
-        If device is already in supported devices list, no action is taken.
-        If device is in unsupported devices list, it is removed from unsupported devices list.
+        If device is already in connected devices list, no action is taken.
+        If device is in not connected devices list, it is removed from not connected devices list.
         """
-        if device in self._unsupported:
-            self._unsupported.remove(device)
-        self._supported.append(device)
+        if device in self._not_connected:
+            self._not_connected.remove(device)
+        self._connected.append(device)
 
-    def list_supported(self) -> list[DevicePy]:
-        """Return a copy of the supported devices list."""
-        return self._supported.copy()
+    def list_connected(self) -> list[DevicePy]:
+        """Return a copy of the connected devices list."""
+        return self._connected.copy()
 
-    def list_unsupported(self) -> list[DevicePy]:
-        """Return a copy of the unsupported devices list."""
-        return self._unsupported.copy()
+    def list_not_connected(self) -> list[DevicePy]:
+        """Return a copy of the not connected devices list."""
+        return self._not_connected.copy()
 
-    def add_unsupported(self, device: DevicePy) -> None:
-        """Add device to not supported devices list.
+    def not_connected(self, device: DevicePy) -> None:
+        """Add device to not connected devices list.
 
-        If device is already in unsupported devices list, no action is taken.
-        If device is in supported devices list, it is removed from supported devices list.
+        If device is already in not connected devices list, no action is taken.
+        If device is in connected devices list, it is removed from connected devices list.
         """
-        if device in self._supported:
-            self._supported.remove(device)
-        self._unsupported.append(device)
+        if device in self._connected:
+            self._connected.remove(device)
+        self._not_connected.append(device)
 
-    def is_supported(self, device: DevicePy) -> bool:
-        """`True` if device is in supported devices list, `False` otherwise."""
-        return device in self._supported
+    def is_connected(self, device: DevicePy) -> bool:
+        """`True` if device is in connected devices list, `False` otherwise."""
+        return device in self._connected
 
-    def any_supported_device(self, module_id: int) -> bool:
-        """`True` if any device with given module ID is in supported devices list, `False` otherwise."""
-        return any(device.module_id == module_id for device in self._supported)
+    def any_connected_device(self, module_id: int) -> bool:
+        """`True` if any device with given module ID is in connected devices list, `False` otherwise."""
+        return any(device.module_id == module_id for device in self._connected)
 
-    def is_unsupported(self, device: DevicePy) -> bool:
-        """`True` if device is in unsupported devices list, `False` otherwise."""
-        return device in self._unsupported
+    def is_not_connected(self, device: DevicePy) -> bool:
+        """`True` if device is in not connected devices list, `False` otherwise."""
+        return device in self._not_connected
+
+    def is_known(self, device: DevicePy) -> bool:
+        """True if device is in connected or not connected devices list."""
+        return self.is_connected(device) or self.is_not_connected(device)
 
     def is_unknown(self, device: DevicePy) -> bool:
-        """True if device is not in supported or unsupported devices list."""
-        return not (self.is_supported(device) or self.is_unsupported(device))
+        """True if device is not in connected or not connected devices list."""
+        return not (self.is_connected(device) or self.is_not_connected(device))
 
     def remove(self, device: DevicePy) -> None:
-        """Remove device from supported or unsupported devices list.
+        """Remove device from connected or not connected devices list.
 
-        If device is not in supported or unsupported devices list, no action is taken.
+        If device is not in connected or not connected devices list, no action is taken.
         """
-        if device in self._supported:
-            self._supported.remove(device)
-        elif device in self._unsupported:
-            self._unsupported.remove(device)
+        if device in self._connected:
+            self._connected.remove(device)
+        elif device in self._not_connected:
+            self._not_connected.remove(device)

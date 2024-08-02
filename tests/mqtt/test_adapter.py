@@ -472,6 +472,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         message = MQTTMessage()
         message.topic = "wrong_topic".encode()
         message.payload = b""
+        self.client._event_queue.clear()
         self.client._on_message(client=self.client, data=None, message=message)
         with self.assertRaises(Empty):
             self.client.received_messages.get(block=True, timeout=0.1)
