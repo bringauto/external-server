@@ -121,8 +121,7 @@ class ExternalServer:
     def state(self) -> ServerState:
         return self._state
 
-    @state.setter
-    def state(self, state: ServerState) -> None:
+    def _set_state(self, state: ServerState) -> None:
         if state in StateTransitionTable[self._state]:
             logger.debug(f"Changing server's state from {self._state} to {state}")
             self._state = state
@@ -165,12 +164,13 @@ class ExternalServer:
                 k += 1
                 if not _counter_initialized:
                     self._status_checker.initialize_counter(status_obj.messageCounter + 1)
-                self.check_device_is_in_connecting_state(status_obj.deviceState)
+
+                self.check_device_is_in_connecting_state(status_obj)
                 status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
                 self._log_new_status(status_obj)
+
                 if self._known_devices.is_not_connected(device):
                     logger.warning(f"Status from not connected device {device_repr(device)}.")
-                    module = self._modules[device.module]
                     if status_obj.errorMessage:
                         module.api_adapter.forward_error_message(device, status_obj.errorMessage)
                     module.api_adapter.forward_status(device, status.statusData)
@@ -271,7 +271,7 @@ class ExternalServer:
     def stop(self, reason: str = "") -> None:
         """Stop the external server communication, stop the MQTT client event loop, clear the modules."""
         msg = f"Stopping the external server."
-        self.state = ServerState.STOPPED
+        self._set_state(ServerState.STOPPED)
         if reason:
             msg += f" Reason: {reason}"
         logger.info(msg)
@@ -355,7 +355,7 @@ class ExternalServer:
         e = self._mqtt.connect()
         if e is not None:
             raise ConnectionRefusedError(e)
-        self.state = ServerState.CONNECTED
+        self._set_state(ServerState.CONNECTED)
 
     def _forward_status(self, status: _Status, module: _ServerModule) -> None:
         """Forward the status to the module's API."""
@@ -525,9 +525,9 @@ class ExternalServer:
         - sending first command to every device listed in the connect message IN ORDER
         of the devices in the connect message and receiving responses to each one.
         """
-        logger.info("Starting the connect sequence.")
         if self.state == ServerState.STOPPED:
             return
+        logger.info("Starting the connect sequence.")
         try:
             if not self.state == ServerState.CONNECTED:
                 raise ConnectSequenceFailure(
@@ -536,7 +536,7 @@ class ExternalServer:
             self.get_and_handle_connect_message()
             self.get_all_first_statuses_and_respond()
             self.get_and_send_first_commands()
-            self.state = ServerState.INITIALIZED
+            self._set_state(ServerState.INITIALIZED)
             self._event_queue.clear()
             logger.info("Connect sequence has finished succesfully")
         except Exception as e:
@@ -604,11 +604,11 @@ class ExternalServer:
         Raise an exception if the sequence fails
         """
         try:
-            self.state = ServerState.UNINITIALIZED
+            self._set_state(ServerState.UNINITIALIZED)
             self._ensure_connection_to_broker()
             self._init_sequence()
         except Exception as e:
-            self.state = ServerState.ERROR
+            self._set_state(ServerState.ERROR)
             raise e
 
     def _run_normal_communication(self) -> None:
@@ -616,14 +616,14 @@ class ExternalServer:
         if not self.state == ServerState.INITIALIZED:
             raise ConnectSequenceFailure("Cannot start communication after init sequence failed.")
         self._session.start()
-        self.state = ServerState.RUNNING
+        self._set_state(ServerState.RUNNING)
         while self.state != ServerState.STOPPED:
             try:
                 event = self._event_queue.get()
                 self._handle_communication_event(event)
             except Exception as e:
                 logger.error(e)
-                self.state = ServerState.ERROR
+                self._set_state(ServerState.ERROR)
                 raise e
 
     def _status_response(self, status: _Status) -> _ExternalServerMsg:
@@ -654,12 +654,13 @@ class ExternalServer:
             self._clear_context()
 
     @staticmethod
-    def check_device_is_in_connecting_state(state_enum: _Status.DeviceState) -> None:
-        if state_enum != _Status.CONNECTING:
-            state = DeviceStatusName.get(state_enum, str(state_enum))
+    def check_device_is_in_connecting_state(status: _Status) -> None:
+        if status.deviceState != _Status.CONNECTING:
+            state = DeviceStatusName.get(status.deviceState, str(status.deviceState))
             connecting_state = DeviceStatusName[_Status.CONNECTING]
             msg = (
-                f"First status from device must contain {connecting_state} state, received {state}."
+                f"First status from device {device_repr(status.deviceStatus.device)} "
+                f"must contain {connecting_state} state, received {state}."
             )
             logger.error(msg)
             raise ConnectSequenceFailure(msg)

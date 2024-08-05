@@ -11,7 +11,7 @@ from external_server.config import (
     Config as ServerConfig,
     ModuleConfig as _ModuleConfig
 )
-from external_server.server import ExternalServer
+from external_server.server import ExternalServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 
 
@@ -77,6 +77,20 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         self.assertEqual(self.es.session_id, "")
 
 
+class Test_Server_State(unittest.TestCase):
+
+        def setUp(self) -> None:
+            example_module_config = _ModuleConfig(
+                lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
+            )
+            self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+            self.es = ExternalServer(config=self.config)
+
+        def test_server_state_is_read_only(self):
+            with self.assertRaises(AttributeError):
+                self.es.state = ServerState.RUNNING
+
+
 class Test_External_Server_Start(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -100,8 +114,8 @@ class Test_External_Server_Start(unittest.TestCase):
             time.sleep(0.5)
             self.assertTrue(self.es.mqtt.is_connected)
             ex.submit(self.es.stop, reason="test")
-            # time.sleep(1)
-            # self.assertFalse(self.es.mqtt.is_connected)
+            time.sleep(1)
+            self.assertFalse(self.es.mqtt.is_connected)
 
     def tearDown(self) -> None:
         self.mqttbroker.stop()
