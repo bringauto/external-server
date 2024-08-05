@@ -30,7 +30,7 @@ class Session:
         self._timer.start()
         self._timer_running = True
 
-    def reset(self) -> None:
+    def reset_timer(self) -> None:
         """Resets the checker's timer.
 
         Next messages' timeout is checked relative to call to this method.

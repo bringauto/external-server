@@ -99,7 +99,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
             self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("session_id", 0, CommandResponse.OK)
             )
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
         # the server is now initialized with mqtt client connected to broker

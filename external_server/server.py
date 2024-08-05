@@ -121,14 +121,6 @@ class ExternalServer:
     def state(self) -> ServerState:
         return self._state
 
-    def _set_state(self, state: ServerState) -> None:
-        if state in StateTransitionTable[self._state]:
-            logger.debug(f"Changing server's state from {self._state} to {state}")
-            self._state = state
-        elif state != self.state:
-            logger.debug(f"Cannot change server's state from {self._state} to {state}")
-        return
-
     def get_and_handle_connect_message(self) -> None:
         """Wait for a connect message. If there is none, raise an exception."""
         msg = self._mqtt.get_connect_message()
@@ -137,7 +129,7 @@ class ExternalServer:
         if self.state != ServerState.STOPPED:
             self._session.id = msg.sessionId
             for device in msg.devices:
-                self._handle_device_from_connect_message(device)
+                self._connect_device_if_supported(device)
             self._publish_connect_response(_ConnectResponse.OK)
 
     def get_all_first_statuses_and_respond(self) -> None:
@@ -244,6 +236,7 @@ class ExternalServer:
         return None
 
     def _check_command_response(self, response: _ExternalClientMsg) -> None:
+        """Check if the response is a command response."""
         if response is None or response == False:
             error_msg = "Command response has not been received."
             logger.error(error_msg)
@@ -302,6 +295,10 @@ class ExternalServer:
             self._status_checker.check(status)
 
     def _clear_context(self) -> None:
+        """Stop and destroy communication with both the API and the MQTT broker.
+
+        Stop and destroy all timers and threads, clear the known devices list and queues.
+        """
         self._mqtt.disconnect()
         self._command_checker.reset()
         self._session.stop()
@@ -313,6 +310,7 @@ class ExternalServer:
         self._event_queue.clear()
 
     def _clear_modules(self) -> None:
+        """Stop the threads for each server module and destroy the API adapters."""
         for module in self._modules.values():
             module.thread.stop()
         for module in self._modules.values():
@@ -323,6 +321,10 @@ class ExternalServer:
         self._modules.clear()
 
     def _connect_device(self, device: _Device) -> bool:
+        """Connect the device if it is not already connected.
+
+        No action is taken if the device is already connected.
+        """
         if self._known_devices.is_connected(device):
             logger.error(f"Device {device_repr(device)} already connected.")
         else:
@@ -363,6 +365,7 @@ class ExternalServer:
         module.api_adapter.forward_status(device, data)
 
     def _get_module_commands(self, module_id: int) -> list[tuple[bytes, _Device]]:
+        """Get all commands for the module from the module's command waiting thread."""
         commands: list[tuple[bytes, _Device]] = []
         while (result := self._modules[module_id].thread.pop_command()) is not None:
             cmd_bytes, device = result
@@ -370,6 +373,7 @@ class ExternalServer:
         return commands
 
     def _handle_connect(self, connect_msg: _Connect) -> None:
+        """Handle connect message received during normal communication, i.e., after init sequence."""
         logger.warning("Received connect message when already connected.")
         if connect_msg.sessionId == self._session.id:
             logger.error("Received connect message with ID of already existing session.")
@@ -377,12 +381,14 @@ class ExternalServer:
             self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
 
     def _handle_received_status(self, received_status: _Status) -> None:
+        """Handle the status received during normal communication, i.e., after init sequence."""
         self._check_received_status(received_status)
         while status := self._status_checker.get():
             self._handle_checked_status(status)
         self._check_at_least_one_device_is_connected()
 
     def _handle_checked_status(self, status: _Status) -> None:
+        """Handle the status that has been checked by the status checker."""
         module_and_dev = self._module_and_device(status)
         if not module_and_dev:
             return
@@ -410,6 +416,7 @@ class ExternalServer:
             self._publish_status_response(status)
 
     def _handle_command(self, module_id: int) -> None:
+        """Handle the command received from command waiting thread during normal communication, i.e., after init sequence."""
         result = self._modules[module_id].thread.pop_command()
         if not result:
             return
@@ -437,6 +444,7 @@ class ExternalServer:
             self._mqtt.publish(handled_cmd.external_command(self.session_id))
 
     def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
+        """Handle the command response received during normal communication, i.e., after init sequence."""
         logger.info("Received command response")
         device_not_connected = cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED
         commands = self._command_checker.pop_commands(cmd_response.messageCounter)
@@ -447,7 +455,8 @@ class ExternalServer:
                 self._disconnect_device(DisconnectTypes.announced, command.device)
                 logger.warning(f"Device {device_repr(command.device)} disconnected.")
 
-    def _handle_device_from_connect_message(self, device: _Device) -> None:
+    def _connect_device_if_supported(self, device: _Device) -> None:
+        """Connect the device if it is supported by a supported module."""
         module = self._modules.get(device.module, None)
         if module:
             if module.is_device_supported(device):
@@ -571,32 +580,39 @@ class ExternalServer:
             logger.error(f"Status for {device_repr(device)} contains error: {error_str}.")
 
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule, _Device] | None:
+        """Return server module and device referenced by the status messages.
+
+        Return None if the module or device is unknown or unsupported.
+        """
         device = message.deviceStatus.device
         module = self._modules.get(device.module, None)
         if not module:
             logger.warning(f"Received status from unknown module (ID={device.module}).")
             return None
         elif not module.api_adapter.is_device_type_supported(device.deviceType):
-            logger.warning(f"Device type {device.deviceType} not supported by module "
-                           f"{device.module} and may not work properly.")
+            logger.warning(f"Device type {device.deviceType} not supported by module with ID={module.id}.")
             return None
         return module, device
 
     def _publish_connect_response(self, response_type: int) -> None:
+        """Publish the connect response message to the MQTT broker on publish topic."""
         logger.info(f"Sending Connect response. Response type: {response_type}")
         msg = _connect_response(self._session.id, response_type)
         self._mqtt.publish(msg)
 
     def _publish_status_response(self, status: _Status) -> None:
+        """Publish the status response message to the MQTT broker on publish topic."""
         status_response = self._status_response(status)
         self._mqtt.publish(status_response)
 
     def _reset_session_timeout_for_session_id_match(self, session_id: str) -> None:
+        """Reset the session checker if the session ID matches the current session ID."""
         if session_id==self._session.id:
             self._reset_session_checker()
 
     def _reset_session_checker(self) -> None:
-        self._session.reset()
+        """Reset the session checker's timer."""
+        self._session.reset_timer()
 
     def _run_initial_sequence(self) -> None:
         """Ensure connection to MQTT broker and run the initial sequence.
@@ -626,6 +642,18 @@ class ExternalServer:
                 self._set_state(ServerState.ERROR)
                 raise e
 
+    def _set_state(self, state: ServerState) -> None:
+        """Set the server's state variable to the given value if the transition is allowed.
+
+        No action is taken if the transition is not allowed.
+        """
+        if state in StateTransitionTable[self._state]:
+            logger.debug(f"Changing server's state from {self._state} to {state}")
+            self._state = state
+        elif state != self.state:
+            logger.debug(f"Cannot change server's state from {self._state} to {state}")
+        return
+
     def _status_response(self, status: _Status) -> _ExternalServerMsg:
         module = status.deviceStatus.device.module
         if module not in self._modules:
@@ -639,11 +667,13 @@ class ExternalServer:
             self._modules[_id].thread.start()
 
     def _start_communication_loop(self) -> None:
+        """Start the main communication loop including the init sequence and normal communication."""
         self._running = True
         while self._running and self.state != ServerState.STOPPED:
             self._single_communication_run()
 
     def _single_communication_run(self) -> None:
+        """Run the initial sequence and normal communication once."""
         try:
             self._run_initial_sequence()
             self._run_normal_communication()
@@ -655,6 +685,7 @@ class ExternalServer:
 
     @staticmethod
     def check_device_is_in_connecting_state(status: _Status) -> None:
+        """Check if the device state contained in the status is connecting."""
         if status.deviceState != _Status.CONNECTING:
             state = DeviceStatusName.get(status.deviceState, str(status.deviceState))
             connecting_state = DeviceStatusName[_Status.CONNECTING]

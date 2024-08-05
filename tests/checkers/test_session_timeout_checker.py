@@ -44,7 +44,7 @@ class Test_Setting_Timeout(unittest.TestCase):
         session = Session(_CHECKER_TIMEOUT)
         session.start()
         time.sleep(_CHECKER_TIMEOUT/2)
-        session.reset()
+        session.reset_timer()
         time.sleep(_CHECKER_TIMEOUT/2)
         self.assertFalse(session.timeout_event.is_set())
         time.sleep(_CHECKER_TIMEOUT/2+.001)
