@@ -10,7 +10,7 @@ from external_server.models.structures import TimeoutType as _TimeoutType
 class Session:
     """Checks if connected session did not timed out."""
 
-    def __init__(self, timeout: int) -> None:
+    def __init__(self, timeout: float) -> None:
         self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout)
         self._timer: _Timer | None = None
         self._timer_running = False

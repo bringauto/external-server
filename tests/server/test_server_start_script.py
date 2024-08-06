@@ -57,7 +57,16 @@ class Test_Argparse_Init(unittest.TestCase):
             self.assertIn(e.msg, "private key to PEM encoded client certificate")
 
     def test_setting_tls_flag_with_ca_cert_cert_and_key_is_allowed(self):
-        sys.argv = ["external_server_main.py", "--tls", "--ca", "ca.pem", "--cert", "cert.pem", "--key", "key.pem"]
+        sys.argv = [
+            "external_server_main.py",
+            "--tls",
+            "--ca",
+            "ca.pem",
+            "--cert",
+            "cert.pem",
+            "--key",
+            "key.pem",
+        ]
         args = parsed_script_args()
         self.assertEqual(args.config, "./config/config.json")
         self.assertEqual(args.tls, True)
@@ -66,5 +75,5 @@ class Test_Argparse_Init(unittest.TestCase):
         self.assertEqual(args.key, "key.pem")
 
 
-if __name__=="__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     unittest.main()

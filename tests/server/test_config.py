@@ -1,5 +1,6 @@
 import unittest
 import sys
+
 sys.path.append(".")
 
 import pydantic
@@ -25,7 +26,7 @@ class Test_Config_Validation(unittest.TestCase):
             "log_files_directory": ".",
             "log_files_to_keep": 5,
             "log_file_max_size_bytes": 100000,
-            "modules": {"123": self.module_config}
+            "modules": {"123": self.module_config},
         }
 
     def test_config_with_all_fields_valid_and_provided_causes_no_error(self):
@@ -73,14 +74,14 @@ class Test_Config_Validation(unittest.TestCase):
                 ServerConfig(**config_dict)
 
     def test_timeouts_is_must_be_nonegative(self):
-        for timeout in [0, 1, 1000, "1883"]:
+        for timeout in [0, 1, 0.1, 1000, "1883"]:
             with self.subTest(timeout=timeout):
                 config_dict = self.valid_config_dict.copy()
                 config_dict["mqtt_timeout"] = timeout
                 config_dict["timeout"] = timeout
                 ServerConfig(**config_dict)
 
-        for timeout in [-1, -1000, 0.1, ""]:
+        for timeout in [-1, -1000, ""]:
             with self.subTest(timeout=timeout), self.assertRaises(pydantic.ValidationError):
                 config_dict = self.valid_config_dict.copy()
                 config_dict["mqtt_timeout"] = timeout

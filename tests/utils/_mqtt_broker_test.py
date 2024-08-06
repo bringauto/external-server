@@ -108,3 +108,4 @@ class MQTTBrokerTest:
                 self._running_broker_processes.remove(self._process)
             self._process = None
             MQTTBrokerTest.kill_all_test_brokers()
+            time.sleep(0.1)

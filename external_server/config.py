@@ -28,8 +28,8 @@ class Config(BaseModel):
     car_name: Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
     mqtt_address: Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
     mqtt_port: int = Field(ge=0, le=65535)
-    mqtt_timeout: int = Field(ge=0)
-    timeout: int = Field(ge=0)
+    mqtt_timeout: float = Field(ge=0)
+    timeout: float = Field(ge=0)
     send_invalid_command: bool
     sleep_duration_after_connection_refused: float = Field(ge=0)
     log_files_directory: DirectoryPath

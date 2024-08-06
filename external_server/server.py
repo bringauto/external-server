@@ -220,12 +220,8 @@ class ExternalServer:
 
     def _check_received_status(self, status: _Status) -> None:
         self._log_new_status(status)
-        if status.sessionId != self._session.id:
-            logger.warning("Received status with different session ID.")
-            return
-        else:
-            self._reset_session_checker()
-            self._status_checker.check(status)
+        self._reset_session_checker()
+        self._status_checker.check(status)
 
     def _clear_context(self) -> None:
         """Stop and destroy communication with both the API and the MQTT broker.
@@ -426,12 +422,10 @@ class ExternalServer:
         if not result:
             return
         cmd_data, target_device = result
-        ExternalServer.warn_if_device_not_in_list(
-            self._known_devices.list_connected(),
-            target_device,
-            logger,
-            msg="Command for not connected device will not be sent.",
-        )
+        if not self._known_devices.is_connected(target_device):
+            logger.warning(
+                f"Sending command to a not connected device ({device_repr(target_device)})."
+            )
         handled_cmd = _HandledCommand(cmd_data, device=target_device, from_api=True)
         self._command_checker.add(handled_cmd)
         logger.info(f"Sending command, counter = {handled_cmd.counter}")
@@ -500,13 +494,17 @@ class ExternalServer:
             case EventType.TIMEOUT_OCCURRED:
                 match event.data:
                     case TimeoutType.SESSION_TIMEOUT:
+                        logger.error("Session timeout occurred.")
                         raise SessionTimeout()
                     case TimeoutType.MESSAGE_TIMEOUT:
+                        logger.error("Status timeout occurred.")
                         raise StatusTimeout()
                     case TimeoutType.COMMAND_TIMEOUT:
+                        logger.error("Command response timeout occurred.")
                         raise CommandResponseTimeout()
                     case _:
                         logger.error("Internal error: Event TimeoutOccurred without TimeoutType.")
+                        raise CommunicationException("Internal error: Timeout event without type.")
             case _:
                 pass
 
@@ -522,11 +520,17 @@ class ExternalServer:
                 # This message is not expected outside of a init sequence
                 self._handle_connect(message.connect)
             elif message.HasField("status"):
-                self._reset_session_timeout_for_session_id_match(message.status.sessionId)
-                self._handle_received_status(message.status)
+                if self._session.id == message.status.sessionId:
+                    self._reset_session_checker()
+                    self._handle_received_status(message.status)
+                else:
+                    logger.warning("Ignoring status with different session ID.")
             elif message.HasField("commandResponse"):
-                self._reset_session_timeout_for_session_id_match(message.commandResponse.sessionId)
-                self._handle_command_response(message.commandResponse)
+                if self._session.id == message.commandResponse.sessionId:
+                    self._reset_session_checker()
+                    self._handle_command_response(message.commandResponse)
+                else:
+                    logger.warning("Ignoring command response with different session ID.")
 
     def _init_sequence(self) -> None:
         """Runs initial sequence before starting normal communication over MQTT.
@@ -602,13 +606,14 @@ class ExternalServer:
 
     def _publish_connect_response(self, response_type: int) -> None:
         """Publish the connect response message to the MQTT broker on publish topic."""
-        logger.info(f"Sending Connect response. Response type: {response_type}")
         msg = _connect_response(self._session.id, response_type)
+        logger.info(f"Sending connect response of type {response_type}")
         self._mqtt.publish(msg)
 
     def _publish_status_response(self, status: _Status) -> None:
         """Publish the status response message to the MQTT broker on publish topic."""
         status_response = self._status_response(status)
+        logger.info(f"Sending status response of type {status_response.statusResponse.type}")
         self._mqtt.publish(status_response)
 
     def _reset_session_timeout_for_session_id_match(self, session_id: str) -> None:
@@ -661,10 +666,6 @@ class ExternalServer:
         return
 
     def _status_response(self, status: _Status) -> _ExternalServerMsg:
-        module = status.deviceStatus.device.module
-        if module not in self._modules:
-            logger.warning(f"Module '{module}' is not supported")
-        logger.info(f"Sending Status response message, messageCounter: {status.messageCounter}")
         return _status_response(status.sessionId, status.messageCounter)
 
     def _start_module_threads(self) -> None:
@@ -716,14 +717,6 @@ class ExternalServer:
             raise ConnectSequenceFailure(msg)
 
     @staticmethod
-    def is_device_in_list(device: _Device | DevicePy, device_list: list[DevicePy]) -> bool:
-        """Check if the device is in the list.
-
-        The device is in the list if the list contains a device with the same module, type, and role.
-        """
-        return device in device_list
-
-    @staticmethod
     def mqtt_adapter_from_config(config: ServerConfig) -> MQTTClientAdapter:
         return MQTTClientAdapter(
             config.company_name,
@@ -732,14 +725,6 @@ class ExternalServer:
             config.mqtt_address,
             config.mqtt_port,
         )
-
-    @staticmethod
-    def warn_if_device_not_in_list(
-        devices: list[DevicePy], device: _Device, logger: _Logger, msg: str
-    ) -> None:
-        """Logs a warning if the device is not in the list of devices."""
-        if not ExternalServer.is_device_in_list(device, devices):
-            logger.warning(f"{msg}. Device {device_repr(device)}")
 
     @staticmethod
     def warn_device_not_supported_by_module(module: _ServerModule, device: _Device, msg: str = "") -> None:

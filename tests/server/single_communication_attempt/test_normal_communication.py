@@ -12,6 +12,7 @@ from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
 from external_server.models.server_messages import status_response, connect_response
+from external_server.models.structures import HandledCommand
 from external_server.models.exceptions import SessionTimeout
 
 
@@ -310,7 +311,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
 class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_server(mqtt_timeout=0.5)
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -337,20 +338,14 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
                 time.sleep(0.1)
                 self.assertIn("already existing session", cm.records[0].message)
 
-    def test_connect_message_with_other_session_id_does_not_log_error_and_publishes_connect_response(self):
+    def test_connect_message_with_other_session_id_does_not_logs_warning(self):
         sub_topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
             time.sleep(0.1)
-            with self.assertNoLogs(_eslogger, logging.ERROR) as cm:
-                future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+            with self.assertNoLogs(_eslogger, logging.WARNING):
                 self.broker.publish(
                     sub_topic, connect_msg("other_session_id", "company", "car", [self.device])
-                )
-                time.sleep(0.1)
-                self.assertEqual(
-                    future.result()[0].payload,
-                    connect_response("session_id", 1).SerializeToString()
                 )
 
     def tearDown(self) -> None:
@@ -358,16 +353,15 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.es.stop()
 
 
-@unittest.skip("Not implemented yet")
 class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_server(mqtt_timeout=0.5)
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            time.sleep(0.2)
+            time.sleep(0.1)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device_1]))
@@ -376,21 +370,63 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
                 topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
 
-    def test_connecting_device_during_normal_communication_logs_error_and_produces_no_response(self):
+    def test_connecting_device_during_normal_communication_is_allowed(self):
         sub_topic = self.es.mqtt.subscribe_topic
-        device_2 = Device(module=1000, deviceType=10, deviceName="TestDevice", deviceRole="test")
+        device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
-            time.sleep(0.1)
             self.broker.publish(
                 sub_topic,
-                status("session_id", Status.CONNECTING, 1, DeviceStatus(device=device_2))
+                status(
+                    "session_id",
+                    Status.CONNECTING,
+                    1,
+                    DeviceStatus(statusData=b"Connecting", device=device_2)
+                )
             )
+            time.sleep(0.1)
             self.assertTrue(self.es._known_devices.is_connected(device_2))
 
     def tearDown(self) -> None:
         self.broker.stop()
         self.es.stop()
+
+
+class Test_Receiving_Command(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_initial_sequence)
+            time.sleep(0.1)
+            device_status = DeviceStatus(device=self.device)
+            topic = self.es.mqtt.subscribe_topic
+            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(
+                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+            )
+
+    def test_command_response_with_other_session_id_is_ignored(self):
+        sub_topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_normal_communication)
+            time.sleep(0.1)
+            with self.assertLogs(_eslogger, logging.WARNING) as cm:
+                self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1))
+                self.broker.publish(
+                    sub_topic, cmd_response("other_session_id", 1, CommandResponse.OK)
+                )
+                time.sleep(0.1)
+                self.broker.publish(
+                    sub_topic, cmd_response("session_id", 1, CommandResponse.OK)
+                )
+
+    def tearDown(self) -> None:
+        self.es.stop()
+        self.broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -413,6 +413,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
         MQTTBrokerTest.kill_all_test_brokers()
 
 
+@patch("external_server.adapters.mqtt_adapter.Queue.get")
 class Test_Getting_Message(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -424,17 +425,14 @@ class Test_Getting_Message(unittest.TestCase):
             port=TEST_PORT,
         )
 
-    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_no_message_returns_none(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: None
         self.assertIsNone(self.adapter._get_message())
 
-    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_equal_to_false_returns_False(self, mock: Mock) -> None:
         mock.side_effect = lambda block, timeout: False
         self.assertFalse(self.adapter._get_message())
 
-    @patch("external_server.adapters.mqtt_adapter.Queue.get")
     def test_getting_message_with_some_nonempty_content_yields_the_message(
         self, mock: Mock
     ) -> None:

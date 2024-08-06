@@ -18,8 +18,8 @@ ES_CONFIG_WITHOUT_MODULES = {
     "car_name": "car1",
     "mqtt_address": "127.0.0.1",
     "mqtt_port": 1883,
-    "mqtt_timeout": 4,
-    "timeout": 4,
+    "mqtt_timeout": 0.5,
+    "timeout": 0.5,
     "send_invalid_command": False,
     "sleep_duration_after_connection_refused": 2,
     "log_files_directory": ".",
@@ -28,7 +28,11 @@ ES_CONFIG_WITHOUT_MODULES = {
 }
 
 
-def get_test_server() -> ExternalServer:
+def get_test_server(mqtt_timeout: float = -1, timeout: float = -1) -> ExternalServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
     config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+    if mqtt_timeout > 0:
+        config.mqtt_timeout = mqtt_timeout
+    if timeout > 0:
+        config.timeout = timeout
     return ExternalServer(config=config)

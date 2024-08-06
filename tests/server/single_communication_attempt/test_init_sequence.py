@@ -229,6 +229,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
     def tearDown(self) -> None:
         self.es.mqtt.stop()
         self.broker.stop()
+        time.sleep(0.1)
 
 
 class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.TestCase):

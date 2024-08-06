@@ -42,7 +42,9 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *payload: str):
     """This mocks publishing a message by an External Client."""
-    payload_str = [p.SerializeToString() if isinstance(p, _ExternalClientMsg) else p for p in payload]
+    payload_str = [
+        p.SerializeToString() if isinstance(p, _ExternalClientMsg) else p for p in payload
+    ]
     broker.publish(server.mqtt.subscribe_topic, *payload_str)
 
 
@@ -197,9 +199,7 @@ class Test_Command_Response(unittest.TestCase):
         command_response = cmd_response("some_id", 0, _CommandResponse.OK)
         with self.executor as ex:
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            response = ex.submit(
-                self.broker.get_messages, self.es.mqtt.subscribe_topic, n=2
-            )
+            response = ex.submit(self.broker.get_messages, self.es.mqtt.subscribe_topic, n=2)
             ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
             ex.submit(publish_from_ext_client, self.es, self.broker, command_response)
             received_msgs = response.result()
@@ -232,9 +232,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
             time.sleep(self.timeout + 0.1)
             # connect sequence is repeated
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            response_1 = ex.submit(
-                self.broker.get_messages, self.es.mqtt.publish_topic, n=2
-            )
+            response_1 = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=2)
             ex.submit(publish_from_ext_client, self.es, self.broker, delayed_status)
             msg_1, msg_2 = _ExternalServerMsg(), _ExternalServerMsg()
             msg_1.ParseFromString(response_1.result()[0].payload)

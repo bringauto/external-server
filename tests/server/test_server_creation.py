@@ -2,15 +2,13 @@ import unittest
 import sys
 import concurrent.futures as futures
 import time
+
 sys.path.append(".")
 
 from pydantic import FilePath
 
-from InternalProtocol_pb2 import Device as _Device # type: ignore
-from external_server.config import (
-    Config as ServerConfig,
-    ModuleConfig as _ModuleConfig
-)
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from external_server.config import Config as ServerConfig, ModuleConfig as _ModuleConfig
 from external_server.server import ExternalServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 
@@ -26,7 +24,7 @@ ES_CONFIG_WITHOUT_MODULES = {
     "sleep_duration_after_connection_refused": 2,
     "log_files_directory": ".",
     "log_files_to_keep": 5,
-    "log_file_max_size_bytes": 100000
+    "log_file_max_size_bytes": 100000,
 }
 
 
@@ -56,7 +54,9 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
 class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = _ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+        example_module_config = _ModuleConfig(
+            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
+        )
         self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
 
@@ -79,16 +79,16 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
 class Test_Server_State(unittest.TestCase):
 
-        def setUp(self) -> None:
-            example_module_config = _ModuleConfig(
-                lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
-            )
-            self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-            self.es = ExternalServer(config=self.config)
+    def setUp(self) -> None:
+        example_module_config = _ModuleConfig(
+            lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
+        )
+        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.es = ExternalServer(config=self.config)
 
-        def test_server_state_is_read_only(self):
-            with self.assertRaises(AttributeError):
-                self.es.state = ServerState.RUNNING
+    def test_server_state_is_read_only(self):
+        with self.assertRaises(AttributeError):
+            self.es.state = ServerState.RUNNING
 
 
 class Test_External_Server_Start(unittest.TestCase):
@@ -97,18 +97,17 @@ class Test_External_Server_Start(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES) # type: ignore
+        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.device = _Device(
-            module = _Device.EXAMPLE_MODULE,
-            deviceType = 0,
-            deviceName = "TestDevice",
-            deviceRole = "test"
+            module=_Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"
         )
         self.mqttbroker = MQTTBrokerTest(start=True)
         time.sleep(0.2)
 
-    def test_external_server_starting_and_stopping_sets_connected_flag_to_connected_and_disconnected(self):
+    def test_external_server_starting_and_stopping_sets_connected_flag_to_connected_and_disconnected(
+        self,
+    ):
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es.start)
             time.sleep(0.5)

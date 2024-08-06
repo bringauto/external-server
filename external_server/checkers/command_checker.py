@@ -58,6 +58,10 @@ class CommandQueue:
             cmd = self._queue.get()
             cmd.stop_timer()
 
+    def empty(self) -> bool:
+        """Check if the queue is empty."""
+        return self._queue.empty()
+
     def get(self) -> _HandledCommand:
         """Get the oldest command (instance of `QueuedCommand`) from the queue and stop its timer."""
         cmd: QueuedCommand = self._queue.get()
@@ -78,7 +82,7 @@ class CommandChecker(_Checker):
     received Command response yet.
     """
 
-    def __init__(self, timeout: int) -> None:
+    def __init__(self, timeout: float) -> None:
         super().__init__(_TimeoutType.COMMAND_TIMEOUT, timeout=timeout)
         self._commands = CommandQueue()
         self._missed_counter_vals: list[_Counter] = []
@@ -100,7 +104,10 @@ class CommandChecker(_Checker):
         """
         if self._commands.oldest_counter != counter:
             self._missed_counter_vals.append(counter)
-            self._logger.warning(f"Command response received in wrong order. Counter={counter}")
+            self._logger.warning(
+                f"Cannot return command with counter={counter}, "
+                f"because it is not the oldest command (counter={self._commands.oldest_counter})."
+            )
             return []
         else:
             popped = [self._commands.get()]
@@ -130,7 +137,6 @@ class CommandChecker(_Checker):
         return command
 
     def reset(self) -> None:
-        """"""
         self._commands.clear()
         self._missed_counter_vals.clear()
         self._timeout_event.clear()
