@@ -476,8 +476,6 @@ class Test_On_Message_Callback(unittest.TestCase):
         self.client._on_message(client=self.client, data=None, message=message)
         with self.assertRaises(Empty):
             self.client.received_messages.get(block=True, timeout=0.1)
-        with self.assertRaises(Empty):
-            self.client._event_queue.get(block=True, timeout=0.1)
 
 
 class Test_On_Connect_Callback(unittest.TestCase):

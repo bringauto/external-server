@@ -160,18 +160,25 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
         self.es._add_connected_device(self.device_1)
         self.es._session.set_id("session_id")
 
-    def test_missing_expected_commands_response_raises_exception(self, mock_get_message: Mock):
-        mock_get_message.return_value = None
+    def test_missing_expected_commands_response_raises_exception(self, mock: Mock):
+        mock.return_value = None
         with self.assertRaises(ConnectSequenceFailure):
             self.es._get_next_valid_command_response()
 
-    def test_expected_command_response_has_no_effect(self, mock_get_message: Mock):
-        mock_get_message.return_value = cmd_response("session_id", 1, CommandResponse.OK)
-        self.es._get_next_valid_command_response()
+    def test_expected_command_response_is_returned(self, mock: Mock):
+        mock.side_effect = ( r for r in [cmd_response("session_id", 1, CommandResponse.OK), None])
+        response = self.es._get_next_valid_command_response()
+        self.assertEqual(
+            response,
+            CommandResponse(sessionId="session_id", type=CommandResponse.OK, messageCounter=1)
+        )
 
-    def test_session_id_is_not_checked_when_receiving_command_response(self, mock_get_message: Mock):
-        mock_get_message.return_value = cmd_response("some_other_session_id", 1, CommandResponse.OK)
-        self.es._get_next_valid_command_response()
+    def test_command_response_is_not_accepted_if_session_id_does_not_match(self, mock: Mock):
+        mock.side_effect = (
+            r for r in [cmd_response("other_session_id", 1, CommandResponse.OK),None]
+        )
+        with self.assertRaises(ConnectSequenceFailure):
+            self.es._get_next_valid_command_response()
 
     def tearDown(self) -> None:
         self.es.mqtt.disconnect()

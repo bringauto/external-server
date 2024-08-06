@@ -151,7 +151,9 @@ class ExternalServer:
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             module = self._modules[device.module]
             if not module.is_device_supported(device):
-                self.warn_device_not_supported_by_module(module, device, logger)
+                self.warn_device_not_supported_by_module(module, device)
+            elif status_obj.sessionId != self._session.id:
+                logger.warning("Received status with different session ID. Skipping.")
             else:
                 k += 1
                 if not _counter_initialized:
@@ -167,9 +169,12 @@ class ExternalServer:
                         module.api.forward_error_message(device, status_obj.errorMessage)
                     module.api.forward_status(device, status.statusData)
 
-            self._publish_status_response(status_obj)
+                self._publish_status_response(status_obj)
 
     def send_first_commands_and_get_responses(self) -> None:
+        """Send first command to each of all known connected and not connected devices.
+        Raise exception if any command response is not received.
+        """
         self._get_and_send_first_commands()
         self._get_first_commands_responses()
 
@@ -356,12 +361,15 @@ class ExternalServer:
 
     def _get_next_valid_command_response(self) -> _CommandResponse:
         while (response := self._mqtt._get_message()) is not None:
-            if response.HasField("commandResponse"):
-                logger.info(f"Received a command response.")
-                return response.commandResponse
-            elif isinstance(response, _ExternalClientMsg):
+            if isinstance(response, _ExternalClientMsg) and response.HasField("commandResponse"):
+                if response.commandResponse.sessionId == self._session.id:
+                    logger.info(f"Received a command response.")
+                    return response.commandResponse
+                else:
+                    logger.warning("Skipping command response with different session ID.")
+            else:
                 # ignore other messages
-                logger.warning(f"Skipping non-command response message.")
+                logger.warning(f"Skipping message of wrong type (expected command response).")
         # response is None
         error_msg = "Command response has not been received."
         logger.error(error_msg)
@@ -459,11 +467,9 @@ class ExternalServer:
             if module.is_device_supported(device):
                 self._connect_device(device)
             else:
-                self.warn_device_not_supported_by_module(module, device, logger)
+                self.warn_device_not_supported_by_module(module, device)
         else:
-            self.warn_module_not_supported(
-                device.module, logger, f"Ignoring device {device_repr(device)}."
-            )
+            logger.warning(f"Ignoring device {device_repr(device)} from unsupported module.")
 
     def _handle_communication_event(self, event: _Event) -> None:
         """Handle the event from the event queue.
@@ -513,6 +519,7 @@ class ExternalServer:
             raise UnexpectedMQTTDisconnect
         else:
             if message.HasField("connect"):
+                # This message is not expected outside of a init sequence
                 self._handle_connect(message.connect)
             elif message.HasField("status"):
                 self._reset_session_timeout_for_session_id_match(message.status.sessionId)
@@ -735,13 +742,7 @@ class ExternalServer:
             logger.warning(f"{msg}. Device {device_repr(device)}")
 
     @staticmethod
-    def warn_module_not_supported(module_id: int, logger: _Logger, msg: str = "") -> None:
-        logger.warning(f"Module (ID={module_id}) not supported. {msg}")
-
-    @staticmethod
-    def warn_device_not_supported_by_module(
-        module: _ServerModule, device: _Device, logger: _Logger, msg: str = ""
-    ) -> None:
+    def warn_device_not_supported_by_module(module: _ServerModule, device: _Device, msg: str = "") -> None:
         logger.warning(
             f"Device type {device.deviceType} not supported by module {module.id}. {msg}"
         )
