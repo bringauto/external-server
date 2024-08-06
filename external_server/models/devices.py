@@ -70,11 +70,6 @@ class KnownDevices:
         return len(self._connected)
 
     @property
-    def n_unsupported(self) -> int:
-        """Number of devices in unsupported devices list."""
-        return len(self._connected)
-
-    @property
     def n_not_connected(self) -> int:
         """Number of devices in not connected devices list."""
         return len(self._not_connected)

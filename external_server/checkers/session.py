@@ -14,7 +14,11 @@ class Session:
         self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout)
         self._timer: _Timer | None = None
         self._timer_running = False
-        self.id: str = ""
+        self._id: str = ""
+
+    @property
+    def id(self) -> str:
+        return self._id
 
     @property
     def timeout(self) -> float:
@@ -24,6 +28,9 @@ class Session:
     @property
     def timeout_event(self) -> _Event:
         return self._checker._timeout_event
+
+    def set_id(self, session_id: str) -> None:
+        self._id = session_id
 
     def start(self) -> None:
         self._timer = _Timer(self._checker.timeout, self._checker._create_timeout_event)

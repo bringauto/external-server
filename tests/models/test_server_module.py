@@ -16,7 +16,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
         module = ServerModule(
             1000, "company", "car", module_config, lambda: True
         )  # pragma: no cover
-        self.assertIsNotNone(module.api_adapter)
+        self.assertIsNotNone(module.api)
         self.assertEqual(module.car, "car")
         self.assertEqual(module.company, "company")
         self.assertEqual(module.id, 1000)

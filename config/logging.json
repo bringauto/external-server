@@ -37,6 +37,11 @@
       "handlers": ["console", "file"],
       "propagate": false
     },
+    "external_server.checkers.command_checker.py": {
+      "level": "DEBUG",
+      "handlers": ["console", "file"],
+      "propagate": false
+    },
     "external_server.adapters.api_client": {
       "level": "DEBUG",
       "handlers": ["console", "file"],

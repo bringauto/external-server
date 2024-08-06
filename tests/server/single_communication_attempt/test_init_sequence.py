@@ -9,6 +9,7 @@ from external_server.server import ServerState
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
+from external_server.models.devices import DevicePy
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.utils import connect_msg, status, cmd_response
 
@@ -41,7 +42,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
 
     def test_without_receiving_connect_message_sets_the_state_to_error(self):
         with self.assertRaises(ConnectSequenceFailure):
@@ -119,8 +120,8 @@ class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
         # device type 123456 is not supported by module 1000
-        self.unsupported = Device(module=1000, deviceType=123456, deviceName="TestDevice", deviceRole="test")
-        self.supported = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.unsupported = Device(module=1000, deviceType=123456, deviceName="Test", deviceRole="test")
+        self.supported = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
 
     def test_device_is_not_connected(self):
         broker = self.broker
@@ -149,9 +150,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        self.device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
-        self.device_3 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_3")
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
 
     def test_initialization_with_mutliple_supported_devices_connects_them_all(self):
         broker = self.broker
@@ -235,9 +236,9 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
     def setUp(self):
         self.es = get_test_server()
         self.broker = MQTTBrokerTest(start=True)
-        self.device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        self.device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
-        self.device_3 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_3")
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
 
     def test_initialization_in_wrong_order_sets_server_state_to_error_and_raises_exception(self):
         broker = self.broker
@@ -259,6 +260,32 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
             with self.assertRaises(ConnectSequenceFailure):
                 future.result()
         self.assertEqual(self.es.state, ServerState.ERROR)
+
+    def tearDown(self) -> None:
+        self.es.mqtt.stop()
+        self.broker.stop()
+
+
+class Test_First_Command(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
+        self.es.mqtt.connect()
+
+    def test_no_known_devices_raise_error(self):
+        with self.assertRaises(ConnectSequenceFailure):
+            self.es._get_and_send_first_commands()
+
+    def test_first_command_is_sent_to_a_single_connected_device(self):
+        self.es._known_devices.connected(DevicePy.from_device(self.device_1))
+        with futures.ThreadPoolExecutor() as ex:
+            f = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+            time.sleep(0.1)
+            ex.submit(self.es._get_and_send_first_commands)
+            sent_commands = f.result()
+            self.assertEqual(len(sent_commands), 1)
 
     def tearDown(self) -> None:
         self.es.mqtt.stop()

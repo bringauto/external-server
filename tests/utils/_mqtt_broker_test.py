@@ -63,12 +63,14 @@ class MQTTBrokerTest:
         """
         logger.debug(f"Waiting for {n} messages on topic {topic}")
         result = subscribe.simple([topic], hostname=self._host, port=self._port, msg_count=n)
+        if n == 0:
+            return []
         if n == 1:
             return [result]
         else:
             return result
 
-    def publish(self, topic: str, *payload: str | bytes) -> None:
+    def publish(self, topic: str, *payload: str| bytes) -> None:
         if not payload:  # pragma: no cover
             return
         payload_list = []

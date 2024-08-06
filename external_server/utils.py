@@ -13,10 +13,14 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
     ExternalClient as _ExternalClientMsg,
 )
+from external_server.models.devices import DevicePy as _DevicePy
 
 
-def device_repr(device: _Device) -> str:
-    return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
+def device_repr(device: _Device | _DevicePy) -> str:
+    if isinstance(device, _DevicePy):
+        return f"{device.module_id}/{device.type}/{device.role}/{device.name}"
+    else:
+        return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"
 
 
 def connect_msg(session_id: str, company: str, car: str, devices: list[_Device]) -> _ExternalClientMsg:

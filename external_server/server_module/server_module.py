@@ -52,7 +52,7 @@ class ServerModule:
         self._thread = _CommandWaitingThread(self._api_adapter, connection_check)
 
     @property
-    def api_adapter(self) -> _ApiAdapter:
+    def api(self) -> _ApiAdapter:
         """Returns the API client adapter used by the ServerModule."""
         return self._api_adapter
 

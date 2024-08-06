@@ -1,0 +1,182 @@
+import unittest
+import sys
+from unittest.mock import patch, Mock
+
+sys.path.append(".")
+
+from InternalProtocol_pb2 import Device  # type: ignore
+from external_server.models.structures import HandledCommand
+from external_server.utils import connect_msg, cmd_response
+from external_server.server import ExternalServer
+from external_server.models.exceptions import ConnectSequenceFailure
+from ExternalProtocol_pb2 import CommandResponse  # type: ignore
+from tests.utils import get_test_server, MQTTBrokerTest
+
+
+class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
+        self.es.mqtt.connect()
+        self.es._add_connected_device(self.device_1)
+
+    def test_empty_command_is_returned_if_thread_commands_queue_is_empty(self):
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertEqual(cmds, [HandledCommand(b"", device=self.device_1, from_api=False)])
+
+    def test_single_command_is_returned_if_thread_commands_contain_one_cmd(self):
+        self.es.modules[1000].thread._commands.put((b"test", self.device_1))
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertEqual(cmds, [HandledCommand(b"test", device=self.device_1, from_api=True)])
+
+    def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
+        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"two", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"three", self.device_1))
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertEqual(cmds, [HandledCommand(b"one", device=self.device_1, from_api=True)])
+
+    def tearDown(self) -> None:
+        self.es.mqtt.disconnect()
+        self.broker.stop()
+
+
+class Test_Multiple_Connected_Devices(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
+        self.es.mqtt.connect()
+        self.es._add_connected_device(self.device_1)
+        self.es._add_connected_device(self.device_2)
+        self.es._add_connected_device(self.device_3)
+
+    def test_empty_commands_are_returned_if_thread_commands_queue_is_empty(self):
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertEqual(
+            cmds, [
+                HandledCommand(b"", device=self.device_1, from_api=False),
+                HandledCommand(b"", device=self.device_2, from_api=False),
+                HandledCommand(b"", device=self.device_3, from_api=False)
+            ]
+        )
+
+    def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
+        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"two", self.device_2))
+        self.es.modules[1000].thread._commands.put((b"three", self.device_3))
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertListEqual(
+            cmds, [
+                HandledCommand(b"one", device=self.device_1, from_api=True),
+                HandledCommand(b"two", device=self.device_2, from_api=True),
+                HandledCommand(b"three", device=self.device_3, from_api=True)
+            ]
+        )
+
+    def test_only_the_first_commands_are_returned_if_thread_commands_contain_multiple_cmds(self):
+        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"two", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"three", self.device_2))
+        self.es.modules[1000].thread._commands.put((b"four", self.device_2))
+        self.es.modules[1000].thread._commands.put((b"five", self.device_3))
+        self.es.modules[1000].thread._commands.put((b"six", self.device_3))
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertListEqual(
+            cmds, [
+                HandledCommand(b"one", device=self.device_1, from_api=True),
+                HandledCommand(b"three", device=self.device_2, from_api=True),
+                HandledCommand(b"five", device=self.device_3, from_api=True)
+            ]
+        )
+
+    def tearDown(self) -> None:
+        self.es.mqtt.disconnect()
+        self.broker.stop()
+
+
+class Test_Not_Connected_Devices(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
+        self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
+        self.es.mqtt.connect()
+        self.es._add_connected_device(self.device_1)
+        self.es._add_not_connected_device(self.device_2)
+        # device_3 is not known (not connected or not disconnected)
+
+    def test_commands_are_returned_for_all_known_devices(self):
+        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
+        self.es.modules[1000].thread._commands.put((b"two", self.device_2))
+        cmds = self.es._collect_first_commands_for_init_sequence()
+        self.assertListEqual(
+            cmds, [
+                HandledCommand(b"one", device=self.device_1, from_api=True),
+                HandledCommand(b"", device=self.device_2, from_api=False)
+            ]
+        )
+
+    def tearDown(self) -> None:
+        self.es.mqtt.disconnect()
+        self.broker.stop()
+
+
+class Test_Checking_Command_Response(unittest.TestCase):
+
+    def test_no_action_is_taken_when_message_is_valid_command_response(self):
+        msg = cmd_response("test_session_id", 1, CommandResponse.OK)
+        ExternalServer.check_message_is_command_response(msg)
+
+    def test_exception_is_raised_when_message_is_none(self):
+        with self.assertRaises(ConnectSequenceFailure):
+            ExternalServer.check_message_is_command_response(None)
+
+    def test_exception_is_raised_when_message_is_false(self):
+        with self.assertRaises(ConnectSequenceFailure):
+            ExternalServer.check_message_is_command_response(False)
+
+    def test_exception_is_raised_when_message_is_not_valid_command_response(self):
+        msg = connect_msg("test_session_id", "test_company", "test_car", [])
+        with self.assertRaises(ConnectSequenceFailure):
+            ExternalServer.check_message_is_command_response(msg)
+
+
+@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter._get_message")
+class Test_Next_Valid_Command_Response(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.es.mqtt.connect()
+        self.es._add_connected_device(self.device_1)
+        self.es._session.set_id("session_id")
+
+    def test_missing_expected_commands_response_raises_exception(self, mock_get_message: Mock):
+        mock_get_message.return_value = None
+        with self.assertRaises(ConnectSequenceFailure):
+            self.es._get_next_valid_command_response()
+
+    def test_expected_command_response_has_no_effect(self, mock_get_message: Mock):
+        mock_get_message.return_value = cmd_response("session_id", 1, CommandResponse.OK)
+        self.es._get_next_valid_command_response()
+
+    def test_session_id_is_not_checked_when_receiving_command_response(self, mock_get_message: Mock):
+        mock_get_message.return_value = cmd_response("some_other_session_id", 1, CommandResponse.OK)
+        self.es._get_next_valid_command_response()
+
+    def tearDown(self) -> None:
+        self.es.mqtt.disconnect()
+        self.broker.stop()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    unittest.main()
