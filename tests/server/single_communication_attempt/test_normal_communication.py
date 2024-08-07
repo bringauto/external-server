@@ -541,12 +541,12 @@ class Test_Handling_Checked_Status(unittest.TestCase):
     def setUp(self) -> None:
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        self.published_statuses: list[ExternalServerMsg] = list()
+        self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
         self.es._session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
-        self.published_statuses.append(msg)
+        self.published_responses.append(msg)
 
     def test_unsupported_module_referenced_by_status_logs_warning_and_sends_no_response(self, mock: Mock):
         device = Device(module=1001, deviceType=0, deviceName="TestDevice", deviceRole="test")
@@ -561,7 +561,7 @@ class Test_Handling_Checked_Status(unittest.TestCase):
                 )
             )
             self.assertIn("unknown module", cm.output[0])
-            self.assertEqual(self.published_statuses, [])
+            self.assertEqual(self.published_responses, [])
 
     def test_unsupported_device_of_supported_module_referenced_by_status_logs_warning_and_sends_no_response(self, mock: Mock):
         device = Device(module=1000, deviceType=11111, deviceName="TestDevice", deviceRole="test")
@@ -576,7 +576,7 @@ class Test_Handling_Checked_Status(unittest.TestCase):
                 )
             )
             self.assertIn("not supported", cm.output[0])
-            self.assertEqual(self.published_statuses, [])
+            self.assertEqual(self.published_responses, [])
 
     def test_supported_device_of_supported_module_referenced_by_status_sends_response(self, mock: Mock):
         device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
@@ -589,8 +589,127 @@ class Test_Handling_Checked_Status(unittest.TestCase):
                 deviceStatus=DeviceStatus(device=device)
             )
         )
-        self.assertEqual(self.published_statuses, [status_response("session_id", 1)])
+        self.assertEqual(self.published_responses, [status_response("session_id", 1)])
 
+    def test_connected_device_sending_disconnect_status_is_disconnected(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.es._handle_checked_status(
+            Status(
+                sessionId="session_id",
+                deviceState=Status.DISCONNECT,
+                messageCounter=1,
+                deviceStatus=DeviceStatus(device=self.device)
+            )
+        )
+        self.assertFalse(self.es._known_devices.is_connected(self.device))
+        self.assertEqual(self.published_responses, [status_response("session_id", 1)])
+
+    def test_connected_device_sending_running_status_is_still_connected(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.es._handle_checked_status(
+            Status(
+                sessionId="session_id",
+                deviceState=Status.RUNNING,
+                messageCounter=1,
+                deviceStatus=DeviceStatus(device=self.device)
+            )
+        )
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.assertEqual(self.published_responses, [status_response("session_id", 1)])
+
+    def test_connected_device_sending_running_status_with_error_logs_error_and_receives_response(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        with self.assertLogs(_eslogger, logging.ERROR) as cm:
+            self.es._handle_checked_status(
+                Status(
+                    sessionId="session_id",
+                    deviceState=Status.RUNNING,
+                    messageCounter=1,
+                    deviceStatus=DeviceStatus(device=self.device),
+                    errorMessage=b"some error"
+                )
+            )
+            self.assertIn("error", cm.output[0])
+            self.assertTrue(self.es._known_devices.is_connected(self.device))
+            self.assertEqual(self.published_responses, [status_response("session_id", 1)])
+
+    def test_connected_device_sending_running_status_with_error_sends_response(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.es._handle_checked_status(
+            status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
+        )
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.assertEqual(self.published_responses, [status_response("session_id", 1)])
+
+
+@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
+
+    def publish(self, msg: ExternalServerMsg) -> None:
+        self.published_responses.append(msg)
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.published_responses: list[ExternalServerMsg] = list()
+        self.es._add_connected_device(self.device)
+        self.es._session.set_id("session_id")
+
+    def test_connecting_state_connects_the_device_and_send_response(self, mock: Mock):
+        self.es._known_devices.not_connected(self.device)
+        mock.side_effect = self.publish
+        self.assertFalse(self.es._known_devices.is_connected(self.device))
+        self.es._handle_checked_status(
+            status("session_id", Status.CONNECTING, 1, DeviceStatus(device=self.device)).status
+        )
+        self.assertTrue(self.es._known_devices.is_connected(self.device))
+        self.assertEqual(self.published_responses, [status_response("session_id", 1)])
+
+    def test_running_state_logs_error_and_does_not_send_response(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.es._known_devices.not_connected(self.device)
+        with self.assertLogs(_eslogger, logging.ERROR) as cm:
+            self.es._handle_checked_status(
+                status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
+            )
+            self.assertIn("not connected", cm.output[0])
+            self.assertEqual(self.published_responses, [])
+
+    def test_disconnect_state_logs_error_and_does_not_send_response(self, mock: Mock):
+        mock.side_effect = self.publish
+        self.es._known_devices.not_connected(self.device)
+        with self.assertLogs(_eslogger, logging.ERROR) as cm:
+            self.es._handle_checked_status(
+                status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device)).status
+            )
+            self.assertIn("not connected", cm.output[0])
+            self.assertEqual(self.published_responses, [])
+
+
+@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+class Test_Response_Session_ID(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.published_responses: list[ExternalServerMsg] = list()
+        self.es._add_connected_device(self.device)
+        self.es._session.set_id("session_id")
+
+    def publish(self, msg: ExternalServerMsg) -> None:
+        self.published_responses.append(msg)
+
+    def test_status_response_is_not_sent_if_session_id_of_status_does_not_match_current_session(self, mock: Mock):
+        mock.side_effect = self.publish
+        with self.assertLogs(_eslogger, logging.ERROR):
+            self.es._handle_checked_status(
+                status("some_other_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
+            )
+            self.assertEqual(self.published_responses, [])
 
 
 if __name__ == "__main__":  # pragma: no cover

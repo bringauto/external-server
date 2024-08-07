@@ -299,6 +299,17 @@ class ExternalServer:
                 )
         return False
 
+    def _connect_device_if_supported(self, device: _Device) -> None:
+        """Connect the device if it is supported by a supported module."""
+        module = self._modules.get(device.module, None)
+        if module:
+            if module.is_device_supported(device):
+                self._connect_device(device)
+            else:
+                self.warn_device_not_supported_by_module(module, device)
+        else:
+            logger.warning(f"Ignoring device {device_repr(device)} from unsupported module.")
+
     def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> bool:
         if not self._known_devices.is_connected(device):
             logger.error(f"Device {device_repr(device)} is not connected.")
@@ -411,13 +422,12 @@ class ExternalServer:
                         status_ok = False
                 case _Status.DISCONNECT:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
-                case _:
-                    # unhandled state
+                case _: # unhandled state
                     pass
+            self._log_status_error(status, device)
             if status_ok:
                 self._forward_status(status, module)
-            self._log_status_error(status, device)
-            self._publish_status_response(status)
+                self._publish_status_response(status)
 
     def _handle_command(self, module_id: int, command: tuple[bytes, _Device]) -> None:
         """Handle the command received from API during normal communication (after init sequence)."""
@@ -452,17 +462,6 @@ class ExternalServer:
             if device_not_connected and command.counter == cmd_response.messageCounter:
                 self._disconnect_device(DisconnectTypes.announced, command.device)
                 logger.warning(f"Device {device_repr(command.device)} disconnected.")
-
-    def _connect_device_if_supported(self, device: _Device) -> None:
-        """Connect the device if it is supported by a supported module."""
-        module = self._modules.get(device.module, None)
-        if module:
-            if module.is_device_supported(device):
-                self._connect_device(device)
-            else:
-                self.warn_device_not_supported_by_module(module, device)
-        else:
-            logger.warning(f"Ignoring device {device_repr(device)} from unsupported module.")
 
     def _handle_communication_event(self, event: _Event) -> None:
         """Handle the event from the event queue.
@@ -622,9 +621,15 @@ class ExternalServer:
 
     def _publish_status_response(self, status: _Status) -> None:
         """Publish the status response message to the MQTT broker on publish topic."""
-        status_response = self._status_response(status)
-        logger.info(f"Sending status response of type {status_response.statusResponse.type}")
-        self._mqtt.publish(status_response)
+        if status.sessionId != self._session.id:
+            logger.error(
+                "Status session ID does not match current session ID of the server. Status response"
+                f" to the device {device_repr(status.deviceStatus.device)} will not be sent."
+            )
+        else:
+            status_response = self._status_response(status)
+            logger.info(f"Sending status response of type {status_response.statusResponse.type}")
+            self._mqtt.publish(status_response)
 
     def _reset_session_timeout_for_session_id_match(self, session_id: str) -> None:
         """Reset the session checker if the session ID matches the current session ID."""
@@ -676,7 +681,7 @@ class ExternalServer:
         return
 
     def _status_response(self, status: _Status) -> _ExternalServerMsg:
-        return _status_response(status.sessionId, status.messageCounter)
+        return _status_response(self._session.id, status.messageCounter)
 
     def _start_module_threads(self) -> None:
         """Start threads for polling each module's API for new commands."""
