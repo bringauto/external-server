@@ -106,12 +106,12 @@ class ExternalServer:
         self._modules = self._initialized_modules(config)
 
     @property
-    def modules(self) -> dict[int, _ServerModule]:
-        return self._modules.copy()
-
-    @property
     def mqtt(self) -> MQTTClientAdapter:
         return self._mqtt
+
+    @property
+    def modules(self) -> dict[int, _ServerModule]:
+        return self._modules.copy()
 
     @property
     def session_id(self) -> str:
@@ -416,31 +416,27 @@ class ExternalServer:
             self._log_status_error(status, device)
             self._publish_status_response(status)
 
-    def _handle_command(self, module_id: int) -> None:
-        """Handle the command received from command waiting thread during normal communication, i.e., after init sequence."""
-        result = self._modules[module_id].thread.pop_command()
-        if not result:
-            return
-        cmd_data, target_device = result
-        if not self._known_devices.is_connected(target_device):
-            logger.warning(
-                f"Sending command to a not connected device ({device_repr(target_device)})."
-            )
-        handled_cmd = _HandledCommand(cmd_data, device=target_device, from_api=True)
-        self._command_checker.add(handled_cmd)
-        logger.info(f"Sending command, counter = {handled_cmd.counter}")
+    def _handle_command(self, module_id: int, command: tuple[bytes, _Device]) -> None:
+        """Handle the command received from API during normal communication (after init sequence)."""
+        cmd_data, device = command
+        if not self._known_devices.is_connected(device):
+            logger.warning(f"Sending command to a not connected device ({device_repr(device)}).")
         if not cmd_data:
-            logger.warning(f"Data of command for device {device_repr(target_device)} is empty.")
-        if handled_cmd.device.module != module_id:
-            logger.warning(f"Device ID from API of module {module_id} has different module ID.")
+            logger.warning(f"Data of command for device {device_repr(device)} is empty.")
+
+        if device.module == module_id:
+            self._publish_command(cmd_data, device)
+        else:
+            logger.warning(f"Device ID {device_repr(device)} from API of module {module_id} contains different module ID.")
             if self._config.send_invalid_command:
                 logger.warning("Sending command with possibly invalid device.")
-                self._mqtt.publish(handled_cmd.external_command(self.session_id))
+                self._publish_command(cmd_data, device)
             else:
                 logger.warning("Invalid command will not be sent.")
-                self._command_checker.pop_commands(handled_cmd.counter)
-        else:
-            self._mqtt.publish(handled_cmd.external_command(self.session_id))
+
+    def _get_api_command(self, module_id: int) -> tuple[bytes, _Device] | None:
+        """Pop the next command from the module's command waiting thread."""
+        return self._modules[module_id].thread.pop_command()
 
     def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
         """Handle the command response received during normal communication, i.e., after init sequence."""
@@ -484,10 +480,13 @@ class ExternalServer:
                 except Exception as e:
                     logger.error(f"Error occurred when retrieving message from MQTT client. {e}")
             case EventType.COMMAND_AVAILABLE:
-                if isinstance(event.data, int):
-                    self._handle_command(event.data)
-                else:
+                module_id = event.data
+                if not isinstance(module_id, int):
                     logger.error("Internal error: Event CommandAvailable without module ID.")
+                else:
+                    cmd = self._get_api_command(module_id)
+                    if cmd is not None:
+                        self._handle_command(module_id, cmd)
             case EventType.MQTT_BROKER_DISCONNECTED:
                 if self._running:
                     raise CommunicationException("Unexpected disconnection of MQTT broker.")
@@ -603,6 +602,14 @@ class ExternalServer:
             )
             return None
         return module, device
+
+    def _publish_command(self, data: bytes, device: _Device) -> None:
+        """Publish the external command to the MQTT broker on publish topic."""
+        handled_cmd = _HandledCommand(data=data, device=device, from_api=True)
+        # the following has to be called before publishing in order to assign counter to the command
+        self._command_checker.add(handled_cmd)
+        logger.info(f"Sending command, counter = {handled_cmd.counter}")
+        self._mqtt.publish(handled_cmd.external_command(self.session_id))
 
     def _publish_connect_response(self, response_type: int) -> None:
         """Publish the connect response message to the MQTT broker on publish topic."""
@@ -727,7 +734,9 @@ class ExternalServer:
         )
 
     @staticmethod
-    def warn_device_not_supported_by_module(module: _ServerModule, device: _Device, msg: str = "") -> None:
+    def warn_device_not_supported_by_module(
+        module: _ServerModule, device: _Device, msg: str = ""
+    ) -> None:
         logger.warning(
             f"Device type {device.deviceType} not supported by module {module.id}. {msg}"
         )

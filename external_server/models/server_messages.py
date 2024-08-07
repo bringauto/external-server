@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import (  # type: ignore
@@ -14,7 +15,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 
 
 def connect_response(session_id: str, response_type: _ConnectResponse.Type) -> _ExternalServerMsg:
-    """ Creates a connect response message with the given session ID and response type.
+    """Creates a connect response message with the given session ID and response type.
 
     Args:
         session_id (str): The session ID for the connect response.
@@ -51,7 +52,7 @@ def status_response(session_id: str, message_counter: int) -> _ExternalServerMsg
     return sent_msg
 
 
-def external_command(
+def command(
     session_id: str, counter: int, device: _Device, data: bytes = bytes()
 ) -> _ExternalServerMsg:
     """Creates an external command with the session ID, counter, device status and data.

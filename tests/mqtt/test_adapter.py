@@ -36,7 +36,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
 from external_server.utils import connect_msg, status as status_msg, cmd_response
-from external_server.models.server_messages import external_command
+from external_server.models.server_messages import command
 from tests.utils import MQTTBrokerTest  # type: ignore
 
 
@@ -592,7 +592,7 @@ class Test_MQTT_Client_Disconnected(unittest.TestCase):
             self.adapter.disconnect()
 
     def test_publishing_message_from_disconnected_client_logs_error(self):
-        msg = external_command("session_id", 0, Device(), b"some_command")
+        msg = command("session_id", 0, Device(), b"some_command")
         with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
             self.adapter.publish(msg)
 

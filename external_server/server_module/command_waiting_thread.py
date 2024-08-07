@@ -61,7 +61,7 @@ class CommandWaitingThread:
             self._waiting_thread.join()
 
     def pop_command(self) -> tuple[bytes, _Device] | None:
-        """Returns available command if currently available, else returns None."""
+        """Return available command if currently available, else returns None."""
         try:
             with self._commands_lock:
                 command = self._commands.get(block=False)
@@ -70,7 +70,7 @@ class CommandWaitingThread:
         return command
 
     def poll_commands(self) -> None:
-        """Polls for a single command from the API.
+        """Poll for a single command from the API.
 
         If commands are avaiable, they are saved in the queue.
         If no commands are available before the timeout, no action is taken.
@@ -87,6 +87,7 @@ class CommandWaitingThread:
             _logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
 
     def _save_available_commands(self) -> None:
+        """Save the available commands in the queue."""
         remaining_commands = 1
         while remaining_commands > 0:
             command, device, remaining_commands = self._api_adapter.pop_command()
@@ -100,10 +101,9 @@ class CommandWaitingThread:
         if self._module_connected():
             module_id = self._api_adapter.get_module_number()
             self._events.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
-        else:
-            pass
 
     def _clear_stored_commands(self) -> None:
+        """Clear the stored commands in the queue."""
         while not self._commands.empty():
             self._commands.get()
 

@@ -88,6 +88,10 @@ class CommandChecker(_Checker):
         self._missed_counter_vals: list[_Counter] = []
         self._counter = 0
 
+    @property
+    def n_of_expected_reponses(self) -> int:
+        return self._commands._queue.qsize()
+
     def pop_commands(self, counter: _Counter) -> list[_HandledCommand]:
         """ Returns list of Command messages acknowledged with Command responses in correct order.
         With every command the returned_from_api flag is also returned.
