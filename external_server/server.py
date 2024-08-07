@@ -165,9 +165,9 @@ class ExternalServer:
 
                 if self._known_devices.is_not_connected(device):
                     logger.warning(f"Status from not connected device {device_repr(device)}.")
-                    if status_obj.errorMessage:
-                        module.api.forward_error_message(device, status_obj.errorMessage)
-                    module.api.forward_status(device, status.statusData)
+                if status_obj.errorMessage:
+                    module.api.forward_error_message(device, status_obj.errorMessage)
+                module.api.forward_status(device, status.statusData)
 
                 self._publish_status_response(status_obj)
 
@@ -379,8 +379,11 @@ class ExternalServer:
         else:
             self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
 
-    def _handle_received_status(self, received_status: _Status) -> None:
-        """Handle the status received during normal communication, i.e., after init sequence."""
+    def _handle_status(self, received_status: _Status) -> None:
+        """Handle the status received during normal communication, i.e., after init sequence.
+
+        If the status is valid and comes with expected counter value, handle all stored received statuses.
+        """
         self._check_received_status(received_status)
         while status := self._status_checker.get():
             self._handle_checked_status(status)
@@ -521,7 +524,7 @@ class ExternalServer:
             elif message.HasField("status"):
                 if self._session.id == message.status.sessionId:
                     self._reset_session_checker()
-                    self._handle_received_status(message.status)
+                    self._handle_status(message.status)
                 else:
                     logger.warning("Ignoring status with different session ID.")
             elif message.HasField("commandResponse"):
@@ -707,7 +710,6 @@ class ExternalServer:
         if not response.HasField("commandResponse"):
             error_msg = "Received message is not a command response."
             logger.error(error_msg)
-            logger.debug(f"Received message: {response}")
             raise ConnectSequenceFailure(error_msg)
 
     @staticmethod

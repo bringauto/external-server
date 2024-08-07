@@ -128,7 +128,7 @@ class StatusChecker(_Checker):
                 self._store_skipped_counter_and_start_timer(c)
 
     def _store_skipped_counter_and_start_timer(self, counter: CounterValue) -> None:
-        timer = _Timer(self._timeout, self._create_timeout_event)
+        timer = _Timer(self._timeout, self.set_timeout)
         timer.start()
         self._skipped.put((counter, timer))
         self._logger.warning(f"Status with counter {counter} is missing.")

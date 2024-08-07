@@ -33,7 +33,7 @@ class Session:
         self._id = session_id
 
     def start(self) -> None:
-        self._timer = _Timer(self._checker.timeout, self._checker._create_timeout_event)
+        self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
         self._timer.start()
         self._timer_running = True
 

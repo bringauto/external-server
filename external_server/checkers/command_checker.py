@@ -147,6 +147,6 @@ class CommandChecker(_Checker):
 
     def _get_started_timer(self) -> _Timer:
         """Get the timer object for the oldest command in the queue and start it."""
-        timer = _Timer(self._timeout, self._create_timeout_event)
+        timer = _Timer(self._timeout, self.set_timeout)
         timer.start()
         return timer

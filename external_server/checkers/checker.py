@@ -45,7 +45,7 @@ class Checker:
         """Returns True if timeout occured, False otherwise."""
         return self._timeout_event.is_set()
 
-    def _create_timeout_event(self) -> None:
+    def set_timeout(self) -> None:
         """Puts event to event queue. """
         self._timeout_event.set()
         self._event_queue.add(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)

@@ -400,41 +400,6 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
         self.es.stop()
 
 
-class Test_Checking_Command(unittest.TestCase):
-
-    def setUp(self):
-        self.es = get_test_server()
-        self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._run_initial_sequence)
-            time.sleep(0.1)
-            device_status = DeviceStatus(device=self.device)
-            topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
-            self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
-            )
-
-    def test_command_response_with_other_session_id_is_ignored(self):
-        sub_topic = self.es.mqtt.subscribe_topic
-        with futures.ThreadPoolExecutor() as ex:
-            ex.submit(self.es._run_normal_communication)
-            time.sleep(0.1)
-            with self.assertLogs(_eslogger, logging.WARNING) as cm:
-                self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1))
-                self.broker.publish(
-                    sub_topic, cmd_response("other_session_id", 1, CommandResponse.OK)
-                )
-                time.sleep(0.1)
-                self.broker.publish(sub_topic, cmd_response("session_id", 1, CommandResponse.OK))
-
-    def tearDown(self) -> None:
-        self.es.stop()
-        self.broker.stop()
-
-
 class Test_Receiving_Command(unittest.TestCase):
 
     def setUp(self):
@@ -464,6 +429,50 @@ class Test_Receiving_Command(unittest.TestCase):
             )
             time.sleep(0.1)
             self.assertEqual(self.es._command_checker.n_of_expected_reponses, 0)
+
+    def tearDown(self) -> None:
+        self.es.stop()
+        self.broker.stop()
+
+
+class Test_Command_Response(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.es._session._checker._timeout = 5
+        self.broker = MQTTBrokerTest(start=True)
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_initial_sequence)
+            time.sleep(0.1)
+            device_status = DeviceStatus(device=self.device)
+            topic = self.es.mqtt.subscribe_topic
+            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(
+                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+            )
+
+    def test_command_response_with_other_session_id_is_ignored(self):
+        sub_topic = self.es.mqtt.subscribe_topic
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_normal_communication)
+            time.sleep(0.1)
+            with self.assertLogs(_eslogger, logging.WARNING) as cm:
+                self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1))
+                self.broker.publish(
+                    sub_topic, cmd_response("other_session_id", 1, CommandResponse.OK)
+                )
+                time.sleep(0.1)
+                self.broker.publish(sub_topic, cmd_response("session_id", 1, CommandResponse.OK))
+
+    def test_timeout_event_is_set_if_command_response_is_not_received_in_time(self):
+        with futures.ThreadPoolExecutor() as ex:
+            ex.submit(self.es._run_normal_communication)
+            time.sleep(0.1)
+            self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1))
+            time.sleep(self.es._config.mqtt_timeout + 0.1)
+            self.assertTrue(self.es._command_checker.timeout_occured())
 
     def tearDown(self) -> None:
         self.es.stop()
@@ -524,6 +533,64 @@ class Test_Handling_Command(unittest.TestCase):
             self.es._handle_command(module_id=1000, command=cmd)
             self.assertIn("not connected", cm.output[0])
             self.assertEqual(self.published_commands, [command("session_id", 0, self.device, b"cmd")])
+
+
+@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+class Test_Handling_Checked_Status(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.es = get_test_server()
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.published_statuses: list[ExternalServerMsg] = list()
+        self.es._add_connected_device(self.device)
+        self.es._session.set_id("session_id")
+
+    def publish(self, msg: ExternalServerMsg) -> None:
+        self.published_statuses.append(msg)
+
+    def test_unsupported_module_referenced_by_status_logs_warning_and_sends_no_response(self, mock: Mock):
+        device = Device(module=1001, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        mock.side_effect = self.publish
+        with self.assertLogs(_eslogger, logging.WARNING) as cm:
+            self.es._handle_checked_status(
+                Status(
+                    sessionId="session_id",
+                    deviceState=Status.RUNNING,
+                    messageCounter=1,
+                    deviceStatus=DeviceStatus(device=device)
+                )
+            )
+            self.assertIn("unknown module", cm.output[0])
+            self.assertEqual(self.published_statuses, [])
+
+    def test_unsupported_device_of_supported_module_referenced_by_status_logs_warning_and_sends_no_response(self, mock: Mock):
+        device = Device(module=1000, deviceType=11111, deviceName="TestDevice", deviceRole="test")
+        mock.side_effect = self.publish
+        with self.assertLogs(_eslogger, logging.WARNING) as cm:
+            self.es._handle_checked_status(
+                Status(
+                    sessionId="session_id",
+                    deviceState=Status.RUNNING,
+                    messageCounter=1,
+                    deviceStatus=DeviceStatus(device=device)
+                )
+            )
+            self.assertIn("not supported", cm.output[0])
+            self.assertEqual(self.published_statuses, [])
+
+    def test_supported_device_of_supported_module_referenced_by_status_sends_response(self, mock: Mock):
+        device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        mock.side_effect = self.publish
+        self.es._handle_checked_status(
+            Status(
+                sessionId="session_id",
+                deviceState=Status.RUNNING,
+                messageCounter=1,
+                deviceStatus=DeviceStatus(device=device)
+            )
+        )
+        self.assertEqual(self.published_statuses, [status_response("session_id", 1)])
+
 
 
 if __name__ == "__main__":  # pragma: no cover
