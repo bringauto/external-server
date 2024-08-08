@@ -1,14 +1,11 @@
-from threading import (
-    Event as _Event,
-    Timer as _Timer
-)
+from threading import Event as _Event, Timer as _Timer
 
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 
 
-class Session:
-    """Checks if connected session did not timed out."""
+class MQTTSession:
+    """A class managing MQTT session context and activity."""
 
     def __init__(self, timeout: float) -> None:
         self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout)
@@ -18,6 +15,7 @@ class Session:
 
     @property
     def id(self) -> str:
+        """Return the session ID."""
         return self._id
 
     @property
@@ -27,12 +25,15 @@ class Session:
 
     @property
     def timeout_event(self) -> _Event:
+        """Return the event object that is set when the session times out."""
         return self._checker._timeout_event
 
     def set_id(self, session_id: str) -> None:
+        """Update the session ID."""
         self._id = session_id
 
     def start(self) -> None:
+        """Starts the checker's timer."""
         self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
         self._timer.start()
         self._timer_running = True
@@ -46,6 +47,7 @@ class Session:
         self.start()
 
     def stop(self) -> None:
+        """Stops the checker's timer."""
         if self._timer_running and self._timer is not None:
             if self._timer.is_alive():
                 self._timer.cancel()

@@ -14,7 +14,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.checkers import CommandChecker, Session, StatusChecker
+from external_server.checkers import CommandChecker, MQTTSession, StatusChecker
 from external_server.models.exceptions import (
     ConnectSequenceFailure,
     CommunicationException,
@@ -93,7 +93,7 @@ class ExternalServer:
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
-        self._session = Session(self._config.mqtt_timeout)
+        self._session = MQTTSession(self._config.mqtt_timeout)
         self._status_checker = StatusChecker(self._config.timeout)
         self._command_checker = CommandChecker(self._config.timeout)
         self._mqtt = self.mqtt_adapter_from_config(config)
@@ -385,10 +385,10 @@ class ExternalServer:
                     logger.info(f"Received a command response.")
                     return response.commandResponse
                 else:
-                    logger.warning("Skipping command response with different session ID.")
+                    logger.error("Skipping command response with different session ID.")
             else:
                 # ignore other messages
-                logger.warning(f"Skipping message of wrong type (expected command response).")
+                logger.error(f"Expected command response, received other type of external client message. Skipping")
         # response is None
         error_msg = "Command response has not been received."
         logger.error(error_msg)
@@ -418,7 +418,7 @@ class ExternalServer:
         """Handle the status that has been checked by the status checker."""
         module_and_dev = self._module_and_device(status)
         if not module_and_dev:
-            logger.warning(f"Status from unknown or unsupported device is ignored.")
+            logger.error(f"Received status from unsupported device. Status is ignored.")
         else:
             module, device = module_and_dev
             status_ok = True
@@ -652,6 +652,7 @@ class ExternalServer:
             status_response = _status_response(self._session.id, status.messageCounter)
             logger.info(f"Sending status response of type {status_response.statusResponse.type}")
             self._mqtt.publish(status_response)
+
 
     def _reset_session_checker(self) -> None:
         """Reset the session checker's timer."""

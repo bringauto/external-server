@@ -114,6 +114,7 @@ class StatusChecker(_Checker):
             timer.join()
 
     def _store_skipped_counter_values(self, status_counter: CounterValue) -> None:
+        """Store all missing status counter values and start timers for them."""
         if not self._skipped.empty() and status_counter <= self._skipped.queue[-1][0]:
             return
         missed_counter_vals = range(self._counter, status_counter)
@@ -123,6 +124,7 @@ class StatusChecker(_Checker):
                 self._store_skipped_counter_and_start_timer(c)
 
     def _store_skipped_counter_and_start_timer(self, counter: CounterValue) -> None:
+        """Store the missing status counter value and start a timer for it."""
         timer = _Timer(self._timeout, self.set_timeout)
         timer.start()
         self._skipped.put((counter, timer))
