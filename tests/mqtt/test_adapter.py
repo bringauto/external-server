@@ -35,8 +35,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.models.event_queue import EventType  # type: ignore
 from external_server.models.event_queue import EventQueueSingleton  # type: ignore
-from external_server.utils import connect_msg, status as status_msg, cmd_response
-from external_server.models.server_messages import command
+from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
 from tests.utils import MQTTBrokerTest  # type: ignore
 
 
@@ -131,15 +130,11 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
 
     def test_publish_topic_value_starts_with_company_name_slash_car_name(self):
-        client = MQTTClientAdapter(
-            "some_company", "test_car", timeout=1, broker_host="", port=0
-        )
+        client = MQTTClientAdapter("some_company", "test_car", timeout=1, broker_host="", port=0)
         self.assertTrue(client.publish_topic.startswith("some_company/test_car"))
 
     def test_empty_company_name_is_allowed(self):
-        client = MQTTClientAdapter(
-            company="", car="test_car", timeout=1, broker_host="", port=0
-        )
+        client = MQTTClientAdapter(company="", car="test_car", timeout=1, broker_host="", port=0)
         self.assertTrue(client.publish_topic.startswith("/test_car"))
 
     def test_empty_car_name_is_allowed(self):
@@ -149,9 +144,7 @@ class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):
         self.assertTrue(client.publish_topic.startswith("some_company/"))
 
     def test_both_names_empty_is_allowed(self):
-        client = MQTTClientAdapter(
-            company="", car="", timeout=1, broker_host="", port=0
-        )
+        client = MQTTClientAdapter(company="", car="", timeout=1, broker_host="", port=0)
         self.assertTrue(client.publish_topic.startswith("/"))
 
 
@@ -646,21 +639,27 @@ class Test_Expecting_Status(unittest.TestCase):
             device_status = DeviceStatus(device=Device(), statusData=b"")
             pub_msg = status_msg("id", 0, Status.RUNNING, device_status)
             f = ex.submit(self.adapter.get_status)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), pub_msg.status)
 
     def test_receiving_command_response_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             pub_msg = cmd_response("id", 0, CommandResponse.OK)
             f = ex.submit(self.adapter.get_status)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), None)
 
     def test_receiving_connect_message_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             pub_msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
             f = ex.submit(self.adapter.get_status)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), None)
 
     def tearDown(self) -> None:
@@ -683,23 +682,56 @@ class Test_Expecting_Connect_Message(unittest.TestCase):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             pub_msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
             f = ex.submit(self.adapter.get_connect_message)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), pub_msg.connect)
 
     def test_receiving_command_response_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             pub_msg = cmd_response("id", 0, CommandResponse.OK)
             f = ex.submit(self.adapter.get_connect_message)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), None)
 
-    def test_receiving_connect_message_yields_none(self):
+    def test_receiving_status_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
             device_status = DeviceStatus(device=Device(), statusData=b"")
             pub_msg = status_msg("id", 0, Status.RUNNING, device_status)
             f = ex.submit(self.adapter.get_connect_message)
-            ex.submit(self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString())
+            ex.submit(
+                self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
+            )
             self.assertEqual(f.result(), None)
+
+    def tearDown(self) -> None:
+        self.adapter.stop()
+        self.broker.stop()
+
+
+class Test_False_Message_When_Expecting_Connect_Message(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
+        self.adapter.connect()
+
+    def test_none_is_returned_if_false_is_the_only_message(self):
+        self.adapter.received_messages.put(False)
+        result = self.adapter.get_connect_message()
+        self.assertIsNone(result)
+
+    def test_false_messages_are_skipped_and_connect_message_is_returned_when_finally_reached(self):
+        self.adapter.received_messages.put(False)
+        self.adapter.received_messages.put(False)
+        self.adapter.received_messages.put(False)
+        msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
+        self.adapter.received_messages.put(msg)
+        with self.assertLogs(logger=_logger, level=logging.WARNING) as cm:
+            result = self.adapter.get_connect_message()
+            self.assertEqual(result, msg.connect)
 
     def tearDown(self) -> None:
         self.adapter.stop()
@@ -717,13 +749,13 @@ class Test_Logging_Connection_Result(unittest.TestCase):
             self.adapter.connect()
 
     def test_info_is_logged_when_just_connected_to_broker(self):
-        broker = MQTTBrokerTest(start=True)
+        MQTTBrokerTest(start=True)
         time.sleep(0.1)
         with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
             self.adapter.connect()
 
     def test_info_is_logged_when_already_connected_to_broker(self):
-        broker = MQTTBrokerTest(start=True)
+        MQTTBrokerTest(start=True)
         self.adapter.connect()
         time.sleep(0.1)
         with self.assertLogs(logger=_logger, level=logging.INFO) as cm:

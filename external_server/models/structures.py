@@ -117,8 +117,8 @@ class HandledCommand:
     """
 
     data: bytes
+    device: _Device
     counter: Counter = -1
-    device: _Device = _Device()
     from_api: ReturnedFromAPIFlag = False
 
     def update_counter_value(self, counter: Counter) -> None:

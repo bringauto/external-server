@@ -106,23 +106,26 @@ class CommandChecker(_Checker):
         counter : int
             number of command, which was acknowledged by received commandResponse
         """
-        if self._commands.oldest_counter != counter:
+        if self._commands.empty():
+            logger.warning("No commands in the queue.")
+            return []
+        elif self._commands.oldest_counter != counter:
             self._missed_counter_vals.append(counter)
-            self._logger.warning(
-                f"Cannot return command with counter={counter}, "
+            logger.warning(
+                f"Cannot return command with counter={counter} "
                 f"because it is not the oldest command (counter={self._commands.oldest_counter})."
             )
             return []
         else:
             popped = [self._commands.get()]
-            self._logger.info(f"Received Command response was acknowledged, counter={counter}")
+            logger.info(f"Command response was acknowledged, counter={counter}")
             while self._missed_counter_vals:
                 counter = self._commands.oldest_counter
                 if (counter is not None) and (counter in self._missed_counter_vals):
                     command = self._commands.get()
                     popped.append(command)
                     self._missed_counter_vals.remove(counter)
-                    self._logger.info(f"Older Command response acknowledged, counter={counter}")
+                    logger.info(f"Older Command response acknowledged, counter={counter}")
                 else:
                     break
             return popped

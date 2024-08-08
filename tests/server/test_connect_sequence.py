@@ -17,8 +17,12 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer, logger
-from external_server.utils import connect_msg, status, cmd_response  # type: ignore
-from external_server.models.server_messages import status_response as _status_response
+from external_server.models.messages import (
+    connect_msg,
+    status,
+    cmd_response,
+    status_response as _status_response,
+)
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
@@ -251,7 +255,6 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
             ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
             time.sleep(self.timeout + 0.1)
-
             # connect sequence is repeated
             ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
             ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)

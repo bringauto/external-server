@@ -6,7 +6,7 @@ sys.path.append(".")
 
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.models.structures import HandledCommand
-from external_server.utils import connect_msg, cmd_response
+from external_server.models.messages import cmd_response, connect_msg
 from external_server.server import ExternalServer
 from external_server.models.exceptions import ConnectSequenceFailure
 from ExternalProtocol_pb2 import CommandResponse  # type: ignore
@@ -59,11 +59,12 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
     def test_empty_commands_are_returned_if_thread_commands_queue_is_empty(self):
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertEqual(
-            cmds, [
+            cmds,
+            [
                 HandledCommand(b"", device=self.device_1, from_api=False),
                 HandledCommand(b"", device=self.device_2, from_api=False),
-                HandledCommand(b"", device=self.device_3, from_api=False)
-            ]
+                HandledCommand(b"", device=self.device_3, from_api=False),
+            ],
         )
 
     def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
@@ -72,11 +73,12 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.es.modules[1000].thread._commands.put((b"three", self.device_3))
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
-            cmds, [
+            cmds,
+            [
                 HandledCommand(b"one", device=self.device_1, from_api=True),
                 HandledCommand(b"two", device=self.device_2, from_api=True),
-                HandledCommand(b"three", device=self.device_3, from_api=True)
-            ]
+                HandledCommand(b"three", device=self.device_3, from_api=True),
+            ],
         )
 
     def test_only_the_first_commands_are_returned_if_thread_commands_contain_multiple_cmds(self):
@@ -88,11 +90,12 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.es.modules[1000].thread._commands.put((b"six", self.device_3))
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
-            cmds, [
+            cmds,
+            [
                 HandledCommand(b"one", device=self.device_1, from_api=True),
                 HandledCommand(b"three", device=self.device_2, from_api=True),
-                HandledCommand(b"five", device=self.device_3, from_api=True)
-            ]
+                HandledCommand(b"five", device=self.device_3, from_api=True),
+            ],
         )
 
     def tearDown(self) -> None:
@@ -118,10 +121,11 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         self.es.modules[1000].thread._commands.put((b"two", self.device_2))
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
-            cmds, [
+            cmds,
+            [
                 HandledCommand(b"one", device=self.device_1, from_api=True),
-                HandledCommand(b"", device=self.device_2, from_api=False)
-            ]
+                HandledCommand(b"", device=self.device_2, from_api=False),
+            ],
         )
 
     def tearDown(self) -> None:
@@ -166,17 +170,15 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
             self.es._get_next_valid_command_response()
 
     def test_expected_command_response_is_returned(self, mock: Mock):
-        mock.side_effect = ( r for r in [cmd_response("session_id", 1, CommandResponse.OK), None])
+        mock.side_effect = (r for r in [cmd_response("session_id", 1, CommandResponse.OK)])
         response = self.es._get_next_valid_command_response()
         self.assertEqual(
             response,
-            CommandResponse(sessionId="session_id", type=CommandResponse.OK, messageCounter=1)
+            CommandResponse(sessionId="session_id", type=CommandResponse.OK, messageCounter=1),
         )
 
     def test_command_response_is_not_accepted_if_session_id_does_not_match(self, mock: Mock):
-        mock.side_effect = (
-            r for r in [cmd_response("other_session_id", 1, CommandResponse.OK),None]
-        )
+        mock.side_effect = (r for r in [cmd_response("other_session_id", 1, CommandResponse.OK), None])
         with self.assertRaises(ConnectSequenceFailure):
             self.es._get_next_valid_command_response()
 

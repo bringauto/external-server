@@ -2,6 +2,8 @@ import unittest
 import sys
 import argparse
 
+sys.path.append(".")
+
 from external_server_main import parsed_script_args
 
 
@@ -25,36 +27,35 @@ class Test_Argparse_Init(unittest.TestCase):
             parsed_script_args()
 
     def test_setting_tls_flag_without_further_arguments_raises_error(self):
-        with self.assertRaises(argparse.ArgumentError) as e:
+        with self.assertRaises(argparse.ArgumentError) as cm:
             sys.argv = ["external_server_main.py", "--tls"]
             parsed_script_args()
-            self.assertIn(e.msg, "ca certificate")
-            self.assertIn(e.msg, "PEM encoded client certificate")
-            self.assertIn(e.msg, "private key to PEM encoded client certificate")
+        self.assertIn("ca certificate", cm.exception.message)
+        self.assertIn("PEM encoded client certificate", cm.exception.message)
+        self.assertIn("private key to PEM encoded client certificate", cm.exception.message)
 
     def test_setting_tls_flag_with_only_ca_certificate_missing_raises_error(self):
-        with self.assertRaises(argparse.ArgumentError) as e:
-            sys.argv = ["external_server_main.py", "--tls"]
+        with self.assertRaises(argparse.ArgumentError) as cm:
+            sys.argv = ["external_server_main.py", "--tls", "--cert", "cert.pem", "--key", "key.pem"]
             parsed_script_args()
-            self.assertIn(e.msg, "ca certificate")
-            self.assertNotIn(e.msg, "PEM encoded client certificate")
-            self.assertNotIn(e.msg, "private key to PEM encoded client certificate")
+        self.assertIn("ca certificate", cm.exception.message)
+        self.assertNotIn("PEM encoded client certificate", cm.exception.message)
+        self.assertNotIn("private key to PEM encoded client certificate", cm.exception.message)
 
     def test_setting_tls_flag_with_only_PEM_certificate_missing_raises_error(self):
-        with self.assertRaises(argparse.ArgumentError) as e:
-            sys.argv = ["external_server_main.py", "--tls"]
+        with self.assertRaises(argparse.ArgumentError) as cm:
+            sys.argv = ["external_server_main.py", "--tls", "--ca", "ca.pem", "--key", "key.pem"]
             parsed_script_args()
-            self.assertNotIn(e.msg, "ca certificate")
-            self.assertIn(e.msg, "PEM encoded client certificate")
-            self.assertNotIn(e.msg, "private key to PEM encoded client certificate")
+        self.assertNotIn("ca certificate", cm.exception.message)
+        self.assertIn("PEM encoded client certificate", cm.exception.message)
+        self.assertNotIn("private key to PEM encoded client certificate", cm.exception.message)
 
     def test_setting_tls_flag_with_only_private_key_missing_raises_error(self):
-        with self.assertRaises(argparse.ArgumentError) as e:
-            sys.argv = ["external_server_main.py", "--tls"]
+        with self.assertRaises(argparse.ArgumentError) as cm:
+            sys.argv = ["external_server_main.py", "--tls", "--cert", "cert.pem", "--ca", "ca.pem"]
             parsed_script_args()
-            self.assertNotIn(e.msg, "ca certificate")
-            self.assertNotIn(e.msg, "PEM encoded client certificate")
-            self.assertIn(e.msg, "private key to PEM encoded client certificate")
+        self.assertNotIn("ca certificate", cm.exception.message)
+        self.assertIn("private key", cm.exception.message)
 
     def test_setting_tls_flag_with_ca_cert_cert_and_key_is_allowed(self):
         sys.argv = [

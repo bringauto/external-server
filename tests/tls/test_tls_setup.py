@@ -6,7 +6,6 @@ import os
 sys.path.append(".")
 
 from pydantic import FilePath
-from paho.mqtt.client import ssl
 from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer
 from external_server.adapters.mqtt_adapter import MQTTClientAdapter

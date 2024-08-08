@@ -1,12 +1,10 @@
 import threading
-import logging
 
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.event_queue import (
     EventQueueSingleton as _EventQueueSingleton,
     EventType as _EventType
 )
-
 
 
 class Checker:
@@ -23,8 +21,6 @@ class Checker:
         Args:
         - timeout_type (TimeoutType): TimeoutType to put onto event queue when timeout occurs
         """
-        self._logger = logging.getLogger(self.__class__.__name__)
-
         self._timeout_event = threading.Event()
         self._timeout_type = timeout_type
         self._timeout = timeout

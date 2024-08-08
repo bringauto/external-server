@@ -61,9 +61,9 @@ class MQTTBrokerTest:
 
         `n` is the number of messages to wait for and return.
         """
-        logger.debug(f"Waiting for {n} messages on topic {topic}")
+        logger.debug(f"Test broker: Waiting for {n} messages on topic {topic}")
         result = subscribe.simple([topic], hostname=self._host, port=self._port, msg_count=n)
-        if n == 0:
+        if n == 0:  # pragma: no cover
             return []
         if n == 1:
             return [result]
@@ -85,7 +85,7 @@ class MQTTBrokerTest:
             try:
                 payload_list = [(topic, p) for p in payload_list]
                 publish.multiple(payload_list, hostname=self._host, port=self._port)
-                logger.debug(f"Published messages to topic {topic}: {payload_list}")
+                logger.debug(f"Test broker: Published messages to topic {topic}: {payload_list}")
             except Exception as e:  # pragma: no cover
                 print(e)
                 raise e

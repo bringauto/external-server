@@ -141,3 +141,10 @@ class KnownDevices:
             self._connected.remove(device)
         elif device in self._not_connected:
             self._not_connected.remove(device)
+
+
+def device_repr(device: _Device | DevicePy) -> str:
+    if isinstance(device, DevicePy):
+        return f"{device.module_id}/{device.type}/{device.role}/{device.name}"
+    else:
+        return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"

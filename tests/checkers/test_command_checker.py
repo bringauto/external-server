@@ -5,6 +5,7 @@ import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
+from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.models.structures import HandledCommand
 from external_server.checkers.command_checker import CommandChecker
 
@@ -20,14 +21,19 @@ class Test_No_Commands_Stored_By_Checker(unittest.TestCase):
         cmd = checker.pop_commands(counter=0)
         self.assertEqual(len(cmd), 0)
 
+    def test_oldest_counter_yields_none(self):
+        checker = CommandChecker(CHECKER_TIMEOUT)
+        self.assertEqual(checker._commands.oldest_counter, None)
+
 
 class Test_Pop_Command(unittest.TestCase):
 
     def setUp(self):
         self.checker = CommandChecker(CHECKER_TIMEOUT)
-        self.cmd_1 = HandledCommand(b"")
-        self.cmd_2 = HandledCommand(b"")
-        self.cmd_3 = HandledCommand(b"")
+        device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        self.cmd_1 = HandledCommand(b"", device=device)
+        self.cmd_2 = HandledCommand(b"", device=device)
+        self.cmd_3 = HandledCommand(b"", device=device)
         self.checker.add(self.cmd_2)
         self.checker.add(self.cmd_1)
         self.checker.add(self.cmd_3)
@@ -72,7 +78,8 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
         self.checker = CommandChecker(CHECKER_TIMEOUT)
-        command = HandledCommand(b"")
+        self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        command = HandledCommand(b"", device=self.device)
         self.checker.add(command)
 
     def test_exceeding_timeout_sets_checkers_timeout_is_set_flag_to_true(self):
@@ -94,7 +101,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.assertFalse(self.checker.timeout_occured())
 
     def test_timeout_is_not_set_when_all_commands_are_acknowledged(self):
-        self.checker.add(HandledCommand(b""))
+        self.checker.add(HandledCommand(b"", device=self.device))
         self.assertFalse(self.checker.timeout_occured())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop_commands(counter=0)
@@ -103,7 +110,7 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.assertFalse(self.checker.timeout_occured())
 
     def test_timeout_is_set_when_any_command_is_not_acknowledged(self):
-        self.checker.add(HandledCommand(b""))
+        self.checker.add(HandledCommand(b"", device=self.device))
         self.assertFalse(self.checker.timeout_occured())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop_commands(counter=0)
@@ -113,5 +120,3 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main(buffer=True, verbosity=2)
-
-''

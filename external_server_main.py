@@ -36,6 +36,7 @@ def parsed_script_args() -> argparse.Namespace:
         raise FileNotFoundError(f"Config file {args.config} not found")
     if args.tls:
         missing_fields = []
+        print(args)
         if not args.ca:
             missing_fields.append("ca certificate")
         if not args.cert:
@@ -43,9 +44,10 @@ def parsed_script_args() -> argparse.Namespace:
         if not args.key:
             missing_fields.append("private key to PEM encoded client certificate")
         if missing_fields:
-            raise argparse.ArgumentError(
+            e = argparse.ArgumentError(
                 None, f"TLS requires additional parameters. The following is missing: {', '.join(missing_fields)}"
             )
+            raise e
     return args
 
 

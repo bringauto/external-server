@@ -64,7 +64,7 @@ class StatusChecker(_Checker):
         """
 
         if status.messageCounter < self._counter:
-            self._logger.warning(f"Status with counter {status.messageCounter} is ignored.")
+            logger.warning(f"Status with counter {status.messageCounter} is ignored.")
         elif status.messageCounter == self._counter:
             self._received.put((status.messageCounter, status))
             while not self._received.empty() and self._received.queue[0][0] == self._counter:
@@ -131,4 +131,4 @@ class StatusChecker(_Checker):
         timer = _Timer(self._timeout, self.set_timeout)
         timer.start()
         self._skipped.put((counter, timer))
-        self._logger.warning(f"Status with counter {counter} is missing.")
+        logger.warning(f"Status with counter {counter} is missing.")

@@ -1,6 +1,7 @@
 import unittest
 import time
 import sys
+
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.checkers.session import Session
