@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import logging
 import logging.handlers
+import logging.config
 import sys
 import argparse
 import os
+import json
 
 from rich.logging import RichHandler
 
@@ -13,6 +14,10 @@ from external_server.config import load_config, InvalidConfigError
 
 _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 _LOG_FILE_NAME = "external_server.log"
+
+
+with open("config/logging.json") as f:
+    logging.config.dictConfig(json.load(f))
 
 
 def parsed_script_args() -> argparse.Namespace:

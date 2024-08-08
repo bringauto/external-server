@@ -8,7 +8,7 @@ import logging
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, MQTT_ERR_INVAL
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
 
 from queue import Empty
 from external_server.adapters.mqtt_adapter import (  # type: ignore

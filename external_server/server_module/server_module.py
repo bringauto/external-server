@@ -1,6 +1,5 @@
-import logging.config
-import json
 from typing import Callable
+import logging
 
 from external_server.adapters.api_adapter import APIClientAdapter as _ApiAdapter
 from external_server.server_module.command_waiting_thread import CommandWaitingThread as _CommandWaitingThread
@@ -8,9 +7,7 @@ from external_server.config import ModuleConfig as _ModuleConfig
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 
 
-_logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+logger = logging.getLogger(__name__)
 
 
 class ServerModule:
@@ -42,12 +39,12 @@ class ServerModule:
             self._api_adapter.init()
         except:
             msg = f"Module {module_id}: Error in init function. Check the configuration file."
-            _logger.error(msg)
+            logger.error(msg)
             raise RuntimeError(msg)
         real_mod_number = self._api_adapter.get_module_number()
         if real_mod_number != module_id:
             msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
-            _logger.error(msg)
+            logger.error(msg)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(self._api_adapter, connection_check)
 

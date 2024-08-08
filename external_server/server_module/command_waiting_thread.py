@@ -1,9 +1,8 @@
 from typing import Callable
 import threading
 from queue import Queue, Empty
-import logging.config
-import json
 import sys
+import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -13,9 +12,7 @@ from external_server.adapters.api_adapter import APIClientAdapter  # type: ignor
 from external_server.models.event_queue import EventQueueSingleton, EventType
 
 
-_logger = logging.getLogger("CommandWaitingThread")
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+logger = logging.getLogger(__name__)
 
 
 class CommandWaitingThread:
@@ -84,7 +81,7 @@ class CommandWaitingThread:
         elif rc == EsErrorCode.TIMEOUT:
             pass
         else:
-            _logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
+            logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
 
     def _save_available_commands(self) -> None:
         """Save the available commands in the queue."""
@@ -92,7 +89,7 @@ class CommandWaitingThread:
         while remaining_commands > 0:
             command, device, remaining_commands = self._api_adapter.pop_command()
             if remaining_commands < 0:
-                _logger.error(f"Error in pop_command function in API. Code: {remaining_commands}")
+                logger.error(f"Error in pop_command function in API. Code: {remaining_commands}")
             else:
                 with self._commands_lock, self._connection_established_lock:
                     if not self._module_connected():

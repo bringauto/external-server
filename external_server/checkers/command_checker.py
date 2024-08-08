@@ -2,8 +2,7 @@ from queue import Queue
 from threading import Timer as _Timer
 import sys
 import dataclasses
-import logging.config
-import json
+import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -16,8 +15,6 @@ from external_server.models.structures import (
 
 
 logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
 
 
 @dataclasses.dataclass(frozen=True)

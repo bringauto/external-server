@@ -1,9 +1,8 @@
-import logging.config
 from functools import partial
 import time
 import sys
 import enum
-import json
+import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -43,8 +42,6 @@ from external_server.models.structures import HandledCommand as _HandledCommand
 
 
 logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
 
 
 class ServerState(enum.Enum):
@@ -216,6 +213,7 @@ class ExternalServer:
         self._known_devices.not_connected(DevicePy.from_device(device))
 
     def _check_at_least_one_device_is_connected(self) -> None:
+        """Raise an exception if all devices have been disconnected."""
         if self._known_devices.n_connected == 0:
             msg = "All devices have been disconnected, restarting server."
             logger.warning(msg)

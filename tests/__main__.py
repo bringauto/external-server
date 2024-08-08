@@ -2,9 +2,15 @@ import os
 import sys
 import subprocess
 import unittest
+import logging.config
+import json
 
 import coverage
 import coverage.exceptions as _cov_exceptions
+
+
+with open("config/logging.json") as f:
+    logging.config.dictConfig(json.load(f))
 
 
 TEST_DIR_NAME = "tests"
