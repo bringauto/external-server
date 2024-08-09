@@ -27,7 +27,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as _ExternalServerMsg,
     Status as _Status,
 )
-from external_server.models.event_queue import EventQueueSingleton, EventType
+from external_server.models.events import EventQueueSingleton, EventType
 
 
 # maximum number of messages in outgoing queue
@@ -174,16 +174,14 @@ class MQTTClientAdapter:
             code = self._mqtt_client.disconnect()
             self.stop()
             if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.debug(
-                    f"Disconnected from MQTT broker: {self._broker_host}:{self._broker_port}"
-                )
+                _logger.info(f"Disconnected from MQTT broker: {self.broker_address}")
             else:
                 _logger.error(
                     "Error when disconnecting from MQTT broker "
-                    f"({self._broker_host}:{self._broker_port}): {mqtt_error_from_code(code)}"
+                    f"({self.broker_address}): {mqtt_error_from_code(code)}"
                 )
         else:
-            _logger.debug(
+            _logger.info(
                 "Trying to disconnect from MQTT broker, but not connected. No action is taken."
             )
 

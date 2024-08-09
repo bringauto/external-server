@@ -16,7 +16,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.models.messages import status_response, command, connect_msg, status, cmd_response
-from external_server.models.event_queue import EventType
+from external_server.models.events import EventType
 from external_server.models.structures import HandledCommand
 from external_server.models.exceptions import (
     NoPublishedMessage,

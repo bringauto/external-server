@@ -32,14 +32,14 @@ class EventType(Enum):
     TIMEOUT_OCCURRED = auto()  # data = TimeoutType
 
 
-@dataclasses.dataclass(slots=True)
+@dataclasses.dataclass(slots=True, frozen=True)
 class Event:
     """A class representing an event in the event queue.
 
-    It contains the event type and data, if required.
+    It contains the event type and optionally a data.
     """
 
-    event: EventType
+    event_type: EventType
     data: Any | None = None
 
 
@@ -53,7 +53,7 @@ class EventQueueSingleton(metaclass=SingletonMeta):
 
     def add(self, event_type: EventType, data: Any = None) -> None:
         """Add new item to the queue."""
-        self._queue.put(Event(event=event_type, data=data))
+        self._queue.put(Event(event_type=event_type, data=data))
 
     def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""

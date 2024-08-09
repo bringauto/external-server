@@ -1,7 +1,7 @@
 import threading
 
 from external_server.models.structures import TimeoutType as _TimeoutType
-from external_server.models.event_queue import (
+from external_server.models.events import (
     EventQueueSingleton as _EventQueueSingleton,
     EventType as _EventType,
 )

@@ -37,7 +37,7 @@ from external_server.models.structures import (
     TimeoutType,
 )
 from external_server.models.devices import DevicePy, KnownDevices, device_repr
-from external_server.models.event_queue import EventQueueSingleton, EventType, Event as _Event
+from external_server.models.events import EventQueueSingleton, EventType, Event as _Event
 from external_server.server_module.server_module import ServerModule as _ServerModule
 from external_server.models.structures import HandledCommand as _HandledCommand
 
@@ -498,21 +498,18 @@ class ExternalServer:
                 logger.warning(f"Device {device_repr(command.device)} disconnected.")
 
     def _handle_communication_event(self, event: _Event) -> None:
-        """Handle the event from the event queue.
-
-        Log error for invalid car messages.
+        """Match the event type and handle it accordingly.
 
         Raise exception if connection to MQTT BROKER is lost or if expected command response
         or status is not received.
         """
-        match event.event:
+        match event.event_type:
             case EventType.CAR_MESSAGE_AVAILABLE:
                 self._handle_car_message()
             case EventType.COMMAND_AVAILABLE:
                 self._check_and_handle_available_commands(event.data)
             case EventType.MQTT_BROKER_DISCONNECTED:
-                if self._running:
-                    raise CommunicationException("Unexpected disconnection of MQTT broker.")
+                raise UnexpectedMQTTDisconnect("Unexpected disconnection of MQTT client.")
             case EventType.TIMEOUT_OCCURRED:
                 self._handle_timeout_event(event.data)
             case _:

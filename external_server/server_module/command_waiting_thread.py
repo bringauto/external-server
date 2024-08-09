@@ -9,7 +9,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api_adapter import APIClientAdapter  # type: ignore
-from external_server.models.event_queue import EventQueueSingleton, EventType
+from external_server.models.events import EventQueueSingleton, EventType
 
 
 logger = logging.getLogger(__name__)

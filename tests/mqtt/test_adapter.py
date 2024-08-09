@@ -33,8 +33,8 @@ from ExternalProtocol_pb2 import (  # type: ignore
     StatusResponse,
     ExternalClient,
 )
-from external_server.models.event_queue import EventType  # type: ignore
-from external_server.models.event_queue import EventQueueSingleton  # type: ignore
+from external_server.models.events import EventType  # type: ignore
+from external_server.models.events import EventQueueSingleton  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
 from tests.utils import MQTTBrokerTest  # type: ignore
 
@@ -457,7 +457,7 @@ class Test_On_Message_Callback(unittest.TestCase):
         msg = self.client.received_messages.get(block=True, timeout=0.1)
         self.assertEqual(msg, ExternalClient())
         event = self.client._event_queue.get(block=True, timeout=0.1)
-        self.assertEqual(event.event, EventType.CAR_MESSAGE_AVAILABLE)
+        self.assertEqual(event.event_type, EventType.CAR_MESSAGE_AVAILABLE)
 
     def test_receiving_empty_message_on_wrong_topic_does_not_add_it_to_queue(self):
         message = MQTTMessage()

@@ -9,21 +9,21 @@ class CommunicationException(Exception):
     pass
 
 
-class UnexpectedMQTTDisconnect(CommunicationException):
+class UnexpectedMQTTDisconnect(Exception):
     pass
 
 
-class NoPublishedMessage(CommunicationException):
+class NoPublishedMessage(Exception):
     pass
 
 
-class SessionTimeout(CommunicationException):
+class SessionTimeout(Exception):
     pass
 
 
-class CommandResponseTimeout(CommunicationException):
+class CommandResponseTimeout(Exception):
     pass
 
 
-class StatusTimeout(CommunicationException):
+class StatusTimeout(Exception):
     pass
