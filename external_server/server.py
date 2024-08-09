@@ -224,8 +224,6 @@ class ExternalServer:
         message = self._mqtt._get_message()
         if message is None:
             raise NoPublishedMessage("Expected message from car, but did not received any.")
-        elif message is False:
-            raise UnexpectedMQTTDisconnect("MQTT client disconnected unexpectedly")
         return message
 
     def _check_and_handle_available_commands(self, module_id: Any) -> None:
@@ -715,18 +713,6 @@ class ExternalServer:
             time.sleep(self._config.sleep_duration_after_connection_refused)
         finally:
             self._clear_context()
-
-    @staticmethod
-    def check_message_is_command_response(response: _ExternalClientMsg) -> None:
-        """Check if the response is a command response."""
-        if response is None or response == False:
-            error_msg = "Command response has not been received."
-            logger.error(error_msg)
-            raise ConnectSequenceFailure(error_msg)
-        if not response.HasField("commandResponse"):
-            error_msg = "Received message is not a command response."
-            logger.error(error_msg)
-            raise ConnectSequenceFailure(error_msg)
 
     @staticmethod
     def check_device_is_in_connecting_state(status: _Status) -> None:

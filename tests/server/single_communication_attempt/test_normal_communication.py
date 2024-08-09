@@ -572,11 +572,6 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         with self.assertRaises(NoPublishedMessage):
             self.es._handle_car_message()
 
-    def test_handling_none_raises_error(self):
-        self.es.mqtt._received_msgs.put(False)
-        with self.assertRaises(UnexpectedMQTTDisconnect):
-            self.es._handle_car_message()
-
     @patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
     def test_connect_message_logs_error_and_produces_connect_response(self, mock: Mock):
         mock.side_effect = self.publish

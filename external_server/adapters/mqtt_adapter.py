@@ -188,20 +188,11 @@ class MQTTClientAdapter:
     def get_connect_message(self) -> _Connect | None:
         """"""
         msg = self._get_message()
-        while msg is False:
-            if self.is_connected:
-                _logger.warning(
-                    "Disconnect message from connecting client will be skipped. "
-                    "Repeating message retrieval."
-                )
-            msg = self._get_message()
         if msg is None:
-            if self.is_connected:
-                _logger.error("Connect message has not been received.")
+            _logger.error("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
-            if self.is_connected:
-                _logger.error("Received message is not a connect message.")
+            _logger.error("Received message is not a connect message.")
             return None
         _logger.info("Connect message has been received.")
         return msg.connect
@@ -212,7 +203,7 @@ class MQTTClientAdapter:
         Raise an exception if the message is not received or is not a status message.
         """
         msg = self._get_message()
-        if msg is None or msg == False:
+        if msg is None:
             _logger.error("Expected valid status message has not been received.")
             return None
         if not msg.HasField("status"):
@@ -315,7 +306,6 @@ class MQTTClientAdapter:
         - `properties` The properties associated with the disconnection event.
         """
         try:
-            self._received_msgs.put(False)
             self._event_queue.add(event_type=EventType.MQTT_BROKER_DISCONNECTED)
         except:  # pragma: no cover
             _logger.error("MQTT on disconnect callback: Failed to disconnect from the broker")

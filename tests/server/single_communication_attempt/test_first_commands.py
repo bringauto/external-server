@@ -133,26 +133,6 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         self.broker.stop()
 
 
-class Test_Checking_Command_Response(unittest.TestCase):
-
-    def test_no_action_is_taken_when_message_is_valid_command_response(self):
-        msg = cmd_response("test_session_id", 1, CommandResponse.OK)
-        ExternalServer.check_message_is_command_response(msg)
-
-    def test_exception_is_raised_when_message_is_none(self):
-        with self.assertRaises(ConnectSequenceFailure):
-            ExternalServer.check_message_is_command_response(None)
-
-    def test_exception_is_raised_when_message_is_false(self):
-        with self.assertRaises(ConnectSequenceFailure):
-            ExternalServer.check_message_is_command_response(False)
-
-    def test_exception_is_raised_when_message_is_not_valid_command_response(self):
-        msg = connect_msg("test_session_id", "test_company", "test_car", [])
-        with self.assertRaises(ConnectSequenceFailure):
-            ExternalServer.check_message_is_command_response(msg)
-
-
 @patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter._get_message")
 class Test_Next_Valid_Command_Response(unittest.TestCase):
 

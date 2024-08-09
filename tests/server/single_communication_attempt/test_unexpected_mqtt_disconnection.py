@@ -60,6 +60,7 @@ class Test_Unexpected_MQTT_Client_Disconnection_During_Normal_Communication(unit
             time.sleep(0.1)
             self.assertEqual(self.es.state, ServerState.RUNNING)
             self.es._mqtt.disconnect()
+            time.sleep(0.1)
             self.assertEqual(self.es.state, ServerState.ERROR)
             self.assertFalse(self.es.mqtt.is_connected)
 

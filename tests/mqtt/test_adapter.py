@@ -711,33 +711,6 @@ class Test_Expecting_Connect_Message(unittest.TestCase):
         self.broker.stop()
 
 
-class Test_False_Message_When_Expecting_Connect_Message(unittest.TestCase):
-
-    def setUp(self) -> None:
-        self.broker = MQTTBrokerTest(start=True)
-        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
-        self.adapter.connect()
-
-    def test_none_is_returned_if_false_is_the_only_message(self):
-        self.adapter.received_messages.put(False)
-        result = self.adapter.get_connect_message()
-        self.assertIsNone(result)
-
-    def test_false_messages_are_skipped_and_connect_message_is_returned_when_finally_reached(self):
-        self.adapter.received_messages.put(False)
-        self.adapter.received_messages.put(False)
-        self.adapter.received_messages.put(False)
-        msg = connect_msg("id", "some_company", "test_car", devices=[Device()])
-        self.adapter.received_messages.put(msg)
-        with self.assertLogs(logger=_logger, level=logging.WARNING) as cm:
-            result = self.adapter.get_connect_message()
-            self.assertEqual(result, msg.connect)
-
-    def tearDown(self) -> None:
-        self.adapter.stop()
-        self.broker.stop()
-
-
 class Test_Logging_Connection_Result(unittest.TestCase):
 
     def setUp(self) -> None:
