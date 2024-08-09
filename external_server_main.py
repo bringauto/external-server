@@ -41,7 +41,6 @@ def parsed_script_args() -> argparse.Namespace:
         raise FileNotFoundError(f"Config file {args.config} not found")
     if args.tls:
         missing_fields = []
-        print(args)
         if not args.ca:
             missing_fields.append("ca certificate")
         if not args.cert:

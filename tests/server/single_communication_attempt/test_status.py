@@ -20,7 +20,7 @@ class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unit
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)
@@ -68,7 +68,7 @@ class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)
@@ -129,7 +129,7 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def test_connecting_state_connects_the_device_and_send_response(self, mock: Mock):
         self.es._known_devices.not_connected(self.device)

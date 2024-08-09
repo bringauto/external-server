@@ -232,8 +232,8 @@ class Test_Session_Time_Out(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             future = ex.submit(self.es._run_normal_communication)
-            time.sleep(self.es._session.timeout + 0.001)
-            self.assertTrue(self.es._session.timeout_event.is_set())
+            time.sleep(self.es._mqtt_session.timeout + 0.001)
+            self.assertTrue(self.es._mqtt_session.timeout_event.is_set())
             with self.assertRaises(SessionTimeout):
                 future.result()
 
@@ -241,15 +241,15 @@ class Test_Session_Time_Out(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             ex.submit(self.es._run_normal_communication)
-            time.sleep(self.es._session.timeout / 2)
+            time.sleep(self.es._mqtt_session.timeout / 2)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic,
                 status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)),
             )
             time.sleep(
-                self.es._session.timeout / 2 + 0.01
+                self.es._mqtt_session.timeout / 2 + 0.01
             )  # in total, the sleep time exceeds the timeout
-            self.assertFalse(self.es._session.timeout_event.is_set())
+            self.assertFalse(self.es._mqtt_session.timeout_event.is_set())
 
     def test_session_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(
         self,
@@ -257,14 +257,14 @@ class Test_Session_Time_Out(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             ex.submit(self.es._run_normal_communication)
-            time.sleep(self.es._session.timeout / 2)
+            time.sleep(self.es._mqtt_session.timeout / 2)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic, cmd_response("session_id", 1, CommandResponse.OK)
             )
             time.sleep(
-                self.es._session.timeout / 2 + 0.02
+                self.es._mqtt_session.timeout / 2 + 0.02
             )  # in total, the sleep time exceeds the timeout
-            self.assertFalse(self.es._session.timeout_event.is_set())
+            self.assertFalse(self.es._mqtt_session.timeout_event.is_set())
 
     def tearDown(self) -> None:
         self.broker.stop()
@@ -486,7 +486,7 @@ class Test_Handling_Command(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_commands: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_commands.append(msg)
@@ -545,7 +545,7 @@ class Test_Response_Session_ID(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def test_status_response_is_not_sent_if_session_id_of_status_does_not_match_current_session(self):
         with self.assertLogs(_eslogger, logging.ERROR):
@@ -562,7 +562,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)

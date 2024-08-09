@@ -188,16 +188,14 @@ class MQTTClientAdapter:
             )
 
     def get_connect_message(self) -> _Connect | None:
-        """Get expected connect message from MQTT client.
-
-        Raise an exception if the message is not received or is not a connect message.
-        """
-        _logger.info("Expecting a connect message.")
+        """"""
         msg = self._get_message()
         while msg is False:
             if self.is_connected:
-                _logger.warning("Disconnect message from connecting client will be skipped. "
-                              "Repeating message retrieval.")
+                _logger.warning(
+                    "Disconnect message from connecting client will be skipped. "
+                    "Repeating message retrieval."
+                )
             msg = self._get_message()
         if msg is None:
             if self.is_connected:

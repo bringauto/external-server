@@ -3,6 +3,7 @@ import time
 import sys
 import enum
 import logging
+from typing import Any
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -15,7 +16,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.checkers import CommandChecker, MQTTSession, StatusChecker
-from external_server.models.exceptions import (
+from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
     CommunicationException,
     StatusTimeout,
@@ -87,16 +88,19 @@ ExternalClientMessage = _Connect | _Status | _CommandResponse
 
 
 class ExternalServer:
+
     def __init__(self, config: ServerConfig) -> None:
         self._running = False
         self._config = config
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
-        self._session = MQTTSession(self._config.mqtt_timeout)
-        self._status_checker = StatusChecker(self._config.timeout)
-        self._command_checker = CommandChecker(self._config.timeout)
+
+        self._mqtt_session = MQTTSession(self._config.mqtt_timeout)
         self._mqtt = self.mqtt_adapter_from_config(config)
+        self._status_checker = StatusChecker(self._config.timeout)
+
+        self._command_checker = CommandChecker(self._config.timeout)
         self._modules = self._initialized_modules(config)
 
     @property
@@ -112,7 +116,7 @@ class ExternalServer:
     @property
     def session_id(self) -> str:
         """Return an ID of the current session."""
-        return self._session.id
+        return self._mqtt_session.id
 
     @property
     def state(self) -> ServerState:
@@ -125,7 +129,7 @@ class ExternalServer:
         if msg is None:
             raise ConnectSequenceFailure("Connect message has not been received")
         if self.state != ServerState.STOPPED:
-            self._session.set_id(msg.sessionId)
+            self._mqtt_session.set_id(msg.sessionId)
             for device in msg.devices:
                 self._connect_device_if_supported(device)
             self._publish_connect_response(_ConnectResponse.OK)
@@ -150,7 +154,7 @@ class ExternalServer:
             module = self._modules[device.module]
             if not module.is_device_supported(device):
                 self.warn_device_not_supported_by_module(module, device)
-            elif status_obj.sessionId != self._session.id:
+            elif status_obj.sessionId != self._mqtt_session.id:
                 logger.warning("Received status with different session ID. Skipping.")
             else:
                 k += 1
@@ -212,6 +216,26 @@ class ExternalServer:
         """Store the device as not connected for further handling of received messages and messages to be sent to it."""
         self._known_devices.not_connected(DevicePy.from_device(device))
 
+    def _car_message_from_mqtt(self) -> _ExternalClientMsg:
+        """Get the next message from the MQTT broker.
+
+        Raise exception if there is no message or the message is not a valid `ExternalClient` message.
+        """
+        message = self._mqtt._get_message()
+        if message is None:
+            raise NoPublishedMessage("Expected message from car, but did not received any.")
+        elif message is False:
+            raise UnexpectedMQTTDisconnect("MQTT client disconnected unexpectedly")
+        return message
+
+    def _check_and_handle_available_commands(self, module_id: Any) -> None:
+        """Check if there are any commands available for the module and process them."""
+        if not isinstance(module_id, int):
+            raise ValueError(f"Invalid module ID: {module_id}.")
+        cmd = self._get_api_command(module_id)
+        if cmd is not None:
+            self._handle_command(module_id, cmd)
+
     def _check_at_least_one_device_is_connected(self) -> None:
         """Raise an exception if all devices have been disconnected."""
         if self._known_devices.n_connected == 0:
@@ -232,7 +256,7 @@ class ExternalServer:
         """
         self._mqtt.disconnect()
         self._command_checker.reset()
-        self._session.stop()
+        self._mqtt_session.stop()
         self._status_checker.reset()
         for device in self._known_devices.list_connected():
             module_adapter = self._modules[device.module_id].api
@@ -287,18 +311,16 @@ class ExternalServer:
 
         No action is taken if the device is already connected.
         """
+        drepr = device_repr(device)
         if self._known_devices.is_connected(device):
-            logger.error(f"Device {device_repr(device)} already connected.")
+            logger.error(f"Device {drepr} already connected.")
         else:
             code = self._modules[device.module].api.device_connected(device)
             if code == GeneralErrorCode.OK:
                 self._add_connected_device(device)
-                logger.info(f"Connected device {device_repr(device)}.")
+                logger.info(f"Connected device {drepr}.")
                 return True
-            else:
-                logger.error(
-                    f"Device {device_repr(device)} could not connect. Response code: {code}"
-                )
+            logger.error(f"Device {drepr} could not connect. Response code: {code}")
         return False
 
     def _connect_device_if_supported(self, device: _Device) -> None:
@@ -352,7 +374,7 @@ class ExternalServer:
         commands = self._collect_first_commands_for_init_sequence()
         for cmd in commands:
             self._command_checker.add(cmd)
-            ext_cmd = cmd.external_command(self._session.id)
+            ext_cmd = cmd.external_command(self._mqtt_session.id)
             self._mqtt.publish(ext_cmd, f"Sending command (counter={cmd.counter}).")
 
     def _get_first_commands_responses(self) -> None:
@@ -381,14 +403,16 @@ class ExternalServer:
         """
         while (response := self._mqtt._get_message()) is not None:
             if isinstance(response, _ExternalClientMsg) and response.HasField("commandResponse"):
-                if response.commandResponse.sessionId == self._session.id:
+                if response.commandResponse.sessionId == self._mqtt_session.id:
                     logger.info(f"Received a command response.")
                     return response.commandResponse
                 else:
                     logger.error("Skipping command response with different session ID.")
             else:
                 # ignore other messages
-                logger.error(f"Expected command response, received other type of external client message. Skipping")
+                logger.error(
+                    f"Expected command response, received other type of external client message. Skipping"
+                )
         # response is None
         error_msg = "Command response has not been received."
         logger.error(error_msg)
@@ -396,7 +420,7 @@ class ExternalServer:
 
     def _handle_connect(self, connect_msg: _Connect) -> None:
         """Handle connect message received during normal communication, i.e., after init sequence."""
-        if connect_msg.sessionId == self._session.id:
+        if connect_msg.sessionId == self._mqtt_session.id:
             logger.error("Received connect message with ID of already existing session.")
             self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
         else:
@@ -432,7 +456,7 @@ class ExternalServer:
                 case _Status.DISCONNECT:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
                 case _:  # unhandled state
-                    pass
+                    logger.error(f"Received status with unknown state: {status.deviceState}.")
             self._log_status_error(status, device)
             if status_ok:
                 self._forward_status(status, module)
@@ -445,7 +469,6 @@ class ExternalServer:
             logger.warning(f"Sending command to a not connected device ({device_repr(device)}).")
         if not cmd_data:
             logger.warning(f"Data of command for device {device_repr(device)} is empty.")
-
         if device.module == module_id:
             self._publish_command(cmd_data, device)
         else:
@@ -484,53 +507,30 @@ class ExternalServer:
         """
         match event.event:
             case EventType.CAR_MESSAGE_AVAILABLE:
-                try:
-                    self._handle_car_message()
-                except NoPublishedMessage:
-                    logger.error("No message from MQTT broker.")
-                except UnexpectedMQTTDisconnect:
-                    logger.error("Unexpected disconnection of MQTT broker.")
-                except Exception as e:
-                    logger.error(f"Error occurred when retrieving message from MQTT client. {e}")
+                self._handle_car_message()
             case EventType.COMMAND_AVAILABLE:
-                module_id = event.data
-                if not isinstance(module_id, int):
-                    logger.error("Internal error: Event CommandAvailable without module ID.")
-                else:
-                    cmd = self._get_api_command(module_id)
-                    if cmd is not None:
-                        self._handle_command(module_id, cmd)
+                self._check_and_handle_available_commands(event.data)
             case EventType.MQTT_BROKER_DISCONNECTED:
                 if self._running:
                     raise CommunicationException("Unexpected disconnection of MQTT broker.")
             case EventType.TIMEOUT_OCCURRED:
-                match event.data:
-                    case TimeoutType.SESSION_TIMEOUT:
-                        logger.error("Session timeout occurred.")
-                        raise SessionTimeout()
-                    case TimeoutType.MESSAGE_TIMEOUT:
-                        logger.error("Status timeout occurred.")
-                        raise StatusTimeout()
-                    case TimeoutType.COMMAND_TIMEOUT:
-                        logger.error("Command response timeout occurred.")
-                        raise CommandResponseTimeout()
-                    case _:
-                        logger.error("Internal error: Event TimeoutOccurred without TimeoutType.")
-                        raise CommunicationException("Internal error: Timeout event without type.")
+                self._handle_timeout_event(event.data)
             case _:
-                pass
+                logger.error("Uknown event during normal communication. Ignoring.")
 
-    def _car_message_from_mqtt(self) -> _ExternalClientMsg:
-        """Get the next message from the MQTT broker.
-
-        Raise exception if there is no message or the message is not a valid `ExternalClient` message.
-        """
-        message = self._mqtt._get_message()
-        if message is None:
-            raise NoPublishedMessage
-        elif message is False:
-            raise UnexpectedMQTTDisconnect
-        return message
+    def _handle_timeout_event(self, timeout_type: Any) -> None:
+        """Handle the timeout event and put it in the event queue."""
+        if not isinstance(timeout_type, TimeoutType):
+            raise CommunicationException("Timeout event occured, but without type.")
+        match timeout_type:
+            case TimeoutType.SESSION_TIMEOUT:
+                raise SessionTimeout("MQTT Session timeout occurred. No message received in time.")
+            case TimeoutType.STATUS_TIMEOUT:
+                raise StatusTimeout("Some skipped statuses were not received in time.")
+            case TimeoutType.COMMAND_RESPONSE_TIMEOUT:
+                raise CommandResponseTimeout("Some command responses were not received in time.")
+            case _:
+                raise CommunicationException(f"Timeout event with unknown type: {timeout_type}.")
 
     def _handle_car_message(self) -> None:
         """Handle the message received from the MQTT broker during normal communication."""
@@ -539,13 +539,13 @@ class ExternalServer:
             # This message is not expected outside of a init sequence
             self._handle_connect(message.connect)
         elif message.HasField("status"):
-            if self._session.id == message.status.sessionId:
+            if self._mqtt_session.id == message.status.sessionId:
                 self._reset_session_checker()
                 self._handle_status(message.status)
             else:
                 logger.warning("Ignoring status with different session ID.")
         elif message.HasField("commandResponse"):
-            if self._session.id == message.commandResponse.sessionId:
+            if self._mqtt_session.id == message.commandResponse.sessionId:
                 self._reset_session_checker()
                 self._handle_command_response(message.commandResponse)
             else:
@@ -637,26 +637,25 @@ class ExternalServer:
 
     def _publish_connect_response(self, response_type: int) -> None:
         """Publish the connect response message to the MQTT broker on publish topic."""
-        msg = _connect_response(self._session.id, response_type)
+        msg = _connect_response(self._mqtt_session.id, response_type)
         logger.info(f"Sending connect response of type {response_type}")
         self._mqtt.publish(msg)
 
     def _publish_status_response(self, status: _Status) -> None:
         """Publish the status response message to the MQTT broker on publish topic."""
-        if status.sessionId != self._session.id:
+        if status.sessionId != self._mqtt_session.id:
             logger.error(
                 "Status session ID does not match current session ID of the server. Status response"
                 f" to the device {device_repr(status.deviceStatus.device)} will not be sent."
             )
         else:
-            status_response = _status_response(self._session.id, status.messageCounter)
+            status_response = _status_response(self._mqtt_session.id, status.messageCounter)
             logger.info(f"Sending status response of type {status_response.statusResponse.type}")
             self._mqtt.publish(status_response)
 
-
     def _reset_session_checker(self) -> None:
         """Reset the session checker's timer."""
-        self._session.reset_timer()
+        self._mqtt_session.reset_timer()
 
     def _run_initial_sequence(self) -> None:
         """Ensure connection to MQTT broker and run the initial sequence.
@@ -675,7 +674,7 @@ class ExternalServer:
         """Start the normal communication over MQTT. An init sequence must have been completed successfully."""
         if not self.state == ServerState.INITIALIZED:
             raise ConnectSequenceFailure("Cannot start communication after init sequence failed.")
-        self._session.start()
+        self._mqtt_session.start()
         self._set_state(ServerState.RUNNING)
         while self.state != ServerState.STOPPED:
             try:

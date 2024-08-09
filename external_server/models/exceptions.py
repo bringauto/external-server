@@ -10,25 +10,20 @@ class CommunicationException(Exception):
 
 
 class UnexpectedMQTTDisconnect(CommunicationException):
-    def __init__(self) -> None:
-        super().__init__("MQTT client disconnected unexpectedly")
+    pass
 
 
 class NoPublishedMessage(CommunicationException):
-    def __init__(self) -> None:
-        super().__init__("No message from MQTT broker")
+    pass
 
 
 class SessionTimeout(CommunicationException):
-    def __init__(self) -> None:
-        super().__init__("Message has not been received in time.")
+    pass
 
 
 class CommandResponseTimeout(CommunicationException):
-    def __init__(self) -> None:
-        super().__init__("Command response message has not been received in time")
+    pass
 
 
 class StatusTimeout(CommunicationException):
-    def __init__(self) -> None:
-        super().__init__("Status messages has not been received in time")
+    pass

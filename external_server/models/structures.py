@@ -19,8 +19,8 @@ Counter = int
 
 class TimeoutType(IntEnum):
     SESSION_TIMEOUT = 0
-    MESSAGE_TIMEOUT = 1
-    COMMAND_TIMEOUT = 2
+    STATUS_TIMEOUT = 1
+    COMMAND_RESPONSE_TIMEOUT = 2
 
 
 # Enum taken from general_error_codes.h in Fleet protocol,

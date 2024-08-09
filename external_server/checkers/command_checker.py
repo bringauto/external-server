@@ -80,7 +80,7 @@ class CommandChecker(_Checker):
     """
 
     def __init__(self, timeout: float) -> None:
-        super().__init__(_TimeoutType.COMMAND_TIMEOUT, timeout=timeout)
+        super().__init__(_TimeoutType.COMMAND_RESPONSE_TIMEOUT, timeout=timeout)
         self._commands = CommandQueue()
         self._missed_counter_vals: list[_Counter] = []
         self._counter = 0

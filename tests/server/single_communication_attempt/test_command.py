@@ -23,7 +23,7 @@ class Test_Handling_Command(unittest.TestCase):
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.es.mqtt.connect()
         self.es._add_connected_device(self.device_1)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     @patch("external_server.checkers.command_checker.CommandQueue.get")
     def test_missing_expected_commands_response_raises_exception(self, mock: Mock):
@@ -43,7 +43,7 @@ class Test_Handling_Command_Response(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_device(self.device)
-        self.es._session.set_id("session_id")
+        self.es._mqtt_session.set_id("session_id")
 
     def test_to_sent_command_logs_info_and_empties_checked_commands(self):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))

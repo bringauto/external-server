@@ -25,7 +25,7 @@ class StatusChecker(_Checker):
     DEFAULT_INIT_COUNTER = 1
 
     def __init__(self, timeout: float) -> None:
-        super().__init__(_TimeoutType.MESSAGE_TIMEOUT, timeout=timeout)
+        super().__init__(_TimeoutType.STATUS_TIMEOUT, timeout=timeout)
         # priority queues instead of ordinary queues ensure the statuses are stored in ascending
         # order of their counter values
         self._received: _PriorityQueue[QueuedStatus] = _PriorityQueue()

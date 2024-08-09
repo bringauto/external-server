@@ -5,16 +5,13 @@ import concurrent.futures as futures
 
 sys.path.append(".")
 
-from external_server.server import ServerState, logger
+from external_server.server import ServerState
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server.models.devices import DevicePy
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.models.messages import connect_msg, status, cmd_response
-
-
-logger.setLevel("DEBUG")
 
 
 class Test_Initial_State(unittest.TestCase):
