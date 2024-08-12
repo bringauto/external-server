@@ -1,9 +1,9 @@
 [submodule "lib/fleet-protocol"]
 	path = lib/fleet-protocol
 	url = https://github.com/bringauto/fleet-protocol.git
-[submodule "lib/mqtt-testing"]
-	path = lib/mqtt-testing
-	url = https://github.com/eclipse/paho.mqtt.testing.git
 [submodule "tests/utils/example_module"]
 	path = tests/utils/example_module
 	url = https://github.com/bringauto/example-module/
+[submodule "tests/utils/mqtt-testing"]
+	path = tests/utils/mqtt-testing
+	url = https://github.com/eclipse/paho.mqtt.testing.git

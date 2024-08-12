@@ -33,7 +33,7 @@ class MQTTBrokerTest:
         self._port = port
         self._host = self._DEFAULT_HOST
         self._script_path = os.path.join(
-            _EXTERNAL_SERVER_PATH, "lib/mqtt-testing/interoperability/startbroker.py"
+            _EXTERNAL_SERVER_PATH, "tests/utils/mqtt-testing/interoperability/startbroker.py"
         )
         if start:
             self.start()
