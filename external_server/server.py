@@ -628,6 +628,7 @@ class ExternalServer:
         # the following has to be called before publishing in order to assign counter to the command
         self._command_checker.add(handled_cmd)
         logger.info(f"Sending command, counter = {handled_cmd.counter}")
+        logger.debug(f"Command data: {data.decode()}")
         self._mqtt.publish(handled_cmd.external_command(self.session_id))
 
     def _publish_connect_response(self, response_type: int) -> None:
