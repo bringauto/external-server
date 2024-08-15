@@ -148,6 +148,7 @@ class MQTTClientAdapter:
         try:
             code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
             if code == mqtt.MQTT_ERR_SUCCESS:
+                self._set_up_callbacks()
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
                 self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
@@ -350,10 +351,8 @@ class MQTTClientAdapter:
         """
         start = time.time()
         timeout_ms = max(timeout, 0) * 1000
-        _logger.debug("Waiting for connection to be established.")
         while time.time() - start < timeout_ms:
             if self.is_connected:
-                _logger.debug("Connected to MQTT broker.")
                 return True
             time.sleep(0.01)
         return False

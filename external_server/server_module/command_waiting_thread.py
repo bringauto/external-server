@@ -7,10 +7,7 @@ import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.models.structures import (
-    EsErrorCode as _EsErrorCode,
-    GeneralErrorCode as _GeneralErrorCode,
-)
+from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api_adapter import APIClientAdapter  # type: ignore
 from external_server.models.events import EventQueueSingleton, EventType
 
@@ -79,20 +76,20 @@ class CommandWaitingThread:
 
         # The function is made public in order to be used in unit tests
         rc = self._api_adapter.wait_for_command(self._timeout_ms)
-        if rc == _GeneralErrorCode.OK:
+        if rc == GeneralErrorCode.OK:
             self._save_available_commands()
-        elif rc == _EsErrorCode.TIMEOUT:
+        elif rc == EsErrorCode.TIMEOUT:
             pass
         else:
             logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
 
     def _save_available_commands(self) -> None:
         """Save the available commands in the queue."""
-        code = 1
-        while code > 0:
-            command, device, code = self._api_adapter.pop_command()
-            if code < 0:
-                logger.error(f"Error in pop_command function in API. Code: {code}")
+        remaining_commands = 1
+        while remaining_commands > 0:
+            command, device, remaining_commands = self._api_adapter.pop_command()
+            if remaining_commands < 0:
+                logger.error(f"Error in pop_command function in API. Code: {remaining_commands}")
             else:
                 with self._commands_lock, self._connection_established_lock:
                     if not self._module_connected():

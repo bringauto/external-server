@@ -11,11 +11,11 @@ from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
 )
 from external_server.models.structures import (
-    Buffer,
     Config,
+    KeyValue,
+    Buffer,
     DeviceIdentification,
     DisconnectTypes,
-    KeyValue,
 )
 from external_server.config import ModuleConfig
 from external_server.models.structures import (
@@ -79,11 +79,7 @@ class APIClientAdapter:
         """
         if not os.path.isfile(self._lib_path):
             raise FileNotFoundError(self._lib_path)
-        try:
-            _logger.debug(f"Loading library from {self._lib_path}")
-            self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
-        except Exception as e:
-            raise RuntimeError(e)
+        self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
         self._type_all_function()
         self._set_context()
         if not self._context:
@@ -267,7 +263,6 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        _logger.debug(f"Forwarding status to module {device.module}")
         device_identification = self._create_device_identification(device)
         status_buffer = Buffer(data=status_bytes, size=len(status_bytes))
         with self._lock:
@@ -275,7 +270,6 @@ class APIClientAdapter:
                 status_buffer, device_identification, self._context
             )
             self._check_forward_status_code(device.module, code)
-            _logger.debug(f"Status forwarded to module {device.module}. Return code: {code}")
             return code
 
     def forward_error_message(self, device: _Device, error_bytes: bytes) -> ReturnCode:

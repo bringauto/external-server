@@ -42,7 +42,7 @@
       "handlers": ["console", "file"],
       "propagate": false
     },
-    "external_server.adapters.api_adapter": {
+    "external_server.adapters.api_client": {
       "level": "DEBUG",
       "handlers": ["console", "file"],
       "propagate": false
