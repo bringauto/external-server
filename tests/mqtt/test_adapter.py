@@ -11,7 +11,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
 
 from queue import Empty
-from external_server.adapters.mqtt_adapter import (  # type: ignore
+from external_server.adapters.mqtt.adapter import (  # type: ignore
     ClientConnectionState,
     create_mqtt_client,
     MQTTClientAdapter,
@@ -406,7 +406,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
         MQTTBrokerTest.kill_all_test_brokers()
 
 
-@patch("external_server.adapters.mqtt_adapter.Queue.get")
+@patch("external_server.adapters.mqtt.adapter.Queue.get")
 class Test_Getting_Message(unittest.TestCase):
 
     def setUp(self) -> None:

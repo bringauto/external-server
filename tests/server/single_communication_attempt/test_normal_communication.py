@@ -478,7 +478,7 @@ class Test_Command_Response(unittest.TestCase):
         self.broker.stop()
 
 
-@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+@patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
 class Test_Handling_Command(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -572,7 +572,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         with self.assertRaises(NoPublishedMessage):
             self.es._handle_car_message()
 
-    @patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+    @patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
     def test_connect_message_logs_error_and_produces_connect_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es.mqtt._received_msgs.put(

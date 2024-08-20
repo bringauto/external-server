@@ -8,7 +8,7 @@ sys.path.append(".")
 from pydantic import FilePath
 from external_server.config import Config, ModuleConfig
 from external_server.server import ExternalServer
-from external_server.adapters.mqtt_adapter import MQTTClientAdapter
+from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, ES_CONFIG_WITHOUT_MODULES
 
 

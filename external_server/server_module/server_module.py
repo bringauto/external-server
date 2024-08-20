@@ -1,7 +1,7 @@
 from typing import Callable
 import logging
 
-from external_server.adapters.api_adapter import APIClientAdapter as _ApiAdapter
+from external_server.adapters.api.adapter import APIClientAdapter as _ApiAdapter
 from external_server.server_module.command_waiting_thread import CommandWaitingThread as _CommandWaitingThread
 from external_server.config import ModuleConfig as _ModuleConfig
 from InternalProtocol_pb2 import Device as _Device  # type: ignore

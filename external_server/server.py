@@ -29,7 +29,7 @@ from external_server.models.messages import (
     connect_response as _connect_response,
     status_response as _status_response,
 )
-from external_server.adapters.mqtt_adapter import MQTTClientAdapter
+from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from external_server.config import Config as ServerConfig
 from external_server.models.structures import (
     GeneralErrorCode,

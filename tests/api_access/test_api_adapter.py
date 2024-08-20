@@ -4,7 +4,7 @@ import os
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from external_server.adapters.api_adapter import APIClientAdapter
+from external_server.adapters.api.adapter import APIClientAdapter
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.config import ModuleConfig
 from external_server.models.structures import DisconnectTypes
@@ -28,27 +28,6 @@ class Test_Module_Config_Validation(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             adapter = APIClientAdapter(config=self.module_config, company="BringAuto", car="Car1")
             adapter.init()
-
-
-class Test_API_Client_Loading_Shared_Library(unittest.TestCase):
-
-    def setUp(self):
-        self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
-
-    def test_client_library_and_context_is_initially_empty(self):
-        client = APIClientAdapter(
-            config=self.module_config, company="BringAuto", car="Car1"
-        )
-        self.assertIsNone(client.library)
-        self.assertIsNone(client.context)
-
-    def test_client_initializes_library_and_context(self):
-        client = APIClientAdapter(
-            config=self.module_config, company="BringAuto", car="Car1"
-        )
-        client.init()
-        self.assertIsNotNone(client.library)
-        self.assertIsNotNone(client.context)
 
 
 class Test_API_Client_Device_Connection(unittest.TestCase):

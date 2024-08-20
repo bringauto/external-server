@@ -133,7 +133,7 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         self.broker.stop()
 
 
-@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter._get_message")
+@patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter._get_message")
 class Test_Next_Valid_Command_Response(unittest.TestCase):
 
     def setUp(self) -> None:

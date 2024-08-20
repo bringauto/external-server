@@ -12,7 +12,7 @@ from tests.utils import get_test_server
 from external_server.models.messages import status, status_response
 
 
-@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+@patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
 class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -60,7 +60,7 @@ class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unit
         self.assertEqual(self.published_responses, [status_response("session_id", 1)])
 
 
-@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+@patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
 class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -118,7 +118,7 @@ class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
         self.es.stop()
 
 
-@patch("external_server.adapters.mqtt_adapter.MQTTClientAdapter.publish")
+@patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
 class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
 
     def publish(self, msg: ExternalServerMsg) -> None:
