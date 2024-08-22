@@ -104,6 +104,11 @@ class ExternalServer:
         self._modules = self._initialized_modules(config)
 
     @property
+    def sleep_time_before_next_attempt_to_connect(self) -> float:
+        """Sleep time before next attempt to connect to the MQTT broker in seconds."""
+        return self._config.sleep_duration_after_connection_refused
+
+    @property
     def mqtt(self) -> MQTTClientAdapter:
         """Return the MQTT client adapter."""
         return self._mqtt
@@ -123,21 +128,23 @@ class ExternalServer:
         """Return the state of the server."""
         return self._state
 
-    def get_and_handle_connect_message(self) -> None:
+    def _get_and_handle_connect_message(self) -> None:
         """Wait for a connect message. If there is none, raise an exception."""
         msg = self._mqtt.get_connect_message()
-        if msg is None:
+        if not isinstance(msg, _Connect):
             raise ConnectSequenceFailure("Connect message has not been received")
-        if self.state != ServerState.STOPPED:
+        elif not msg.devices:
+            raise ConnectSequenceFailure("Connect message does not contain any devices.")
+        else:
             self._mqtt_session.set_id(msg.sessionId)
             for device in msg.devices:
                 self._connect_device_if_supported(device)
             self._publish_connect_response(_ConnectResponse.OK)
 
-    def get_all_first_statuses_and_respond(self) -> None:
-        """Wait for first status from each of all known devices and send responses.
+    def _get_all_first_statuses_and_respond(self) -> None:
+        """Wait for first status from each of all known devices and send status response.
 
-        The order of the status is expected to match the order of the devices in the
+        The order of the statuses is expected to match the order of the devices in the
         connect message.
         """
         k = 0
@@ -149,6 +156,8 @@ class ExternalServer:
             logger.info(f"Waiting for status message {k + 1} of {n}.")
             status_obj = self._mqtt.get_status()
             if status_obj is None:
+                if not self._running:
+                    return
                 raise ConnectSequenceFailure("First status from device has not been received.")
             status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
             module = self._modules[device.module]
@@ -173,10 +182,12 @@ class ExternalServer:
 
                 self._publish_status_response(status_obj)
 
-    def send_first_commands_and_get_responses(self) -> None:
+    def _send_first_commands_and_get_responses(self) -> None:
         """Send first command to each of all known connected and not connected devices.
         Raise exception if any command response is not received.
         """
+        if not self._running:
+            return
         self._get_and_send_first_commands()
         self._get_first_commands_responses()
 
@@ -567,12 +578,16 @@ class ExternalServer:
                 raise ConnectSequenceFailure(
                     "Cannot start connect sequence without connection to MQTT broker."
                 )
-            self.get_and_handle_connect_message()
-            self.get_all_first_statuses_and_respond()
-            self.send_first_commands_and_get_responses()
+            if self.state == ServerState.STOPPED:
+                logger.info("Server has been stopped. Connect sequence will not be started.")
+                return
+            self._get_and_handle_connect_message()
+            self._get_all_first_statuses_and_respond()
+            self._send_first_commands_and_get_responses()
             self._set_state(ServerState.INITIALIZED)
+            if self._state == ServerState.INITIALIZED:
+                logger.info("Connect sequence has finished succesfully.")
             self._event_queue.clear()
-            logger.info("Connect sequence has finished succesfully")
         except Exception as e:
             msg = f"Connection sequence has failed. {e}"
             raise ConnectSequenceFailure(msg)
@@ -667,7 +682,9 @@ class ExternalServer:
 
     def _run_normal_communication(self) -> None:
         """Start the normal communication over MQTT. An init sequence must have been completed successfully."""
-        if not self.state == ServerState.INITIALIZED:
+        if self._state == ServerState.STOPPED:
+            return
+        elif not self.state == ServerState.INITIALIZED:
             raise ConnectSequenceFailure("Cannot start communication after init sequence failed.")
         self._mqtt_session.start()
         self._set_state(ServerState.RUNNING)

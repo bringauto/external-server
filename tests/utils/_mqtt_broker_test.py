@@ -17,6 +17,9 @@ with open("./config/logging.json", "r") as f:
     logging.config.dictConfig(json.load(f))
 
 
+logging.getLogger().setLevel(logging.ERROR)
+
+
 _EXTERNAL_SERVER_PATH = _external_server.PATH
 
 

@@ -26,9 +26,6 @@ from external_server.models.messages import (
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest, ExternalServerThreadExecutor
 
 
-logger.setLevel(logging.DEBUG)
-
-
 ES_CONFIG_WITHOUT_MODULES = {
     "company_name": "ba",
     "car_name": "car1",
@@ -37,14 +34,14 @@ ES_CONFIG_WITHOUT_MODULES = {
     "mqtt_timeout": 1,
     "timeout": 1,
     "send_invalid_command": False,
-    "sleep_duration_after_connection_refused": 2,
+    "sleep_duration_after_connection_refused": 1,
     "log_files_directory": ".",
     "log_files_to_keep": 5,
     "log_file_max_size_bytes": 100000,
 }
 
 
-def publish_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *payload: str):
+def mock_publishing_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *payload: str):
     """This mocks publishing a message by an External Client."""
     payload_str = [
         p.SerializeToString() if isinstance(p, _ExternalClientMsg) else p for p in payload
@@ -62,11 +59,29 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.executor = ExternalServerThreadExecutor(self.es)
         time.sleep(0.1)
 
+    def test_connect_message_with_no_devices_has_no_effect(self):
+        payload = connect_msg("some_id", company="ba", car="car1", devices=[])
+        with self.executor as ex:
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            self.assertEqual(self.es._known_devices.n_all, 0)
+
+    def test_second_connect_message_with_containg_supported_device_adds_it_to_connected_devices(self):
+        device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        payload_1 = connect_msg("some_id", company="ba", car="car1", devices=[])
+        payload_2 = connect_msg("some_id", company="ba", car="car1", devices=[device])
+        with self.executor as ex:
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload_1.SerializeToString())
+            self.assertEqual(self.es._known_devices.n_all, 0)
+            time.sleep(self.es.sleep_time_before_next_attempt_to_connect)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload_2.SerializeToString())
+            self.assertTrue(self.es._known_devices.is_connected(device))
+            self.assertTrue(self.es._known_devices.is_known(device))
+
     def test_from_supported_device_adds_the_device_to_connected_devices(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertTrue(self.es._known_devices.is_connected(device))
             self.assertTrue(self.es._known_devices.is_known(device))
 
@@ -74,24 +89,22 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         device = _Device(module=1000, deviceType=1251, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg(session_id="some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
-            self.assertFalse(self.es._known_devices.is_connected(device))
-            self.assertFalse(self.es._known_devices.is_not_connected(device))
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            self.assertFalse(self.es._known_devices.is_known(device))
 
     def test_from_device_in_unsupported_module_does_not_add_the_device_to_known_devices(self):
         device = _Device(module=1100, deviceType=0, deviceName="TestDevice", deviceRole="test")
         payload = connect_msg(session_id="some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload)
-            self.assertFalse(self.es._known_devices.is_connected(device))
-            self.assertFalse(self.es._known_devices.is_not_connected(device))
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload)
+            self.assertFalse(self.es._known_devices.is_known(device))
 
     def test_from_multiple_devices_from_supported_module_adds_them_to_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
         device_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device_1, device_2])
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertTrue(self.es._known_devices.is_connected(device_1))
             self.assertTrue(self.es._known_devices.is_connected(device_2))
 
@@ -100,7 +113,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload)
             expected_resp = _ExternalServerMsg(
                 connectResponse=_ConnectResponse(sessionId="some_id")
             )
@@ -111,7 +124,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             expected_resp = _ExternalServerMsg(
                 connectResponse=_ConnectResponse(sessionId="some_id")
             )
@@ -122,7 +135,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         payload = connect_msg("some_id", company="ba", car="car1", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
-            ex.submit(publish_from_ext_client, self.es, self.broker, payload.SerializeToString())
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             expected_resp = _ExternalServerMsg(
                 connectResponse=_ConnectResponse(sessionId="some_id")
             )
@@ -146,9 +159,9 @@ class Test_Receiving_First_Status(unittest.TestCase):
         connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
         status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_1)
             m = response.result()[0]
             self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
@@ -161,9 +174,9 @@ class Test_Receiving_First_Status(unittest.TestCase):
         status_2 = status("some_id", _Status.CONNECTING, 1, _DeviceStatus(device=device_2))
         status_3 = status("some_id", _Status.CONNECTING, 2, _DeviceStatus(device=device_3))
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_1, status_2, status_3)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_1, status_2, status_3)
             for m in response.result():
                 self.assertEqual(m.payload, _status_response("some_id", 0).SerializeToString())
 
@@ -176,9 +189,9 @@ class Test_Receiving_First_Status(unittest.TestCase):
         with self.executor as ex:
             # the next thread will wait for the broker receiving the status response
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_1, status_2)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_1, status_2)
             self.assertEqual(
                 response.result()[0].payload, _status_response("some_id", 0).SerializeToString()
             )
@@ -202,10 +215,10 @@ class Test_Command_Response(unittest.TestCase):
         status_1 = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         command_response = cmd_response("some_id", 0, _CommandResponse.OK)
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt.subscribe_topic, n=2)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_1)
-            ex.submit(publish_from_ext_client, self.es, self.broker, command_response)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_1)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, command_response)
             received_msgs = response.result()
             self.assertEqual(len(received_msgs), 2)
             self.assertEqual(received_msgs[0].payload, status_1.SerializeToString())
@@ -232,12 +245,12 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         connect_payload = connect_msg("some_id", "ba", "car1", [device_1])
         delayed_status = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             time.sleep(self.timeout + 0.1)
             # connect sequence is repeated
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response_1 = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=2)
-            ex.submit(publish_from_ext_client, self.es, self.broker, delayed_status)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, delayed_status)
             msg_1, msg_2 = _ExternalServerMsg(), _ExternalServerMsg()
             msg_1.ParseFromString(response_1.result()[0].payload)
             msg_2.ParseFromString(response_1.result()[1].payload)
@@ -252,13 +265,13 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         status_payload = status("some_id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         cmd_response_payload = cmd_response("some_id", 0, _CommandResponse.OK)
         with self.executor as ex:
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_payload)
             time.sleep(self.timeout + 0.1)
             # connect sequence is repeated
-            ex.submit(publish_from_ext_client, self.es, self.broker, connect_payload)
-            ex.submit(publish_from_ext_client, self.es, self.broker, status_payload)
-            ex.submit(publish_from_ext_client, self.es, self.broker, cmd_response_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_payload)
+            ex.submit(mock_publishing_from_ext_client, self.es, self.broker, cmd_response_payload)
 
     def tearDown(self) -> None:
         self.broker.stop()

@@ -35,4 +35,6 @@ def get_test_server(mqtt_timeout: float = -1, timeout: float = -1) -> ExternalSe
         config.mqtt_timeout = mqtt_timeout
     if timeout > 0:
         config.timeout = timeout
-    return ExternalServer(config=config)
+    es = ExternalServer(config=config)
+    es.mqtt.client.disable_logger()
+    return es
