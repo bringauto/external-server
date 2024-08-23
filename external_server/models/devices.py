@@ -2,6 +2,11 @@ from __future__ import annotations
 import dataclasses
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from InternalProtocol_pb2 import DeviceStatus as _DeviceStatus  # type: ignore
+
+
+def device_status(device: _Device, status_data: bytes = b"") -> _DeviceStatus:
+    return _DeviceStatus(device=device, statusData=status_data)
 
 
 @dataclasses.dataclass(frozen=True)

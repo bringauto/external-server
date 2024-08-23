@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 import logging
 import sys
+import time
 
 sys.path.append(".")
 
@@ -10,6 +11,7 @@ from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from external_server.server import logger as _eslogger
 from tests.utils import get_test_server
 from external_server.models.messages import status, status_response
+from tests.utils._mqtt_broker_test import MQTTBrokerTest
 
 
 @patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")
@@ -160,6 +162,41 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
             )
             self.assertIn("not connected", cm.output[0])
             self.assertEqual(self.published_responses, [])
+
+
+@patch("external_server.adapters.api.module_lib.ModuleLibrary.forward_status")
+class Test_Forwarding_Status(unittest.TestCase):
+
+    def forward_status(self, buffer: bytes, device: Device) -> int:
+        self.forwarded_statuses.append((buffer, device))
+        return 0
+
+    def setUp(self):
+        self.es = get_test_server()
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+        self.es._add_connected_device(self.device)
+        self.es._mqtt_session.set_id("session_id")
+        self.forwarded_statuses = list()
+
+    def test_status_from_supported_device_is_forwarded(self, mock: Mock):
+        mock.side_effect = self.forward_status
+        self.es._handle_checked_status(
+            status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
+        )
+        time.sleep(1)
+        self.assertEqual(len(self.forwarded_statuses), 1)
+
+    def test_status_from_unsupported_device_is_not_forwarded(self, mock: Mock):
+        mock.side_effect = self.forward_status
+        unsup_device = Device(module=1000, deviceType=11111, deviceName="TestDevice", deviceRole="test")
+        self.es._handle_checked_status(
+            status("session_id", Status.RUNNING, 1, DeviceStatus(device=unsup_device)).status
+        )
+        time.sleep(1)
+        self.assertEqual(len(self.forwarded_statuses), 0)
+
+    def tearDown(self) -> None:
+        self.es.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover

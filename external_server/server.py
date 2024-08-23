@@ -14,7 +14,10 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from InternalProtocol_pb2 import (    # type: ignore
+    Device as _Device,
+    DeviceStatus as _DeviceStatus
+)
 from external_server.checkers import CommandChecker, MQTTSession, StatusChecker
 from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
@@ -136,10 +139,14 @@ class ExternalServer:
         elif not msg.devices:
             raise ConnectSequenceFailure("Connect message does not contain any devices.")
         else:
-            self._mqtt_session.set_id(msg.sessionId)
-            for device in msg.devices:
-                self._connect_device_if_supported(device)
-            self._publish_connect_response(_ConnectResponse.OK)
+            self._handle_init_connect(msg)
+
+    def _handle_init_connect(self, msg: _Connect) -> None:
+        self._mqtt_session.set_id(msg.sessionId)
+        devices = list(msg.devices)
+        for device in devices:
+            self._connect_device_if_supported(device)
+        self._publish_connect_response(_ConnectResponse.OK)
 
     def _get_all_first_statuses_and_respond(self) -> None:
         """Wait for first status from each of all known devices and send status response.
@@ -149,7 +156,8 @@ class ExternalServer:
         """
         k = 0
         n = self._known_devices.n_all
-        _counter_initialized = False
+        self._status_checker.allow_counter_reset()
+        ok_statuses: list[_Status] = []
         while k < n:
             # after the loop is finished, all supported devices received status response
             # and are expected to accept a first command
@@ -166,21 +174,21 @@ class ExternalServer:
             elif status_obj.sessionId != self._mqtt_session.id:
                 logger.warning("Received status with different session ID. Skipping.")
             else:
-                k += 1
-                if not _counter_initialized:
-                    self._status_checker.initialize_counter(status_obj.messageCounter + 1)
-
                 self.check_device_is_in_connecting_state(status_obj)
                 status, device = status_obj.deviceStatus, status_obj.deviceStatus.device
                 self._log_new_status(status_obj)
-
-                if self._known_devices.is_not_connected(device):
+                if self._known_devices.is_connected(device):
+                    k += 1
+                elif self._known_devices.is_not_connected(device):
                     logger.warning(f"Status from not connected device {device_repr(device)}.")
-                if status_obj.errorMessage:
-                    module.api.forward_error_message(device, status_obj.errorMessage)
-                module.api.forward_status(device, status.statusData)
-
                 self._publish_status_response(status_obj)
+                ok_statuses.append(status_obj)
+
+        for status in ok_statuses:
+            module = self._modules[status.deviceStatus.device.module]
+            module.api.forward_status(device, status.deviceStatus.statusData)
+            if status.errorMessage:
+                module.api.forward_error_message(device, status.errorMessage)
 
     def _send_first_commands_and_get_responses(self) -> None:
         """Send first command to each of all known connected and not connected devices.
@@ -673,10 +681,12 @@ class ExternalServer:
         Raise an exception if the sequence fails
         """
         try:
+            self._running = True
             self._set_state(ServerState.UNINITIALIZED)
             self._ensure_connection_to_broker()
             self._init_sequence()
         except Exception as e:
+            self._running = False
             self._set_state(ServerState.ERROR)
             raise e
 

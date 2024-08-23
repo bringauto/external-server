@@ -1,5 +1,5 @@
 import sys
-from typing import Optional
+from typing import Optional, Literal
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 

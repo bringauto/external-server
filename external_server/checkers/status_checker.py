@@ -31,6 +31,7 @@ class StatusChecker(_Checker):
         self._received: _PriorityQueue[QueuedStatus] = _PriorityQueue()
         self._skipped: _PriorityQueue[QueuedTimer] = _PriorityQueue()
         self._checked: _Queue[_Status] = _Queue()
+        self._allow_counter_reset = True
 
     @property
     def checked(self) -> _Queue[_Status]:
@@ -60,29 +61,29 @@ class StatusChecker(_Checker):
 
         if status.messageCounter < self._counter:
             logger.warning(f"Status with counter {status.messageCounter} is ignored.")
-        elif status.messageCounter == self._counter:
+        else:
+            if self._allow_counter_reset:
+                self._counter = status.messageCounter
+                self._allow_counter_reset = False
+
             self._received.put((status.messageCounter, status))
-            while not self._received.empty() and self._received.queue[0][0] == self._counter:
-                self._remove_oldest_skipped_and_stop_its_timer()
-                oldest_received = self._received.get()[1]
-                self._checked.put(oldest_received)
-                self._counter += 1
-        else:  # status counter is greater than expected - some statuses are missing
-            self._received.put((status.messageCounter, status))
-            self._store_skipped_counter_values(status.messageCounter)
+            if status.messageCounter == self._counter:
+                while not self._received.empty() and self._received.queue[0][0] == self._counter:
+                    self._remove_oldest_skipped_and_stop_its_timer()
+                    oldest_received = self._received.get()[1]
+                    self._checked.put(oldest_received)
+                    self._counter += 1
+            else:  # status counter is greater than expected - some statuses are missing
+                self._store_skipped_counter_values(status.messageCounter)
 
     def get(self) -> _Status | None:
         """Returns the next Status message in queue if it is available, otherwise `None`."""
         status = self._checked.get_nowait() if not self._checked.empty() else None
         return status
 
-    def initialize_counter(self, counter: CounterValue) -> None:
-        """Set the initial counter value of the checker.
-
-        If some statuses are already received, no action is taken.
-        """
-        if self._received.empty() and self._checked.empty():
-            self._counter = counter
+    def allow_counter_reset(self) -> None:
+        """The next status check will reset the counter to the received status counter value."""
+        self._allow_counter_reset = True
 
     def reset(self) -> None:
         """Clear all data stored in the checker and reset the counter to the initial value.

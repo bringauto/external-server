@@ -17,17 +17,17 @@ class Test_Initializing_Status_Checker_Counter(unittest.TestCase):
 
     def test_status_checker_can_be_set_if_no_statuses_were_yet_received(self):
         checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        checker.initialize_counter(5)
+        checker.allow_counter_reset(5)
         self.assertEqual(checker.counter, 5)
 
     def test_status_checker_is_not_set_if_statuses_were_yet_received(self):
         checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        checker.initialize_counter(0)
+        checker.allow_counter_reset(0)
         checker.check(Status(messageCounter=0))
 
         # the counter was updated to 1 after receiving the status
         self.assertEqual(checker.counter, 1)
-        checker.initialize_counter(5)
+        checker.allow_counter_reset(5)
         # the counter cannot be initialized again after already receiving a status
         self.assertEqual(checker.counter, 1)
 
@@ -36,7 +36,7 @@ class Test_Receiving_Status(unittest.TestCase):
 
     def setUp(self):
         self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(4)
+        self.checker.allow_counter_reset(4)
 
     def test_checker_accepts_status_with_counter_matching_checkers_counter(self):
         expected = self.checker.counter
@@ -85,7 +85,7 @@ class Test_Checking_Multiple_Statuses(unittest.TestCase):
 
     def setUp(self):
         self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(1)
+        self.checker.allow_counter_reset(1)
 
     def test_in_any_order_eventually_not_skipping_any_counter_value_yields_statuses_in_correct_order(
         self,
@@ -121,7 +121,7 @@ class Test_Skipped_Values(unittest.TestCase):
 
     def setUp(self) -> None:
         self.checker = StatusChecker(timeout=ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(1)
+        self.checker.allow_counter_reset(1)
 
     def test_skipped_values_are_stored_and_checked_for_timeout(self):
         self.checker._store_skipped_counter_values(3)
@@ -147,7 +147,7 @@ class Test_Checking_Statuses(unittest.TestCase):
 
     def setUp(self):
         self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(1)
+        self.checker.allow_counter_reset(1)
 
     def test_status_is_stored_as_received_when_counter_is_greater_than_expected(self):
         expected = self.checker.counter
@@ -254,7 +254,7 @@ class Test_Timeout(unittest.TestCase):
 
     def setUp(self):
         self.checker = StatusChecker(timeout=ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(1)
+        self.checker.allow_counter_reset(1)
 
     def test_single_message_with_correct_counter_value_does_not_cause_timeout(self):
         self.checker.check(Status(messageCounter=1))
@@ -290,7 +290,7 @@ class Test_Resetting_Checker(unittest.TestCase):
 
     def setUp(self):
         self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
-        self.checker.initialize_counter(1)
+        self.checker.allow_counter_reset(1)
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=2))
         self.checker.check(Status(messageCounter=3))

@@ -20,8 +20,7 @@ from external_server.models.events import EventType
 from external_server.models.structures import HandledCommand
 from external_server.models.exceptions import (
     NoPublishedMessage,
-    SessionTimeout,
-    UnexpectedMQTTDisconnect,
+    SessionTimeout
 )
 
 
