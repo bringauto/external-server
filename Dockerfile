@@ -1,7 +1,7 @@
 FROM bringauto/cpp-build-environment:latest AS cmlib_cache_builder
 
 ARG MISSION_MODULE_VERSION=v1.2.8
-ARG IO_MODULE_VERSION=v1.2.8
+ARG IO_MODULE_VERSION=v1.3.0
 
 WORKDIR /home/bringauto
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/cmlib_cache
@@ -46,7 +46,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREF
 
 FROM bringauto/cpp-build-environment:latest AS io_module_builder
 
-ARG IO_MODULE_VERSION=v1.2.8
+ARG IO_MODULE_VERSION=v1.3.0
 
 RUN mkdir /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
