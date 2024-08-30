@@ -24,7 +24,7 @@ class StatusChecker(_Checker):
 
     DEFAULT_INIT_COUNTER = 1
 
-    def __init__(self, timeout: float) -> None:
+    def __init__(self, timeout: float, init_counter_value: int = 0) -> None:
         super().__init__(_TimeoutType.STATUS_TIMEOUT, timeout=timeout)
         # priority queues instead of ordinary queues ensure the statuses are stored in ascending
         # order of their counter values
@@ -84,6 +84,12 @@ class StatusChecker(_Checker):
     def allow_counter_reset(self) -> None:
         """The next status check will reset the counter to the received status counter value."""
         self._allow_counter_reset = True
+
+    def set_counter(self, counter: CounterValue) -> None:
+        """Set the counter to the given value and disallow the counter reset."""
+        if self._received.empty() and self._checked.empty():
+            self._counter = counter
+            self._allow_counter_reset = False
 
     def reset(self) -> None:
         """Clear all data stored in the checker and reset the counter to the initial value.

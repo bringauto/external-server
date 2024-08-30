@@ -112,6 +112,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     def test_status_sent_by_connected_device_publishes_status_response(self):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(
@@ -125,6 +126,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     def test_status_containing_error_message_forwards_error(self):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(
@@ -147,6 +149,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     ):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=3)
             self.broker.publish(
@@ -166,6 +169,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     def test_multiple_statuses_sent_in_wrong_order_produce_status_responses_in_correct_order(self):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=3)
             self.broker.publish(
@@ -187,6 +191,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
     ):
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=2)
             self.broker.publish(
@@ -292,6 +297,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
         topic = self.es.mqtt.subscribe_topic
         with self.assertLogs(_eslogger, logging.ERROR):
             with futures.ThreadPoolExecutor() as ex:
+                self.es._status_checker.set_counter(1)
                 ex.submit(self.es._run_normal_communication)
                 future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
                 self.broker.publish(
@@ -299,8 +305,8 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
                     status(
                         "session_id",
                         Status.RUNNING,
-                        1,
-                        DeviceStatus(device=self.device),
+                        counter=1,
+                        status=DeviceStatus(device=self.device),
                         error_message=b"error",
                     ),
                 )
@@ -320,6 +326,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
@@ -334,6 +341,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
     def test_connect_message_with_current_session_id_logs_error_and_produces_no_response(self):
         sub_topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             time.sleep(0.1)
             with self.assertLogs(_eslogger, logging.ERROR) as cm:
@@ -346,6 +354,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
     def test_connect_message_with_other_session_id_does_not_logs_warning(self):
         sub_topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
+            self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             time.sleep(0.1)
             with self.assertNoLogs(_eslogger, logging.WARNING):

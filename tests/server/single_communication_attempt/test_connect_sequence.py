@@ -7,10 +7,10 @@ from unittest.mock import Mock, patch
 sys.path.append(".")
 
 from external_server.server import ServerState
-from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
+from InternalProtocol_pb2 import Device # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
-from external_server.models.devices import DevicePy, device_status
+from external_server.models.devices import DevicePy, device_status as _device_status
 from tests.utils import MQTTBrokerTest, get_test_server
 from external_server.models.messages import connect_msg, status, cmd_response
 
@@ -58,7 +58,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 
     def test_without_receiving_command_responses_sets_the_state_to_error(self):
         broker = self.broker
-        device_status = device_status(self.device)
+        device_status = _device_status(self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
@@ -68,12 +68,12 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 
     def test_with_receiving_command_responses_sets_the_state_to_initialized(self):
         broker = self.broker
-        device_status = device_status(self.device)
+        device_status = _device_status(self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.1)
-            device_status = device_status(self.device)
+            device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
@@ -82,11 +82,11 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 
     def test_with_receiving_status_with_other_state_than_connecting_raises_error(self):
         broker = self.broker
-        device_status = device_status(self.device)
+        device_status = _device_status(self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            device_status = device_status(self.device)
+            device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
             broker.publish(topic, status("id", Status.DISCONNECT, 0, device_status))
@@ -98,12 +98,12 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
     ):
         broker = self.broker
         time.sleep(0.1)
-        device_status = device_status(self.device)
+        device_status = _device_status(self.device)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
-            device_status = device_status(self.device)
+            device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
@@ -136,8 +136,8 @@ class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
                 topic,
                 connect_msg("id", "company", "car", [self.supported, self.unsupported]),
             )
-            supported_status = device_status(self.supported)
-            unsupported_status = device_status(self.unsupported)
+            supported_status = _device_status(self.supported)
+            unsupported_status = _device_status(self.unsupported)
             broker.publish(topic, status("id", Status.CONNECTING, 0, supported_status))
             broker.publish(topic, status("id", Status.CONNECTING, 1, unsupported_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
@@ -162,9 +162,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
 
     def test_initialization_with_mutliple_supported_devices_connects_them_all(self):
         broker = self.broker
-        device_status_1 = device_status(self.device_1)
-        device_status_2 = device_status(self.device_2)
-        device_status_3 = device_status(self.device_3)
+        device_status_1 = _device_status(self.device_1)
+        device_status_2 = _device_status(self.device_2)
+        device_status_3 = _device_status(self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
@@ -188,9 +188,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         self,
     ):
         broker = self.broker
-        device_status_1 = device_status(self.device_1)
-        device_status_2 = device_status(self.device_2)
-        device_status_3 = device_status(self.device_3)
+        device_status_1 = _device_status(self.device_1)
+        device_status_2 = _device_status(self.device_2)
+        device_status_3 = _device_status(self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
@@ -214,9 +214,9 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         self,
     ):
         broker = self.broker
-        device_status_1 = device_status(self.device_1)
-        device_status_2 = device_status(self.device_2)
-        device_status_3 = device_status(self.device_3)
+        device_status_1 = _device_status(self.device_1)
+        device_status_2 = _device_status(self.device_2)
+        device_status_3 = _device_status(self.device_3)
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
@@ -260,8 +260,8 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
                 topic,
                 connect_msg("id", "company", "car", [self.device_1, self.device_2, self.device_3]),
             )
-            broker.publish(topic, status("id", Status.CONNECTING, 0, device_status(self.device_1)))
-            broker.publish(topic, status("id", Status.CONNECTING, 1, device_status(self.device_2)))
+            broker.publish(topic, status("id", Status.CONNECTING, 0, _device_status(self.device_1)))
+            broker.publish(topic, status("id", Status.CONNECTING, 1, _device_status(self.device_2)))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
             broker.publish(topic, cmd_response("id", 1, CommandResponse.OK))
             broker.publish(topic, cmd_response("id", 2, CommandResponse.OK))
@@ -318,7 +318,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
     def test_status_from_supported_device_is_forwarded(self, mock_get: Mock, mock_forward: Mock):
         mock_forward.side_effect = self.forward_status
         mock_get.return_value = status(
-            "id", Status.CONNECTING, 1, device_status(self.device)
+            "id", Status.CONNECTING, 1, _device_status(self.device)
         ).status
         self.es._handle_init_connect(connect_msg("id", "company", "car", [self.device]).connect)
         self.es._get_all_first_statuses_and_respond()
@@ -330,7 +330,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, device_status(unsup_device)).status,
+                status("id", Status.CONNECTING, 1, _device_status(unsup_device)).status,
                 None,
             ]
         )
@@ -346,7 +346,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, device_status(other_device)).status,
+                status("id", Status.CONNECTING, 1, _device_status(other_device)).status,
                 None,
             ]
         )
@@ -367,9 +367,9 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, device_status(device_1, b"from_device_1")).status,
-                status("id", Status.CONNECTING, 2, device_status(device_3, b"from_device_3")).status,
-                status("id", Status.CONNECTING, 3, device_status(device_2, b"from_device_2")).status
+                status("id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")).status,
+                status("id", Status.CONNECTING, 2, _device_status(device_3, b"from_device_3")).status,
+                status("id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")).status
             ]
         )
         self.es._get_all_first_statuses_and_respond()
@@ -391,9 +391,9 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, device_status(device_1, b"from_device_1")).status,
-                status("id", Status.CONNECTING, 2, device_status(not_connected, b"from_not_connected")).status,
-                status("id", Status.CONNECTING, 3, device_status(device_2, b"from_device_2")).status
+                status("id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")).status,
+                status("id", Status.CONNECTING, 2, _device_status(not_connected, b"from_not_connected")).status,
+                status("id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")).status
             ]
         )
         self.es._get_all_first_statuses_and_respond()
