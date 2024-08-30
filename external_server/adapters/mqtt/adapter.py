@@ -152,6 +152,9 @@ class MQTTClientAdapter:
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
                 self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
+                _logger.debug(f"Connected to MQTT broker: {self.broker_address}. "
+                              f"\nListening on topic: {self._subscribe_topic}"
+                              f"\nPublishing on topic: {self._publish_topic}")
             else:
                 _logger.error(
                     f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
@@ -186,13 +189,13 @@ class MQTTClientAdapter:
             )
 
     def get_connect_message(self) -> _Connect | None:
-        """"""
         msg = self._get_message()
         if msg is None:
             _logger.error("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
-            _logger.error("Received message is not a connect message.")
+            other_type = "status" if msg.HasField("status") else ("command response" if msg.HasField("commandResponse") else "unknown")
+            _logger.error(f"Received message is not a connect message. Received message type: {other_type}")
             return None
         _logger.info("Connect message has been received.")
         return msg.connect
@@ -273,6 +276,7 @@ class MQTTClientAdapter:
         t = None if ignore_timeout else self._timeout
         try:
             message = self._received_msgs.get(block=True, timeout=t)
+            _logger.debug("Received message from the queue.")
             return message
         except Empty:
             return None
@@ -322,6 +326,7 @@ class MQTTClientAdapter:
         - `message` (mqtt.MQTTMessage): The received MQTT message.
         """
         try:
+            _logger.debug("Received message from MQTT client.")
             if message.topic == self._subscribe_topic:
                 msg = _ExternalClientMsg().FromString(message.payload)
                 self._received_msgs.put(msg)

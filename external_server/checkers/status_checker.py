@@ -60,7 +60,7 @@ class StatusChecker(_Checker):
         """
 
         if status.messageCounter < self._counter:
-            logger.warning(f"Status with counter {status.messageCounter} is ignored.")
+            logger.warning(f"Status with counter {status.messageCounter} smaller than expected value {self._counter} is ignored.")
         else:
             if self._allow_counter_reset:
                 self._counter = status.messageCounter

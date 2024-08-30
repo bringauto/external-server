@@ -397,7 +397,7 @@ class Test_MQTT_Client_Receiving_Message(unittest.TestCase):
             ).SerializeToString()
             future = ex.submit(self.adapter._get_message)
             ex.submit(self.broker.publish, self.adapter.subscribe_topic, msg)
-            rec_msg = future.result()
+            rec_msg = future.result(timeout=10.0)
             self.assertEqual(msg, rec_msg.SerializeToString())
 
     def tearDown(self) -> None:

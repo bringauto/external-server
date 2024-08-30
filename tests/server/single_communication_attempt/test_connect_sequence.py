@@ -267,7 +267,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
             broker.publish(topic, cmd_response("id", 2, CommandResponse.OK))
             time.sleep(0.01)
             with self.assertRaises(ConnectSequenceFailure):
-                future.result()
+                future.result(timeout=10.0)
         self.assertEqual(self.es.state, ServerState.ERROR)
 
     def tearDown(self) -> None:

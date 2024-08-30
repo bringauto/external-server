@@ -242,7 +242,10 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        return self._library.wait_for_command(timeout)  # type: ignore
+        code = self._library.wait_for_command(timeout)
+        if code == _GeneralErrorCode.OK:
+            _logger.debug("Command received")
+        return code  # type: ignore
 
     def pop_command(self) -> tuple[bytes, _Device, ReturnCode]:
         """
