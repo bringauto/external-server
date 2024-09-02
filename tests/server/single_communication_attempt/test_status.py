@@ -143,10 +143,10 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
         self.assertTrue(self.es._known_devices.is_connected(self.device))
         self.assertEqual(self.published_responses, [status_response("session_id", 1)])
 
-    def test_running_state_logs_error_and_does_not_send_response(self, mock: Mock):
+    def test_running_state_logs_warning_and_does_not_send_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es._known_devices.not_connected(self.device)
-        with self.assertLogs(_eslogger, logging.ERROR) as cm:
+        with self.assertLogs(_eslogger, logging.WARNING) as cm:
             self.es._handle_checked_status(
                 status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
             )

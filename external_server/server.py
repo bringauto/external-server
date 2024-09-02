@@ -262,7 +262,6 @@ class ExternalServer:
 
     def _check_received_status(self, status: _Status) -> None:
         """Reset session timeout checker and pass the status to the status checker."""
-        self._log_new_status(status)
         self._reset_session_checker()
         self._status_checker.check(status)
 
@@ -451,6 +450,7 @@ class ExternalServer:
         If the status is valid and comes with expected counter value, handle all stored received statuses.
         """
         self._check_received_status(received_status)
+        self._log_new_status(received_status)
         while status := self._status_checker.get():
             self._handle_checked_status(status)
         self._check_at_least_one_device_is_connected()
@@ -463,17 +463,18 @@ class ExternalServer:
         else:
             module, device = module_and_dev
             status_ok = True
+            logger.info(f"Received status from {device_repr(device)}")
             match status.deviceState:
                 case _Status.CONNECTING:
                     status_ok = self._connect_device(device)
                 case _Status.RUNNING:
-                    if self._known_devices.is_not_connected(device):
-                        logger.error(f"Device {device_repr(device)} is not connected.")
+                    if not self._known_devices.is_connected(device):
+                        logger.warning(f"Device is not connected. Ignoring status.")
                         status_ok = False
                 case _Status.DISCONNECT:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
                 case _:  # unhandled state
-                    logger.error(f"Received status with unknown state: {status.deviceState}.")
+                    logger.error(f"Unknown device state: {status.deviceState}.")
             self._log_status_error(status, device)
             if status_ok:
                 self._forward_status(status, module)

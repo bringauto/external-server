@@ -88,8 +88,8 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             )
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.mqtt.stop()
+        self.broker.stop()
 
 
 class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.TestCase):
@@ -209,8 +209,8 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.assertEqual(msgs[1].payload, status_response("session_id", 2).SerializeToString())
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.mqtt.stop()
+        self.broker.stop()
 
 
 class Test_Session_Time_Out(unittest.TestCase):
@@ -232,7 +232,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             time.sleep(0.01)
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
-    def test_session_timeout_is_raised_if_no_message_from_module_gateway_is_received_in_time(self):
+    def test_timeout_is_raised_if_no_message_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             future = ex.submit(self.es._run_normal_communication)
@@ -241,7 +241,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             with self.assertRaises(SessionTimeout):
                 future.result(timeout=10.0)
 
-    def test_session_timeout_is_not_raised_if_status_is_received_in_time(self):
+    def test_timeout_is_not_raised_if_status_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             ex.submit(self.es._run_normal_communication)
@@ -255,9 +255,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             )  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._mqtt_session.timeout_event.is_set())
 
-    def test_session_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(
-        self,
-    ):
+    def test_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             ex.submit(self.es._run_normal_communication)
@@ -271,8 +269,8 @@ class Test_Session_Time_Out(unittest.TestCase):
             self.assertFalse(self.es._mqtt_session.timeout_event.is_set())
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.mqtt.stop()
+        self.broker.stop()
 
 
 class Test_Statuses_Containing_Errors(unittest.TestCase):
@@ -315,8 +313,8 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
                 )
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.mqtt.stop()
+        self.broker.stop()
 
 
 class Test_Receiving_Connect_Message(unittest.TestCase):
@@ -363,8 +361,8 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
                 )
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.stop()
+        self.broker.stop()
 
 
 class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
@@ -404,8 +402,8 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
             self.assertTrue(self.es._known_devices.is_connected(device_2))
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.stop()
+        self.broker.stop()
 
 
 class Test_Receiving_Command(unittest.TestCase):

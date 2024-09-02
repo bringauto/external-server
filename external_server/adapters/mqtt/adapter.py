@@ -276,7 +276,6 @@ class MQTTClientAdapter:
         t = None if ignore_timeout else self._timeout
         try:
             message = self._received_msgs.get(block=True, timeout=t)
-            _logger.debug("Received message from the queue.")
             return message
         except Empty:
             return None

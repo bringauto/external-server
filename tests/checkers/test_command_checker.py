@@ -10,7 +10,7 @@ from external_server.models.structures import HandledCommand
 from external_server.checkers.command_checker import CommandChecker
 
 
-CHECKER_TIMEOUT = 0.15
+CHECKER_TIMEOUT = 0.09
 logging.getLogger("CommandMessagesChecker").setLevel(logging.CRITICAL)
 
 
