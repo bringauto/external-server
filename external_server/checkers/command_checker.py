@@ -41,8 +41,11 @@ class CommandQueue:
         self._queue: Queue[QueuedCommand] = Queue()
 
     @property
-    def oldest_counter(self) -> _Counter | None:
-        """Get the counter of the oldest command in the queue."""
+    def oldest_command_counter(self) -> _Counter | None:
+        """Get the counter of the oldest command in the queue.
+
+        Returns None if the queue is empty.
+        """
         if self._queue.empty():
             return None
         else:
@@ -63,11 +66,13 @@ class CommandQueue:
         """Get the oldest command (instance of `QueuedCommand`) from the queue and stop its timer."""
         cmd: QueuedCommand = self._queue.get()
         cmd.stop_timer()
+        logger.debug(f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}")
         return cmd.command
 
     def put(self, command: _HandledCommand, timer: _Timer) -> None:
         """Put the command (instance of `HandledCommand`) into the queue."""
         self._queue.put(QueuedCommand(command, timer))
+        logger.debug(f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}")
 
 
 class CommandChecker(_Checker):
@@ -89,7 +94,7 @@ class CommandChecker(_Checker):
     def n_of_expected_reponses(self) -> int:
         return self._commands._queue.qsize()
 
-    def pop_commands(self, counter: _Counter) -> list[_HandledCommand]:
+    def pop_commands(self, response_counter: _Counter) -> list[_HandledCommand]:
         """ Returns list of Command messages acknowledged with Command responses in correct order.
         With every command the returned_from_api flag is also returned.
 
@@ -103,29 +108,31 @@ class CommandChecker(_Checker):
         counter : int
             number of command, which was acknowledged by received commandResponse
         """
-        if self._commands.empty():
-            logger.warning("No commands in the queue.")
-            return []
-        elif self._commands.oldest_counter != counter:
-            self._missed_counter_vals.append(counter)
-            logger.warning(
-                f"Cannot return command with counter={counter} "
-                f"because it is not the oldest command (counter={self._commands.oldest_counter})."
-            )
+        oldest_counter = self._commands.oldest_command_counter
+        if oldest_counter != response_counter:
+            if oldest_counter is None:
+                logger.warning(
+                    "No commands in the queue awaiting a response. "
+                    f"Ignoring the recevied response (counter={response_counter})."
+                )
+            else:
+                self._missed_counter_vals.append(response_counter)
+                logger.warning(
+                    f"Cannot pop command with counter={response_counter} "
+                    f"because it is not the oldest command (counter={self._commands.oldest_command_counter})."
+                )
             return []
         else:
-            popped = [self._commands.get()]
-            logger.info(f"Command response was acknowledged, counter={counter}")
-            while self._missed_counter_vals:
-                counter = self._commands.oldest_counter
-                if (counter is not None) and (counter in self._missed_counter_vals):
-                    command = self._commands.get()
-                    popped.append(command)
-                    self._missed_counter_vals.remove(counter)
-                    logger.info(f"Older Command response acknowledged, counter={counter}")
-                else:
-                    break
-            return popped
+            cmds = [self._commands.get()]
+            logger.info(f"Command response was acknowledged, counter={response_counter}")
+            next_counter = self._commands.oldest_command_counter
+            while next_counter in self._missed_counter_vals:
+                cmds.append(self._commands.get())
+                self._missed_counter_vals.remove(next_counter)
+                next_counter = self._commands.oldest_command_counter
+                logger.info(f"Older command response acknowledged, counter={next_counter}")
+            logger.debug(f"Popping commands with counter values: {', '.join(str(cmd.counter) for cmd in cmds)}")
+            return cmds
 
     def add(self, command: _HandledCommand) -> _HandledCommand:
         """Adds command to checker

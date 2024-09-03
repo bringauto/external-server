@@ -15,6 +15,40 @@ from external_server.models.events import EventQueueSingleton, EventType
 logger = logging.getLogger(__name__)
 
 
+class _CommandQueue:
+
+    def __init__(self) -> None:
+        self._queue: Queue[tuple[bytes, _Device]] = Queue()
+        self._commands_lock = threading.Lock()
+
+    def clear(self) -> None:
+        """Clear the stored commands in the queue."""
+        while not self._queue.empty():
+            self._queue.get()
+        logger.debug("Command queue of command waiting thread has been emptied.")
+
+    def empty(self) -> bool:
+        """Check if the queue is empty."""
+        return self._queue.empty()
+
+    def get(self) -> tuple[bytes, _Device] | None:
+        try:
+            with self._commands_lock:
+                command = self._queue.get(block=False)
+                logger.debug(f"Retrieving command from command waiting thread queue. Number of remaning commands: {self.qsize()}.")
+        except Empty:
+            return None
+        return command
+
+    def qsize(self) -> int:
+        """Return the number of commands stored in the queue."""
+        return self._queue.qsize()
+
+    def put(self, command: bytes, device: _Device) -> None:
+        self._queue.put((command, device))
+        logger.debug(f"Command added to command waiting thread queue. Number of commands in queue: {self.qsize()}.")
+
+
 class CommandWaitingThread:
     """Instances of this class are responsible for retrieving commands from external server API.
 
@@ -32,7 +66,7 @@ class CommandWaitingThread:
         self._api_adapter: APIClientAdapter = api_client
         self._events = EventQueueSingleton()
         self._waiting_thread = threading.Thread(target=self._main_thread)
-        self._commands: Queue[tuple[bytes, _Device]] = Queue()
+        self._commands = _CommandQueue()
         self._module_connected: Callable[[], bool] = module_connection_check
         self._commands_lock = threading.Lock()
         self._connection_established_lock = threading.Lock()
@@ -59,12 +93,7 @@ class CommandWaitingThread:
 
     def pop_command(self) -> tuple[bytes, _Device] | None:
         """Return available command if currently available, else returns None."""
-        try:
-            with self._commands_lock:
-                command = self._commands.get(block=False)
-        except Empty:
-            return None
-        return command
+        return self._commands.get()
 
     def poll_commands(self) -> None:
         """Poll for a single command from the API.
@@ -77,13 +106,13 @@ class CommandWaitingThread:
         # The function is made public in order to be used in unit tests
         rc = self._api_adapter.wait_for_command(self._timeout_ms)
         if rc == GeneralErrorCode.OK:
-            self._save_available_commands()
+            self._pass_available_commands_to_queue()
         elif rc == EsErrorCode.TIMEOUT:
             pass
         else:
             logger.error(f"Error occured in wait_for_command function in API, rc: {rc}")
 
-    def _save_available_commands(self) -> None:
+    def _pass_available_commands_to_queue(self) -> None:
         """Save the available commands in the queue."""
         remaining_commands = 1
         while remaining_commands > 0:
@@ -93,16 +122,12 @@ class CommandWaitingThread:
             else:
                 with self._commands_lock, self._connection_established_lock:
                     if not self._module_connected():
-                        self._clear_stored_commands()
-                    self._commands.put((command, device))
+                        self._commands.clear()
+                    logger.debug("Command received from API is stored in queue.")
+                    self._commands.put(command, device)
         if self._module_connected():
             module_id = self._api_adapter.get_module_number()
             self._events.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
-
-    def _clear_stored_commands(self) -> None:
-        """Clear the stored commands in the queue."""
-        while not self._commands.empty():
-            self._commands.get()
 
     def _main_thread(self) -> None:
         while self._continue_thread:

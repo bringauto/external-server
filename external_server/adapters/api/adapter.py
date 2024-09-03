@@ -84,13 +84,7 @@ class APIClientAdapter:
         return self._library.destroy()  # type: ignore
 
     def device_initialized(self) -> bool:
-        """Checks if device is initialized.
-
-        Returns
-        -------
-        bool
-            True if device is initialized, False otherwise.
-        """
+        """Returns `True` if device is initialized, `False` otherwise."""
         return self._library.context is not None
 
     def device_connected(self, device: _Device) -> ReturnCode:
@@ -134,7 +128,7 @@ class APIClientAdapter:
             return code
 
     def _create_device_identification(self, device: _Device) -> DeviceIdentification:
-        """ Creates a DeviceIdentification structure based on the provided device object.
+        """Creates a DeviceIdentification structure based on the provided device object.
 
         Parameters
         ----------

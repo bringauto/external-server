@@ -426,7 +426,7 @@ class Test_Receiving_Command(unittest.TestCase):
     def test_command_response_received_after_publishing_command_from_api_is_acknowledged(self):
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
-            self.es._modules[1000].thread._commands.put((b"cmd", self.device))
+            self.es._modules[1000].thread._commands.put(b"cmd", self.device)
             self.es._event_queue.add(event_type=EventType.COMMAND_AVAILABLE, data=1000)
             time.sleep(0.2)
             self.assertEqual(self.es._command_checker.n_of_expected_reponses, 1)

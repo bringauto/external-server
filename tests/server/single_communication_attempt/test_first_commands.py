@@ -6,8 +6,7 @@ sys.path.append(".")
 
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.models.structures import HandledCommand
-from external_server.models.messages import cmd_response, connect_msg
-from external_server.server import ExternalServer
+from external_server.models.messages import cmd_response
 from external_server.models.exceptions import ConnectSequenceFailure
 from ExternalProtocol_pb2 import CommandResponse  # type: ignore
 from tests.utils import get_test_server, MQTTBrokerTest
@@ -27,14 +26,14 @@ class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
         self.assertEqual(cmds, [HandledCommand(b"", device=self.device_1, from_api=False)])
 
     def test_single_command_is_returned_if_thread_commands_contain_one_cmd(self):
-        self.es.modules[1000].thread._commands.put((b"test", self.device_1))
+        self.es.modules[1000].thread._commands.put(b"test", self.device_1)
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertEqual(cmds, [HandledCommand(b"test", device=self.device_1, from_api=True)])
 
     def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
-        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"two", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"three", self.device_1))
+        self.es.modules[1000].thread._commands.put(b"one", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"two", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"three", self.device_1)
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertEqual(cmds, [HandledCommand(b"one", device=self.device_1, from_api=True)])
 
@@ -68,9 +67,9 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         )
 
     def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
-        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"two", self.device_2))
-        self.es.modules[1000].thread._commands.put((b"three", self.device_3))
+        self.es.modules[1000].thread._commands.put(b"one", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"two", self.device_2)
+        self.es.modules[1000].thread._commands.put(b"three", self.device_3)
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
             cmds,
@@ -82,12 +81,12 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         )
 
     def test_only_the_first_commands_are_returned_if_thread_commands_contain_multiple_cmds(self):
-        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"two", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"three", self.device_2))
-        self.es.modules[1000].thread._commands.put((b"four", self.device_2))
-        self.es.modules[1000].thread._commands.put((b"five", self.device_3))
-        self.es.modules[1000].thread._commands.put((b"six", self.device_3))
+        self.es.modules[1000].thread._commands.put(b"one", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"two", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"three", self.device_2)
+        self.es.modules[1000].thread._commands.put(b"four", self.device_2)
+        self.es.modules[1000].thread._commands.put(b"five", self.device_3)
+        self.es.modules[1000].thread._commands.put(b"six", self.device_3)
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
             cmds,
@@ -117,8 +116,8 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         # device_3 is not known (not connected or not disconnected)
 
     def test_commands_are_returned_for_all_known_devices(self):
-        self.es.modules[1000].thread._commands.put((b"one", self.device_1))
-        self.es.modules[1000].thread._commands.put((b"two", self.device_2))
+        self.es.modules[1000].thread._commands.put(b"one", self.device_1)
+        self.es.modules[1000].thread._commands.put(b"two", self.device_2)
         cmds = self.es._collect_first_commands_for_init_sequence()
         self.assertListEqual(
             cmds,

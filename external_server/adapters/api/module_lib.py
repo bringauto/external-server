@@ -45,7 +45,9 @@ class ModuleLibrary:
             raise RuntimeError("API Client not initialized")
         return self._library
 
-    def device_disconnected(self, disconnect_type: DisconnectTypes, device: DeviceIdentification) -> int:
+    def device_disconnected(
+        self, disconnect_type: DisconnectTypes, device: DeviceIdentification
+    ) -> int:
         return int(self.library.device_disconnected(disconnect_type, device, self._context))
 
     def device_connected(self, device: DeviceIdentification) -> int:
@@ -69,7 +71,7 @@ class ModuleLibrary:
     def forward_status(self, buffer: Buffer, device: DeviceIdentification) -> int:
         return int(self.library.forward_status(buffer, device, self._context))
 
-    def get_module_number(self) ->int:
+    def get_module_number(self) -> int:
         return int(self.library.get_module_number())
 
     def init(self) -> ct.c_void_p:
@@ -86,7 +88,9 @@ class ModuleLibrary:
 
     def pop_command(self, cmd_buffer: Buffer, device: DeviceIdentification) -> int:
         with self._lock:
-            return int(self.library.pop_command(ct.byref(cmd_buffer), ct.byref(device), self._context))
+            return int(
+                self.library.pop_command(ct.byref(cmd_buffer), ct.byref(device), self._context)
+            )
 
     def wait_for_command(self, timeout: int) -> int:
         return int(self.library.wait_for_command(timeout, self._context))

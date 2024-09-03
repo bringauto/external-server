@@ -325,7 +325,6 @@ class MQTTClientAdapter:
         - `message` (mqtt.MQTTMessage): The received MQTT message.
         """
         try:
-            _logger.debug("Received message from MQTT client.")
             if message.topic == self._subscribe_topic:
                 msg = _ExternalClientMsg().FromString(message.payload)
                 self._received_msgs.put(msg)
@@ -340,9 +339,7 @@ class MQTTClientAdapter:
 
     def _start_client_loop(self) -> None:
         code = self._mqtt_client.loop_start()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.debug("Started MQTT client's event loop")
-        else:
+        if code != mqtt.MQTT_ERR_SUCCESS:
             _logger.error(f"Failed to start MQTT client's event loop: {mqtt_error_from_code(code)}")
 
     def _wait_for_connection(self, timeout: float) -> bool:  # pragma: no cover

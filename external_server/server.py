@@ -14,10 +14,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
-from InternalProtocol_pb2 import (    # type: ignore
-    Device as _Device,
-    DeviceStatus as _DeviceStatus
-)
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.checkers import CommandChecker, MQTTSession, StatusChecker
 from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
@@ -194,10 +191,9 @@ class ExternalServer:
         """Send first command to each of all known connected and not connected devices.
         Raise exception if any command response is not received.
         """
-        if not self._running:
-            return
-        self._get_and_send_first_commands()
-        self._get_first_commands_responses()
+        if self._running:
+            self._get_and_send_first_commands()
+            self._get_first_commands_responses()
 
     def start(self) -> None:
         """Starts the external server.
@@ -249,8 +245,7 @@ class ExternalServer:
         """Check if there are any commands available for the module and process them."""
         if not isinstance(module_id, int):
             raise ValueError(f"Invalid module ID: {module_id}.")
-        cmd = self._get_api_command(module_id)
-        if cmd is not None:
+        while (cmd := self._get_api_command(module_id)) is not None:
             self._handle_command(module_id, cmd)
 
     def _check_at_least_one_device_is_connected(self) -> None:
@@ -505,7 +500,7 @@ class ExternalServer:
 
     def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
         """Handle the command response received during normal communication, i.e., after init sequence."""
-        logger.info("Received command response")
+        logger.info(f"Received command response (counter = {cmd_response.messageCounter}).")
         device_not_connected = cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED
         commands = self._command_checker.pop_commands(cmd_response.messageCounter)
         for command in commands:
