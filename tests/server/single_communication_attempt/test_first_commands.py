@@ -19,7 +19,7 @@ class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
         self.es.mqtt.connect()
-        self.es._add_connected_device(self.device_1)
+        self.es._add_connected_devices(self.device_1)
 
     def test_empty_command_is_returned_if_thread_commands_queue_is_empty(self):
         cmds = self.es._collect_first_commands_for_init_sequence()
@@ -51,9 +51,9 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
         self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
         self.es.mqtt.connect()
-        self.es._add_connected_device(self.device_1)
-        self.es._add_connected_device(self.device_2)
-        self.es._add_connected_device(self.device_3)
+        self.es._add_connected_devices(self.device_1)
+        self.es._add_connected_devices(self.device_2)
+        self.es._add_connected_devices(self.device_3)
 
     def test_empty_commands_are_returned_if_thread_commands_queue_is_empty(self):
         cmds = self.es._collect_first_commands_for_init_sequence()
@@ -111,7 +111,7 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
         self.device_3 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_3")
         self.es.mqtt.connect()
-        self.es._add_connected_device(self.device_1)
+        self.es._add_connected_devices(self.device_1)
         self.es._add_not_connected_device(self.device_2)
         # device_3 is not known (not connected or not disconnected)
 
@@ -140,7 +140,7 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.es.mqtt.connect()
-        self.es._add_connected_device(self.device_1)
+        self.es._add_connected_devices(self.device_1)
         self.es._mqtt_session.set_id("session_id")
 
     def test_missing_expected_commands_response_raises_exception(self, mock: Mock):

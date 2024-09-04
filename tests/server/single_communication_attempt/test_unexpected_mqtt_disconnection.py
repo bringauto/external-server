@@ -28,7 +28,7 @@ class Test_Unexpected_MQTT_Client_Disconnection(unittest.TestCase):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
-        self.es._add_connected_device(self.device)
+        self.es._add_connected_devices(self.device)
         self.es._mqtt_session.set_id("session_id")
 
     def test_unexpected_disconnect_raises_error_when_handling_event(self):

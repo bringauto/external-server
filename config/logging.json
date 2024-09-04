@@ -52,6 +52,11 @@
       "handlers": ["console"],
       "propagate": false
     },
+    "external_server.models.events": {
+      "level": "DEBUG",
+      "handlers": ["console", "file"],
+      "propagate": false
+    },
     "CommandWaitingThread": {
       "level": "DEBUG",
       "handlers": ["console", "file"],

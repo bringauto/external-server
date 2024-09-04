@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable
 import time
 from concurrent import futures as _futures
 
@@ -20,14 +20,16 @@ class ExternalServerThreadExecutor:
         ex.submit(foo)
     """
 
-    def __init__(self, server: _ExternalServer, sleep_after: float = 0.1) -> None:
+    def __init__(self, server: _ExternalServer, sleep_after: float = 0.1, start: bool = True) -> None:
         self._ex = _futures.ThreadPoolExecutor()
         self._sleep_after = sleep_after
         self._server = server
+        self._start = start
 
     def __enter__(self):
-        self._ex.submit(self._server.start)
-        time.sleep(self._sleep_after)
+        if self._start:
+            self._ex.submit(self._server.start)
+            time.sleep(self._sleep_after)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

@@ -94,18 +94,10 @@ class DeviceIdentification(ct.Structure):
     ]
 
 
-# struct key_value {
-# 	buffer key;
-# 	buffer value;
-# };
 class KeyValue(ct.Structure):
     _fields_ = [("key", Buffer), ("value", Buffer)]
 
 
-# struct config {
-# 	key_value* parameters;
-# 	size_t size;
-# };
 class Config(ct.Structure):
     _fields_ = [("parameters", ct.POINTER(KeyValue)), ("size", ct.c_size_t)]
 
@@ -121,15 +113,26 @@ class HandledCommand:
     counter: Counter = -1
     from_api: ReturnedFromAPIFlag = False
 
-    def update_counter_value(self, counter: Counter) -> None:
-        """Set the counter value of the command."""
-        self.__dict__["counter"] = counter
+    def copy(self) -> "HandledCommand":
+        # do not set the counter to prevent unexpected match between two commands counters
+        return HandledCommand(data=self.data, device=self.device, from_api=self.from_api)
 
     def external_command(self, session_id: str) -> _ExternalServerMsg:
         """Return the command as ExternalServer message."""
-        command = _Command(
-            sessionId=session_id,
-            messageCounter=self.counter,
-            deviceCommand=_DeviceCommand(device=self.device, commandData=self.data),
-        )
-        return _ExternalServerMsg(command=command)
+        try:
+            if self.counter < 0:
+                raise ValueError
+            command = _Command(
+                sessionId=session_id,
+                messageCounter=self.counter,
+                deviceCommand=_DeviceCommand(device=self.device, commandData=self.data),
+            )
+            return _ExternalServerMsg(command=command)
+        except ValueError as e:
+            raise ValueError("Incorrect command data. Counter value is not set.")
+        except Exception as e:
+            raise ValueError(f"Incorrect command data. {e.args[0]}")
+
+    def update_counter_value(self, counter: Counter) -> None:
+        """Set the counter value of the command."""
+        self.__dict__["counter"] = counter

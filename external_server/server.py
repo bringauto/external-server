@@ -15,7 +15,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.checkers import CommandChecker, MQTTSession, StatusChecker
+from external_server.checkers import PublishedCommandChecker, MQTTSession, StatusChecker
 from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
     CommunicationException,
@@ -95,12 +95,10 @@ class ExternalServer:
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
-
         self._mqtt_session = MQTTSession(self._config.mqtt_timeout)
         self._mqtt = self.mqtt_adapter_from_config(config)
         self._status_checker = StatusChecker(self._config.timeout)
-
-        self._command_checker = CommandChecker(self._config.timeout)
+        self._command_checker = PublishedCommandChecker(self._config.timeout)
         self._modules = self._initialized_modules(config)
 
     @property
@@ -127,6 +125,14 @@ class ExternalServer:
     def state(self) -> ServerState:
         """Return the state of the server."""
         return self._state
+
+    def _set_running_flag(self, running: bool) -> None:
+        """Set the running flag to `running`."""
+        if self._running == running:
+            logger.debug(f"Running flag is already set to {running}.")
+        else:
+            logger.debug(f"Setting running flag to {running}.")
+            self._running = running
 
     def _get_and_handle_connect_message(self) -> None:
         """Wait for a connect message. If there is none, raise an exception."""
@@ -202,6 +208,8 @@ class ExternalServer:
         - starting thread waiting for commands for each of the supported modules,
         - starting the MQTT connection.
         """
+
+        logger.debug("> Starting the external server.")
         self._start_module_threads()
         self._start_communication_loop()
 
@@ -214,7 +222,7 @@ class ExternalServer:
         if reason:
             msg += f" Reason: {reason}"
         logger.info(msg)
-        self._running = False
+        self._set_running_flag(False)
         self._clear_context()
         self._clear_modules()
 
@@ -222,10 +230,12 @@ class ExternalServer:
         "Set tls security to MQTT client"
         self._mqtt.tls_set(ca_certs, certfile, keyfile)
 
-    def _add_connected_device(self, device: _Device) -> None:
+    def _add_connected_devices(self,*device: _Device) -> None:
         """Store the device as connected for further handling of received messages and messages to be sent to it."""
-        assert isinstance(device, _Device)
-        self._known_devices.connected(DevicePy.from_device(device))
+        for d in device:
+            assert isinstance(d, _Device)
+        for d in device:
+            self._known_devices.connected(DevicePy.from_device(d))
 
     def _add_not_connected_device(self, device: _Device) -> None:
         """Store the device as not connected for further handling of received messages and messages to be sent to it."""
@@ -289,23 +299,23 @@ class ExternalServer:
     def _collect_first_commands_for_init_sequence(self) -> list[_HandledCommand]:
         """Collect all first commands for the init sequence."""
         commands: list[_HandledCommand] = list()
-        expecting_cmd: list[_Device] = [d.to_device() for d in self._known_devices.list_connected()]
-        received_cmd: list[_Device] = list()
+        devices_expecting_cmd: list[_Device] = [d.to_device() for d in self._known_devices.list_connected()]
+        devices_received_cmd: list[_Device] = list()
         for module in self._modules:
             for cmd in self._get_module_commands(module):
                 data, device = cmd[0], cmd[1]
                 drepr = device_repr(device)
-                if device in expecting_cmd:
+                if device in devices_expecting_cmd:
                     commands.append(_HandledCommand(data, device=device, from_api=True))
-                    expecting_cmd.remove(device)
-                    received_cmd.append(device)
-                elif device in received_cmd:
+                    devices_expecting_cmd.remove(device)
+                    devices_received_cmd.append(device)
+                elif device in devices_received_cmd:
                     logger.warning(f"Multiple commands for '{drepr}'. Only the first is accepted.")
                 else:  # device could not be in the list of connected devices
                     logger.warning(
                         f"Command from API for not connected device '{drepr}' is ignored."
                     )
-        for device in expecting_cmd:
+        for device in devices_expecting_cmd:
             commands.append(_HandledCommand(b"", device=device, from_api=False))
             logger.warning(
                 f"No command received for device {device_repr(device)}. Creating empty command."
@@ -328,7 +338,7 @@ class ExternalServer:
         else:
             code = self._modules[device.module].api.device_connected(device)
             if code == GeneralErrorCode.OK:
-                self._add_connected_device(device)
+                self._add_connected_devices(device)
                 logger.info(f"Connected device {drepr}.")
                 return True
             logger.error(f"Device {drepr} could not connect. Response code: {code}")
@@ -384,9 +394,13 @@ class ExternalServer:
             raise ConnectSequenceFailure("No connected device.")
         commands = self._collect_first_commands_for_init_sequence()
         for cmd in commands:
-            self._command_checker.add(cmd)
-            ext_cmd = cmd.external_command(self._mqtt_session.id)
-            self._mqtt.publish(ext_cmd, f"Sending command (counter={cmd.counter}).")
+            try:
+                self._command_checker.add(cmd)
+                logger.debug(f"Sending command to {device_repr(cmd.device)}")
+                ext_cmd = cmd.external_command(self._mqtt_session.id)
+                self._mqtt.publish(ext_cmd, f"Sending command (counter={cmd.counter}).")
+            except Exception as e:
+                logger.error(f"Error in sending command: {e}")
 
     def _get_first_commands_responses(self) -> None:
         n_devices = self._known_devices.n_all
@@ -394,7 +408,7 @@ class ExternalServer:
         for iter in range(n_devices):
             logger.info(f"Waiting for command response {iter + 1} of {n_devices}.")
             response = self._get_next_valid_command_response()
-            commands = self._command_checker.pop_commands(response.messageCounter)
+            commands = self._command_checker.pop(response)
             for cmd in commands:
                 if self._known_devices.is_connected(cmd.device) and cmd.from_api:
                     self._modules[cmd.device.module].api.command_ack(cmd.data, cmd.device)
@@ -501,14 +515,20 @@ class ExternalServer:
     def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
         """Handle the command response received during normal communication, i.e., after init sequence."""
         logger.info(f"Received command response (counter = {cmd_response.messageCounter}).")
-        device_not_connected = cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED
-        commands = self._command_checker.pop_commands(cmd_response.messageCounter)
+
+        if cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED:
+            self._handle_command_response_with_disconnected_type(cmd_response)
+
+        commands = self._command_checker.pop(cmd_response)
         for command in commands:
             module = self._modules[command.device.module]
             module.api.command_ack(command.data, command.device)
-            if device_not_connected and command.counter == cmd_response.messageCounter:
-                self._disconnect_device(DisconnectTypes.announced, command.device)
-                logger.warning(f"Device {device_repr(command.device)} disconnected.")
+
+    def _handle_command_response_with_disconnected_type(self, cmd_response: _CommandResponse) -> None:
+        device = self._command_checker.command_device(cmd_response.messageCounter)
+        if device:
+            self._disconnect_device(DisconnectTypes.announced, device)
+            logger.warning(f"Device {device_repr(device)} disconnected.")
 
     def _handle_communication_event(self, event: _Event) -> None:
         """Match the event type and handle it accordingly.
@@ -575,6 +595,7 @@ class ExternalServer:
         of the devices in the connect message and receiving responses to each one.
         """
         if self.state == ServerState.STOPPED:
+            logger.info("Server has been stopped. Connect sequence will not be started.")
             return
         logger.info("Starting the connect sequence.")
         try:
@@ -582,12 +603,10 @@ class ExternalServer:
                 raise ConnectSequenceFailure(
                     "Cannot start connect sequence without connection to MQTT broker."
                 )
-            if self.state == ServerState.STOPPED:
-                logger.info("Server has been stopped. Connect sequence will not be started.")
-                return
             self._get_and_handle_connect_message()
             self._get_all_first_statuses_and_respond()
             self._send_first_commands_and_get_responses()
+
             self._set_state(ServerState.INITIALIZED)
             if self._state == ServerState.INITIALIZED:
                 logger.info("Connect sequence has finished succesfully.")
@@ -644,10 +663,10 @@ class ExternalServer:
     def _publish_command(self, data: bytes, device: _Device) -> None:
         """Publish the external command to the MQTT broker on publish topic."""
         handled_cmd = _HandledCommand(data=data, device=device, from_api=True)
-        # the following has to be called before publishing in order to assign counter to the command
         self._command_checker.add(handled_cmd)
-        logger.info(f"Sending command, counter = {handled_cmd.counter}")
+        # the following has to be called before publishing in order to assign counter to the command
         self._mqtt.publish(handled_cmd.external_command(self.session_id))
+        logger.info(f"Sending command, counter = {handled_cmd.counter}")
 
     def _publish_connect_response(self, response_type: int) -> None:
         """Publish the connect response message to the MQTT broker on publish topic."""
@@ -669,20 +688,21 @@ class ExternalServer:
 
     def _reset_session_checker(self) -> None:
         """Reset the session checker's timer."""
+        logger.debug("Resetting MQTT session checker timer.")
         self._mqtt_session.reset_timer()
 
     def _run_initial_sequence(self) -> None:
         """Ensure connection to MQTT broker and run the initial sequence.
 
-        Raise an exception if the sequence fails
+        Raise an exception if the sequence fails.
         """
         try:
-            self._running = True
             self._set_state(ServerState.UNINITIALIZED)
             self._ensure_connection_to_broker()
+            if not self._running:
+                self._set_running_flag(True)
             self._init_sequence()
         except Exception as e:
-            self._running = False
             self._set_state(ServerState.ERROR)
             raise e
 
@@ -693,6 +713,8 @@ class ExternalServer:
         elif not self.state == ServerState.INITIALIZED:
             raise ConnectSequenceFailure("Cannot start communication after init sequence failed.")
         self._mqtt_session.start()
+        if not self._running:
+            self._set_running_flag(True)
         self._set_state(ServerState.RUNNING)
         while self.state != ServerState.STOPPED:
             try:
@@ -722,7 +744,7 @@ class ExternalServer:
 
     def _start_communication_loop(self) -> None:
         """Start the main communication loop including the init sequence and normal communication."""
-        self._running = True
+        self._set_running_flag(True)
         while self._running and self.state != ServerState.STOPPED:
             self._single_communication_run()
 

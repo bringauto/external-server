@@ -54,3 +54,4 @@ class MQTTSession:
                 self._timer.join()
             self._checker._timeout_event.clear()
             self._timer_running = False
+

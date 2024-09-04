@@ -225,7 +225,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         self.es = ExternalServer(config=self.config)
         self.timeout = self.es.mqtt.timeout
         self.broker = MQTTBrokerTest(start=True)
-        self.executor = ExternalServerThreadExecutor(self.es, 0.1)
+        self.executor = ExternalServerThreadExecutor(self.es, 0.1, start=False)
         time.sleep(0.1)
 
     def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
@@ -236,6 +236,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         command_response = cmd_response("id", 0, _CommandResponse.OK)
 
         with self.executor as ex:
+            self.es._set_running_flag(True)
             ex.submit(self.es._single_communication_run)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             time.sleep(self.timeout + 1)

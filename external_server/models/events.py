@@ -3,6 +3,13 @@ import threading
 from typing import Any
 import dataclasses
 from enum import Enum, auto
+import logging.config
+import json
+
+
+logger = logging.getLogger(__name__)
+with open("./config/logging.json", "r") as f:
+    logging.config.dictConfig(json.load(f))
 
 
 class SingletonMeta(type):

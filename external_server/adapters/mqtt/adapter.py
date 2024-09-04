@@ -152,8 +152,7 @@ class MQTTClientAdapter:
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
                 self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
-                _logger.debug(f"Connected to MQTT broker: {self.broker_address}. "
-                              f"\nListening on topic: {self._subscribe_topic}"
+                _logger.debug(f"\nListening on topic: {self._subscribe_topic}"
                               f"\nPublishing on topic: {self._publish_topic}")
             else:
                 _logger.error(

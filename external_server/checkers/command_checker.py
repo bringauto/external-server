@@ -7,11 +7,13 @@ import logging
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.checkers.checker import Checker as _Checker
+from ExternalProtocol_pb2 import CommandResponse as _CommandResponse  # type: ignore
 from external_server.models.structures import (
     Counter as _Counter,
     HandledCommand as _HandledCommand,
-    TimeoutType as _TimeoutType
+    TimeoutType as _TimeoutType,
 )
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -41,6 +43,10 @@ class CommandQueue:
         self._queue: Queue[QueuedCommand] = Queue()
 
     @property
+    def command_counters(self) -> list[_Counter]:
+        return [cmd.command.counter for cmd in self._queue.queue]
+
+    @property
     def oldest_command_counter(self) -> _Counter | None:
         """Get the counter of the oldest command in the queue.
 
@@ -50,6 +56,18 @@ class CommandQueue:
             return None
         else:
             cmd: QueuedCommand = self._queue.queue[0]
+            return cmd.command.counter
+
+    @property
+    def newest_command_counter(self) -> _Counter | None:
+        """Get the counter of the oldest command in the queue.
+
+        Returns None if the queue is empty.
+        """
+        if self._queue.empty():
+            return None
+        else:
+            cmd: QueuedCommand = self._queue.queue[-1]
             return cmd.command.counter
 
     def clear(self) -> None:
@@ -66,16 +84,24 @@ class CommandQueue:
         """Get the oldest command (instance of `QueuedCommand`) from the queue and stop its timer."""
         cmd: QueuedCommand = self._queue.get()
         cmd.stop_timer()
-        logger.debug(f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}")
+        logger.debug(
+            f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}"
+        )
         return cmd.command
+
+    def list_commands(self) -> list[_HandledCommand]:
+        """Return the list of commands in the queue."""
+        return [cmd.command for cmd in self._queue.queue]
 
     def put(self, command: _HandledCommand, timer: _Timer) -> None:
         """Put the command (instance of `HandledCommand`) into the queue."""
         self._queue.put(QueuedCommand(command, timer))
-        logger.debug(f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}")
+        logger.debug(
+            f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}"
+        )
 
 
-class CommandChecker(_Checker):
+class PublishedCommandChecker(_Checker):
     """Checks for order of received Command responses and checks if duration between
     sending Command and receiving Command reponses do not exceeds timeout given in
     constructor.
@@ -87,59 +113,86 @@ class CommandChecker(_Checker):
     def __init__(self, timeout: float) -> None:
         super().__init__(_TimeoutType.COMMAND_RESPONSE_TIMEOUT, timeout=timeout)
         self._commands = CommandQueue()
-        self._missed_counter_vals: list[_Counter] = []
+        self._received_response_counters: list[_Counter] = []
         self._counter = 0
 
     @property
-    def n_of_expected_reponses(self) -> int:
+    def n_of_commands(self) -> int:
         return self._commands._queue.qsize()
 
-    def pop_commands(self, response_counter: _Counter) -> list[_HandledCommand]:
-        """ Returns list of Command messages acknowledged with Command responses in correct order.
-        With every command the returned_from_api flag is also returned.
+    @property
+    def command_counters(self) -> list[_Counter]:
+        """Get the list of counters of commands in the queue.
 
-        Can return empty list if received Command responses in wrong order.
+        It is ensured that each counter in the list equals the previous one incremented by 1.
+        """
+        return self._commands.command_counters
 
-        Stops the timer for acknowledged commands. Should be called when Command
-        response from Module gateway is received.
+    def command_device(self, counter: _Counter) -> None | _Device:
+        """Return the device of the command with the given counter.
 
-        Parameters
-        ----------
-        counter : int
-            number of command, which was acknowledged by received commandResponse
+        Return None if the command with the given counter is not in the queue.
+        """
+        for cmd in self._commands.list_commands():
+            if cmd.counter == counter:
+                return cmd.device
+        return None
+
+    def pop(self, response: _CommandResponse) -> list[_HandledCommand]:
+        """Returns list of commands acknowledged with command responses in correct order.
+
+        The list content depends on the response counter value:
+        - if it matches the oldest commands counter waiting for response, the commands is returned
+        with all the newer commands coming right after it.
+        - if its outside of range of counters of the commands currently waiting for response, the
+        response is ignored and empty list is returned.
+        - if its within the range of counters of the commands currently waiting for response, the
+        the response counter is stored in the list of received response counters and empty list is
+        returned.
         """
         oldest_counter = self._commands.oldest_command_counter
-        if oldest_counter != response_counter:
+        counter = response.messageCounter
+
+        if oldest_counter == counter:
+            cmds = [self._commands.get()]
+            logger.info(f"Command delivery to a car has been acknowledged (counter={counter}).")
+            next_counter = self._commands.oldest_command_counter
+            while next_counter in sorted(self._received_response_counters):
+                cmd = self._commands.get()
+                assert cmd.counter == next_counter
+                cmds.append(cmd)
+                self._received_response_counters.remove(next_counter)
+                logger.info(
+                    f"Command delivery to a car has been acknowledged (counter={next_counter})."
+                )
+                next_counter = self._commands.oldest_command_counter
+            logger.debug(
+                f"Popping commands with counters: {', '.join(str(cmd.counter) for cmd in cmds)}"
+            )
+            return cmds
+        else:
             if oldest_counter is None:
                 logger.warning(
                     "No commands in the queue awaiting a response. "
-                    f"Ignoring the recevied response (counter={response_counter})."
+                    f"Ignoring the recevied response (counter={counter})."
+                )
+            elif oldest_counter < counter <= self._commands.newest_command_counter:
+                self._received_response_counters.append(counter)
+                logger.warning(
+                    f"Cannot pop command with counter={counter} "
+                    f"because it is not the oldest command (counter={oldest_counter})."
                 )
             else:
-                self._missed_counter_vals.append(response_counter)
                 logger.warning(
-                    f"Cannot pop command with counter={response_counter} "
-                    f"because it is not the oldest command (counter={self._commands.oldest_command_counter})."
+                    f"Ignoring received response (counter={counter}) as it "
+                    f"corresponds to a command that is not in the queue."
                 )
             return []
-        else:
-            cmds = [self._commands.get()]
-            logger.info(f"Command response was acknowledged, counter={response_counter}")
-            next_counter = self._commands.oldest_command_counter
-            while next_counter in self._missed_counter_vals:
-                cmds.append(self._commands.get())
-                self._missed_counter_vals.remove(next_counter)
-                next_counter = self._commands.oldest_command_counter
-                logger.info(f"Older command response acknowledged, counter={next_counter}")
-            logger.debug(f"Popping commands with counter values: {', '.join(str(cmd.counter) for cmd in cmds)}")
-            return cmds
 
     def add(self, command: _HandledCommand) -> _HandledCommand:
-        """Adds command to checker
+        """Add command to checker, when command is sent to Module Gateway.
 
-        Adds given command to this checker. Starts timeout for Command response. Set
-        the returned_from_api to True if command was returned by get_command API
-        function. Should be called when command is sent to Module gateway.
+        Start timeout for Command response.
         """
         command.update_counter_value(self._counter)
         self._commands.put(command, self._get_started_timer())
@@ -149,8 +202,11 @@ class CommandChecker(_Checker):
 
     def reset(self) -> None:
         self._commands.clear()
-        self._missed_counter_vals.clear()
+        self._received_response_counters.clear()
         self._timeout_event.clear()
+
+    def set_counter(self, counter: int) -> None:
+        self._counter = counter
 
     def _get_started_timer(self) -> _Timer:
         """Get the timer object for the oldest command in the queue and start it."""

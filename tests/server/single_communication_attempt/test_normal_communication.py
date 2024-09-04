@@ -37,10 +37,10 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device_1]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device_1]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
         self.assertTrue(self.es._known_devices.is_connected(self.device_1))
@@ -52,7 +52,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             ex.submit(self.es._run_normal_communication)
             self.broker.publish(
                 topic,
-                status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
+                status("id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
             )
             time.sleep(0.2)
             self.assertFalse(self.es._known_devices.is_connected(self.device_1))
@@ -63,12 +63,12 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             ex.submit(self.es._run_normal_communication)
             self.broker.publish(
                 topic,
-                status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
+                status("id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
             )
             time.sleep(0.3)
             self.broker.publish(
                 topic,
-                status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
+                status("id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
             )
             time.sleep(0.5)
             self.assertFalse(self.es._known_devices.is_connected(self.device_1))
@@ -80,11 +80,11 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic,
-                status("session_id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
+                status("id", Status.DISCONNECT, 1, DeviceStatus(device=self.device_1)),
             )
             time.sleep(0.1)
             self.assertEqual(
-                future.result(timeout=10.0)[0].payload, status_response("session_id", 1).SerializeToString()
+                future.result(timeout=10.0)[0].payload, status_response("id", 1).SerializeToString()
             )
 
     def tearDown(self) -> None:
@@ -99,13 +99,14 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
+            self.es._set_running_flag(True)
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
-            self.broker.publish(topic, cmd_response("session_id", 0, CommandResponse.OK))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
         # the server is now initialized with mqtt client connected to broker
 
@@ -116,11 +117,11 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device))
             )
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             self.assertEqual(
-                future.result(timeout=10.0)[0].payload, status_response("session_id", 1).SerializeToString()
+                future.result()[0].payload, status_response("id", 1).SerializeToString()
             )
 
     def test_status_containing_error_message_forwards_error(self):
@@ -132,7 +133,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.broker.publish(
                 topic,
                 status(
-                    "session_id",
+                    "id",
                     Status.RUNNING,
                     1,
                     DeviceStatus(device=self.device),
@@ -141,7 +142,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             )
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             self.assertEqual(
-                future.result(timeout=10.0)[0].payload, status_response("session_id", 1).SerializeToString()
+                future.result(timeout=10.0)[0].payload, status_response("id", 1).SerializeToString()
             )
 
     def test_multiple_statuses_sent_by_connected_device_publishes_status_responses_with_corresponding_counter_values(
@@ -153,18 +154,18 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=3)
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device))
             )
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 2, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 2, DeviceStatus(device=self.device))
             )
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 3, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 3, DeviceStatus(device=self.device))
             )
             msgs = future.result(timeout=10.0)
-            self.assertEqual(msgs[0].payload, status_response("session_id", 1).SerializeToString())
-            self.assertEqual(msgs[1].payload, status_response("session_id", 2).SerializeToString())
-            self.assertEqual(msgs[2].payload, status_response("session_id", 3).SerializeToString())
+            self.assertEqual(msgs[0].payload, status_response("id", 1).SerializeToString())
+            self.assertEqual(msgs[1].payload, status_response("id", 2).SerializeToString())
+            self.assertEqual(msgs[2].payload, status_response("id", 3).SerializeToString())
 
     def test_multiple_statuses_sent_in_wrong_order_produce_status_responses_in_correct_order(self):
         topic = self.es.mqtt.subscribe_topic
@@ -173,18 +174,18 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=3)
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 2, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 2, DeviceStatus(device=self.device))
             )
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 3, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 3, DeviceStatus(device=self.device))
             )
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device))
             )
-            msgs = future.result(timeout=10.0)
-            self.assertEqual(msgs[0].payload, status_response("session_id", 1).SerializeToString())
-            self.assertEqual(msgs[1].payload, status_response("session_id", 2).SerializeToString())
-            self.assertEqual(msgs[2].payload, status_response("session_id", 3).SerializeToString())
+            msgs = future.result()
+            self.assertEqual(msgs[0].payload, status_response("id", 1).SerializeToString())
+            self.assertEqual(msgs[1].payload, status_response("id", 2).SerializeToString())
+            self.assertEqual(msgs[2].payload, status_response("id", 3).SerializeToString())
 
     def test_status_without_session_id_matching_current_session_id_is_ignored_and_no_response_is_sent_to_it(
         self,
@@ -195,18 +196,18 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=2)
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device))
             )
             self.broker.publish(
                 topic, status("unknown_id", Status.RUNNING, 2, DeviceStatus(device=self.device))
             )
             self.broker.publish(
-                topic, status("session_id", Status.RUNNING, 2, DeviceStatus(device=self.device))
+                topic, status("id", Status.RUNNING, 2, DeviceStatus(device=self.device))
             )
             msgs = future.result(timeout=3)
             self.assertEqual(len(msgs), 2)
-            self.assertEqual(msgs[0].payload, status_response("session_id", 1).SerializeToString())
-            self.assertEqual(msgs[1].payload, status_response("session_id", 2).SerializeToString())
+            self.assertEqual(msgs[0].payload, status_response("id", 1).SerializeToString())
+            self.assertEqual(msgs[1].payload, status_response("id", 2).SerializeToString())
 
     def tearDown(self) -> None:
         self.es.mqtt.stop()
@@ -224,10 +225,10 @@ class Test_Session_Time_Out(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
             time.sleep(0.01)
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
@@ -248,7 +249,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             time.sleep(self.es._mqtt_session.timeout / 2)
             self.broker.publish(
                 self.es.mqtt.subscribe_topic,
-                status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)),
+                status("id", Status.RUNNING, 1, DeviceStatus(device=self.device)),
             )
             time.sleep(
                 self.es._mqtt_session.timeout / 2 + 0.01
@@ -261,7 +262,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             ex.submit(self.es._run_normal_communication)
             time.sleep(self.es._mqtt_session.timeout / 2)
             self.broker.publish(
-                self.es.mqtt.subscribe_topic, cmd_response("session_id", 1, CommandResponse.OK)
+                self.es.mqtt.subscribe_topic, cmd_response("id", 1, CommandResponse.OK)
             )
             time.sleep(
                 self.es._mqtt_session.timeout / 2 + 0.02
@@ -284,10 +285,10 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
@@ -301,7 +302,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
                 self.broker.publish(
                     topic,
                     status(
-                        "session_id",
+                        "id",
                         Status.RUNNING,
                         counter=1,
                         status=DeviceStatus(device=self.device),
@@ -309,7 +310,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
                     ),
                 )
                 self.assertEqual(
-                    future.result(timeout=10.0)[0].payload, status_response("session_id", 1).SerializeToString()
+                    future.result(timeout=10.0)[0].payload, status_response("id", 1).SerializeToString()
                 )
 
     def tearDown(self) -> None:
@@ -329,10 +330,10 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
@@ -344,7 +345,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             time.sleep(0.1)
             with self.assertLogs(_eslogger, logging.ERROR) as cm:
                 self.broker.publish(
-                    sub_topic, connect_msg("session_id", "company", "car", [self.device])
+                    sub_topic, connect_msg("id", "company", "car", [self.device])
                 )
                 time.sleep(0.1)
                 self.assertIn("already existing session", cm.records[0].message)
@@ -378,10 +379,10 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device_1]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device_1]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
+                topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
             )
 
     def test_connecting_device_during_normal_communication_is_allowed(self):
@@ -389,15 +390,8 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
         device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
-            self.broker.publish(
-                sub_topic,
-                status(
-                    "session_id",
-                    Status.CONNECTING,
-                    1,
-                    DeviceStatus(statusData=b"Connecting", device=device_2),
-                ),
-            )
+            payload = DeviceStatus(statusData=b"Connecting", device=device_2)
+            self.broker.publish(sub_topic, status("id", Status.CONNECTING, 1, payload))
             time.sleep(0.1)
             self.assertTrue(self.es._known_devices.is_connected(device_2))
 
@@ -417,24 +411,23 @@ class Test_Receiving_Command(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
-            self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
-            )
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
+            time.sleep(0.5)
 
     def test_command_response_received_after_publishing_command_from_api_is_acknowledged(self):
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
             self.es._modules[1000].thread._commands.put(b"cmd", self.device)
             self.es._event_queue.add(event_type=EventType.COMMAND_AVAILABLE, data=1000)
-            time.sleep(0.2)
-            self.assertEqual(self.es._command_checker.n_of_expected_reponses, 1)
+            time.sleep(0.3)
+            self.assertEqual(self.es._command_checker.n_of_commands, 1)
             self.broker.publish(
-                self.es.mqtt.subscribe_topic, cmd_response("session_id", 1, CommandResponse.OK)
+                self.es.mqtt.subscribe_topic, cmd_response("id", 1, CommandResponse.OK)
             )
-            time.sleep(0.1)
-            self.assertEqual(self.es._command_checker.n_of_expected_reponses, 0)
+            time.sleep(0.2)
+            self.assertEqual(self.es._command_checker.n_of_commands, 0)
 
     def tearDown(self) -> None:
         self.es.stop()
@@ -452,11 +445,9 @@ class Test_Command_Response(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
-            self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
-            self.broker.publish(
-                topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
-            )
+            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
+            self.broker.publish(topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
 
     def test_command_response_with_other_session_id_is_ignored(self):
         sub_topic = self.es.mqtt.subscribe_topic
@@ -465,11 +456,9 @@ class Test_Command_Response(unittest.TestCase):
             time.sleep(0.1)
             with self.assertLogs(_eslogger, logging.WARNING) as cm:
                 self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1, device=self.device))
-                self.broker.publish(
-                    sub_topic, cmd_response("other_session_id", 1, CommandResponse.OK)
-                )
+                self.broker.publish(sub_topic, cmd_response("other_id", 1, CommandResponse.OK))
                 time.sleep(0.1)
-                self.broker.publish(sub_topic, cmd_response("session_id", 1, CommandResponse.OK))
+                self.broker.publish(sub_topic, cmd_response("id", 1, CommandResponse.OK))
 
     def test_timeout_event_is_set_if_command_response_is_not_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
@@ -491,8 +480,8 @@ class Test_Handling_Command(unittest.TestCase):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_commands: list[ExternalServerMsg] = list()
-        self.es._add_connected_device(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._add_connected_devices(self.device)
+        self.es._mqtt_session.set_id("id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_commands.append(msg)
@@ -501,7 +490,7 @@ class Test_Handling_Command(unittest.TestCase):
         mock.side_effect = self.publish
         cmd = (b"cmd", self.device)
         self.es._handle_command(module_id=1000, command=cmd)
-        self.assertEqual(self.published_commands, [command("session_id", 0, self.device, b"cmd")])
+        self.assertEqual(self.published_commands, [command("id", 0, self.device, b"cmd")])
 
     def test_cmd_is_published_when_module_id_does_not_match_device_id_and_sending_invalid_cmd_is_allowed(
         self, mock: Mock
@@ -512,7 +501,7 @@ class Test_Handling_Command(unittest.TestCase):
         with self.assertLogs(_eslogger, logging.WARNING):
             self.es._handle_command(module_id=1001, command=cmd)
             self.assertEqual(
-                self.published_commands, [command("session_id", 0, self.device, b"cmd")]
+                self.published_commands, [command("id", 0, self.device, b"cmd")]
             )
 
     def test_cmd_is_not_published_when_module_id_does_not_match_device_id_and_sending_invalid_cmd_is_disallowed(
@@ -530,7 +519,7 @@ class Test_Handling_Command(unittest.TestCase):
         cmd = (b"", self.device)
         with self.assertLogs(_eslogger, logging.WARNING):
             self.es._handle_command(module_id=1000, command=cmd)
-            self.assertEqual(self.published_commands, [command("session_id", 0, self.device, b"")])
+            self.assertEqual(self.published_commands, [command("id", 0, self.device, b"")])
 
     def test_cmd_is_published_and_warning_is_logged_when_device_is_not_connected(self, mock: Mock):
         mock.side_effect = self.publish
@@ -540,7 +529,7 @@ class Test_Handling_Command(unittest.TestCase):
             self.es._handle_command(module_id=1000, command=cmd)
             self.assertIn("not connected", cm.output[0])
             self.assertEqual(
-                self.published_commands, [command("session_id", 0, self.device, b"cmd")]
+                self.published_commands, [command("id", 0, self.device, b"cmd")]
             )
 
 
@@ -550,8 +539,8 @@ class Test_Response_Session_ID(unittest.TestCase):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
-        self.es._add_connected_device(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._add_connected_devices(self.device)
+        self.es._mqtt_session.set_id("id")
 
     def test_status_response_is_not_sent_if_session_id_of_status_does_not_match_current_session(self):
         with self.assertLogs(_eslogger, logging.ERROR):
@@ -567,8 +556,8 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
-        self.es._add_connected_device(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._add_connected_devices(self.device)
+        self.es._mqtt_session.set_id("id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)
@@ -582,7 +571,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
     def test_connect_message_logs_error_and_produces_connect_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es.mqtt._received_msgs.put(
-            connect_msg("session_id", company="company", car="car", devices=[])
+            connect_msg("id", company="company", car="car", devices=[])
         )
         with self.assertLogs(_eslogger, logging.WARNING) as cm:
             self.es._handle_car_message()
