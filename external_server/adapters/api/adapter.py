@@ -8,6 +8,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
 )
+from ExternalProtocol_pb2 import Status as _Status  # type: ignore
 from external_server.models.structures import (
     Buffer,
     DeviceIdentification,
@@ -18,6 +19,7 @@ from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
     ReturnCode,
 )
+from external_server.models.devices import device_repr
 from external_server.adapters.api.module_lib import (
     empty_command_buffer as _empty_command_buffer,
     empty_device_identification as _empty_device_identification,
@@ -171,7 +173,7 @@ class APIClientAdapter:
             device.deviceName = device_id.device_name.data[:name_length].decode("utf-8")
         return device
 
-    def forward_status(self, device: _Device, status_bytes: bytes) -> ReturnCode:
+    def forward_status(self, status: _Status) -> ReturnCode:
         """
         Forwards a status update by creating the device identification and status buffer,
         and calling the library function.
@@ -181,20 +183,32 @@ class APIClientAdapter:
         device: Device
             The device object.
 
-        status_bytes: bytes
-            Bytes of status message.
+        statud: Status message.
 
         Returns
         -------
         int
             The result of the library function call.
         """
-        device_identification = self._create_device_identification(device)
-        status_buffer = Buffer(data=status_bytes, size=len(status_bytes))
+        device_identification = self._create_device_identification(status.deviceStatus.device)
+        status_buffer = Buffer(
+            data=status.deviceStatus.statusData, size=len(status.deviceStatus.statusData)
+        )
+        code = 0
         with self._lock:
             code = self._library.forward_status(status_buffer, device_identification)
-            self._check_forward_status_code(device.module, code)
-            return code
+            self._check_forward_status_code(status.deviceStatus.device, code)
+        if status.errorMessage:
+            self._log_status_error(status)
+            self.forward_error_message(status.deviceStatus.device, status.errorMessage)
+        return code
+
+    def _log_status_error(self, status: _Status) -> None:
+        """Log error if the status contains a non-empty error message."""
+        if status.errorMessage:
+            error_str = status.errorMessage.decode()
+            drepr = device_repr(status.deviceStatus.device)
+            _logger.info(f"Status for {drepr} contains error: {error_str}.")
 
     def forward_error_message(self, device: _Device, error_bytes: bytes) -> ReturnCode:
         """
@@ -218,8 +232,13 @@ class APIClientAdapter:
         device_identification = self._create_device_identification(device)
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         with self._lock:
+            code = 0
             code = self._library.forward_error_message(error_buffer, device_identification)
             self._check_forward_error_message_code(device.module, code)
+            if code == _GeneralErrorCode.OK:
+                _logger.debug(f"Error message forwarded to module {device.module}.")
+            else:
+                _logger.debug(f"Error message not forwarded to module {device.module}.")
             return code
 
     def wait_for_command(self, timeout: int) -> ReturnCode:

@@ -27,25 +27,16 @@ class TimeoutType(IntEnum):
 # must be kept updated with the current version of the Fleet protocol
 
 
-# enum general_error_codes_enum {
-#   OK       = 0,   /// Routine execution succeed
-#   NOT_OK   = -1,  /// Routine execution does not succeed
-#   RESERVED = -10, /// Codes from -1 to RESERVED are reserved as General purpose errors
-# };
 class GeneralErrorCode(IntEnum):
-    OK = 0
-    NOT_OK = -1
-    RESERVED = -10
+    OK = 0  # Routine execution succeed
+    NOT_OK = -1  # Routine execution did not succeed
+    RESERVED = -10  # Codes from -1 to RESERVED are reserved as General purpose errors
 
 
 # Enum taken from external_server_structures.h in Fleet protocol,
 # must be kept updated with the current version of the Fleet protocol
 
 
-# enum es_error_codes {
-# 	CONTEXT_INCORRECT = -11,
-# 	TIMEOUT_OCCURRED = -12,
-# };
 class EsErrorCode(IntEnum):
     CONTEXT_INCORRECT = GeneralErrorCode.RESERVED - 1
     TIMEOUT = GeneralErrorCode.RESERVED - 2
@@ -55,11 +46,6 @@ class EsErrorCode(IntEnum):
 # must be kept updated with the current version of the Fleet protocol
 
 
-# enum disconnect_types {
-# 	announced = 0,
-# 	timeout = 1,
-# 	error = 2
-# };
 class DisconnectTypes(IntEnum):
     announced = 0
     timeout = 1
@@ -70,18 +56,8 @@ class DisconnectTypes(IntEnum):
         return int(obj)
 
 
-# struct buffer {
-# 	void *data;
-# 	size_t size;
-# };
 class Buffer(ct.Structure):
     _fields_ = [("data", ct.c_char_p), ("size", ct.c_size_t)]
-
-
-# struct device_identification {
-# 	int device_type;
-# 	char device# 	char device_name[NAME_LENGTH];
-# };_role[NAME_LENGTH];
 
 
 class DeviceIdentification(ct.Structure):

@@ -27,8 +27,7 @@ def connect_response(session_id: str, response_type: _ConnectResponse.Type) -> _
         session_id (str): The session ID for the connect response.
         connect_response_type (ConnectResponse.Type): The response type for the connect response.
 
-    Returns:
-        ExternalServer: An instance of the connect response message.
+    Returns an instance of ExternalServer containing the connect response message.
     """
     connect_response = _ConnectResponse()
     connect_response.sessionId = session_id

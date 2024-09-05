@@ -189,9 +189,7 @@ class ExternalServer:
 
         for status in ok_statuses:
             module = self._modules[status.deviceStatus.device.module]
-            module.api.forward_status(device, status.deviceStatus.statusData)
-            if status.errorMessage:
-                module.api.forward_error_message(device, status.errorMessage)
+            module.api.forward_status(status)
 
     def _send_first_commands_and_get_responses(self) -> None:
         """Send first command to each of all known connected and not connected devices.
@@ -230,7 +228,7 @@ class ExternalServer:
         "Set tls security to MQTT client"
         self._mqtt.tls_set(ca_certs, certfile, keyfile)
 
-    def _add_connected_devices(self,*device: _Device) -> None:
+    def _add_connected_devices(self, *device: _Device) -> None:
         """Store the device as connected for further handling of received messages and messages to be sent to it."""
         for d in device:
             assert isinstance(d, _Device)
@@ -299,7 +297,9 @@ class ExternalServer:
     def _collect_first_commands_for_init_sequence(self) -> list[_HandledCommand]:
         """Collect all first commands for the init sequence."""
         commands: list[_HandledCommand] = list()
-        devices_expecting_cmd: list[_Device] = [d.to_device() for d in self._known_devices.list_connected()]
+        devices_expecting_cmd: list[_Device] = [
+            d.to_device() for d in self._known_devices.list_connected()
+        ]
         devices_received_cmd: list[_Device] = list()
         for module in self._modules:
             for cmd in self._get_module_commands(module):
@@ -382,11 +382,6 @@ class ExternalServer:
         if e is not None:
             raise ConnectionRefusedError(e)
         self._set_state(ServerState.CONNECTED)
-
-    def _forward_status(self, status: _Status, module: _ServerModule) -> None:
-        """Forward the status to the module's API."""
-        device, data = status.deviceStatus.device, status.deviceStatus.statusData
-        module.api.forward_status(device, data)
 
     def _get_and_send_first_commands(self) -> None:
         """Send command to all connected devices and check responses are returned."""
@@ -484,9 +479,8 @@ class ExternalServer:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
                 case _:  # unhandled state
                     logger.error(f"Unknown device state: {status.deviceState}.")
-            self._log_status_error(status, device)
             if status_ok:
-                self._forward_status(status, module)
+                module.api.forward_status(status)
                 self._publish_status_response(status)
 
     def _handle_command(self, module_id: int, command: tuple[bytes, _Device]) -> None:
@@ -524,7 +518,9 @@ class ExternalServer:
             module = self._modules[command.device.module]
             module.api.command_ack(command.data, command.device)
 
-    def _handle_command_response_with_disconnected_type(self, cmd_response: _CommandResponse) -> None:
+    def _handle_command_response_with_disconnected_type(
+        self, cmd_response: _CommandResponse
+    ) -> None:
         device = self._command_checker.command_device(cmd_response.messageCounter)
         if device:
             self._disconnect_device(DisconnectTypes.announced, device)
@@ -636,12 +632,6 @@ class ExternalServer:
         info = f"Received status, counter={status.messageCounter}.{status_error}"
         logger.info(info)
 
-    def _log_status_error(self, status: _Status, device: _Device) -> None:
-        """Log error if the status contains a non-empty error message."""
-        if status.errorMessage:
-            error_str = status.errorMessage.decode()
-            logger.error(f"Status for {device_repr(device)} contains error: {error_str}.")
-
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule, _Device] | None:
         """Return server module and device referenced by the status messages.
 
@@ -653,10 +643,7 @@ class ExternalServer:
             logger.warning(f"Unknown module (ID={device.module}).")
             return None
         elif not module.api.is_device_type_supported(device.deviceType):
-            self.warn_device_not_supported_by_module(
-                module,
-                device,
-            )
+            self.warn_device_not_supported_by_module(module, device)
             return None
         return module, device
 

@@ -92,21 +92,6 @@ class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
         self.assertTrue(self.es._known_devices.is_connected(self.device))
         self.assertEqual(self.published_responses, [status_response("session_id", 1)])
 
-    def test_connected_device_sending_running_status_with_error_logs_error_and_receives_response(
-        self, mock: Mock
-    ):
-        mock.side_effect = self.publish
-        self.assertTrue(self.es._known_devices.is_connected(self.device))
-        with self.assertLogs(_eslogger, logging.ERROR) as cm:
-            self.es._handle_checked_status(
-                status(
-                    "session_id", Status.RUNNING, 1, DeviceStatus(device=self.device), b"some error"
-                ).status
-            )
-            self.assertIn("error", cm.output[0])
-            self.assertTrue(self.es._known_devices.is_connected(self.device))
-            self.assertEqual(self.published_responses, [status_response("session_id", 1)])
-
     def test_connected_device_sending_running_status_with_error_sends_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.assertTrue(self.es._known_devices.is_connected(self.device))

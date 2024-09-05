@@ -8,6 +8,7 @@ from unittest.mock import patch, Mock
 sys.path.append(".")
 
 from external_server.server import ServerState, logger as _eslogger
+from external_server.models.structures import Buffer
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
     CommandResponse,
@@ -124,26 +125,23 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
                 future.result()[0].payload, status_response("id", 1).SerializeToString()
             )
 
-    def test_status_containing_error_message_forwards_error(self):
+    @patch("external_server.adapters.api.module_lib.ModuleLibrary.forward_error_message")
+    def test_status_containing_error_message_forwards_error(self, mock: Mock):
         topic = self.es.mqtt.subscribe_topic
+        self.posted_error = ""
+        def forward_error(buffer: Buffer, device):
+            self.posted_error = buffer.data
+            return 0
+        mock.side_effect = forward_error
         with futures.ThreadPoolExecutor() as ex:
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
-            future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             self.broker.publish(
                 topic,
-                status(
-                    "id",
-                    Status.RUNNING,
-                    1,
-                    DeviceStatus(device=self.device),
-                    error_message=b"error",
-                ),
+                status("id", Status.RUNNING, 1, DeviceStatus(device=self.device), b"error")
             )
-            self.assertTrue(self.es._known_devices.is_connected(self.device))
-            self.assertEqual(
-                future.result(timeout=10.0)[0].payload, status_response("id", 1).SerializeToString()
-            )
+            time.sleep(1)
+            self.assertEqual(self.posted_error, b"error")
 
     def test_multiple_statuses_sent_by_connected_device_publishes_status_responses_with_corresponding_counter_values(
         self,
@@ -153,15 +151,10 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             future = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=3)
-            self.broker.publish(
-                topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device))
-            )
-            self.broker.publish(
-                topic, status("id", Status.RUNNING, 2, DeviceStatus(device=self.device))
-            )
-            self.broker.publish(
-                topic, status("id", Status.RUNNING, 3, DeviceStatus(device=self.device))
-            )
+            device_status = DeviceStatus(device=self.device)
+            self.broker.publish(topic, status("id", Status.RUNNING, 1, device_status))
+            self.broker.publish(topic, status("id", Status.RUNNING, 2, device_status))
+            self.broker.publish(topic, status("id", Status.RUNNING, 3, device_status))
             msgs = future.result(timeout=10.0)
             self.assertEqual(msgs[0].payload, status_response("id", 1).SerializeToString())
             self.assertEqual(msgs[1].payload, status_response("id", 2).SerializeToString())
