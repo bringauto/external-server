@@ -627,9 +627,7 @@ class ExternalServer:
         return modules
 
     def _log_new_status(self, status: _Status) -> None:
-        """Log the new status received from the device. Include error message if non-empty."""
-        status_error = f" status.errorMessage" if status.errorMessage else ""
-        info = f"Received status, counter={status.messageCounter}.{status_error}"
+        info = f"Received status, counter={status.messageCounter}."
         logger.info(info)
 
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule, _Device] | None:

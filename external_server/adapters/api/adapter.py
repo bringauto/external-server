@@ -206,9 +206,8 @@ class APIClientAdapter:
     def _log_status_error(self, status: _Status) -> None:
         """Log error if the status contains a non-empty error message."""
         if status.errorMessage:
-            error_str = status.errorMessage.decode()
             drepr = device_repr(status.deviceStatus.device)
-            _logger.info(f"Status for {drepr} contains error: {error_str}.")
+            _logger.info(f"Status for {drepr} contains error.")
 
     def forward_error_message(self, device: _Device, error_bytes: bytes) -> ReturnCode:
         """
@@ -236,9 +235,9 @@ class APIClientAdapter:
             code = self._library.forward_error_message(error_buffer, device_identification)
             self._check_forward_error_message_code(device.module, code)
             if code == _GeneralErrorCode.OK:
-                _logger.debug(f"Error message forwarded to module {device.module}.")
+                _logger.debug(f"Error message from {device_repr(device)} forwarded to API.")
             else:
-                _logger.debug(f"Error message not forwarded to module {device.module}.")
+                _logger.debug(f"Error message from {device_repr(device)} not forwarded to API.")
             return code
 
     def wait_for_command(self, timeout: int) -> ReturnCode:
