@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM bringauto/cpp-build-environment:latest AS mission_module_builder
 
 ARG MISSION_MODULE_VERSION=update_packages
