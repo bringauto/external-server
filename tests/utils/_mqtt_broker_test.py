@@ -94,7 +94,7 @@ class MQTTBrokerTest:
 
     def start(self, sleep: float = 1):
         broker_script = self._script_path
-        self._process = subprocess.Popen(["python", broker_script, f"--port={self._port}"])
+        self._process = subprocess.Popen(["python3", broker_script, f"--port={self._port}"])
         print(f"Started test broker on host {self._host} and port {self._port}")
         assert isinstance(self._process, subprocess.Popen)
         self._running_broker_processes.append(self._process)
