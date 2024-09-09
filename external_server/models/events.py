@@ -4,12 +4,13 @@ from typing import Any
 import dataclasses
 from enum import Enum, auto
 import logging.config
-import json
+
+
+from external_server.config import configure_logging
 
 
 logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+configure_logging("config/logging.json")
 
 
 class SingletonMeta(type):

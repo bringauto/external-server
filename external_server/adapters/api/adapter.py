@@ -1,7 +1,6 @@
 import threading
 import sys
 import logging.config
-import json
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -14,7 +13,7 @@ from external_server.models.structures import (
     DeviceIdentification,
     DisconnectTypes,
 )
-from external_server.config import ModuleConfig
+from external_server.config import ModuleConfig, configure_logging
 from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
     ReturnCode,
@@ -28,8 +27,7 @@ from external_server.adapters.api.module_lib import (
 
 
 _logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+configure_logging("config/logging.json")
 
 
 class APIClientAdapter:

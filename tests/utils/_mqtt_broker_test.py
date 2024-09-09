@@ -2,10 +2,10 @@ from __future__ import annotations
 import os
 import subprocess
 import logging.config
-import json
 import time
 
 import external_server as _external_server
+from external_server.config import configure_logging
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
@@ -13,8 +13,7 @@ from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
 
 
 logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+configure_logging("config/logging.json")
 
 
 logging.getLogger().setLevel(logging.ERROR)
@@ -73,7 +72,7 @@ class MQTTBrokerTest:
         else:
             return result
 
-    def publish(self, topic: str, *payload: str| bytes) -> None:
+    def publish(self, topic: str, *payload: str | bytes) -> None:
         if not payload:  # pragma: no cover
             return
         payload_list = []

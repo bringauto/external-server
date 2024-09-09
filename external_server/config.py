@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging.config
 
 from typing import Annotated, TypeVar, Mapping
 
@@ -10,7 +11,7 @@ from pydantic import (
     Field,
     FilePath,
     StringConstraints,
-    ValidationError
+    ValidationError,
 )
 
 
@@ -35,7 +36,7 @@ class Config(BaseModel):
     log_files_directory: DirectoryPath
     log_files_to_keep: int = Field(ge=0)
     log_file_max_size_bytes: int = Field(ge=0)
-    modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN )], ModuleConfig]
+    modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)], ModuleConfig]
 
     @field_validator("modules")
     @classmethod
@@ -59,7 +60,9 @@ class Config(BaseModel):
         config_json["mqtt_timeout"] = self.mqtt_timeout
         config_json["timeout"] = self.timeout
         config_json["send_invalid_command"] = self.send_invalid_command
-        config_json["sleep_duration_after_connection_refused"] = self.sleep_duration_after_connection_refused
+        config_json["sleep_duration_after_connection_refused"] = (
+            self.sleep_duration_after_connection_refused
+        )
         config_json["log_files_directory"] = str(self.log_files_directory)
         config_json["log_files_to_keep"] = self.log_files_to_keep
         config_json["log_file_max_size_bytes"] = self.log_file_max_size_bytes
@@ -94,3 +97,14 @@ def load_config(config_path: str) -> Config:
         raise InvalidConfigError(e) from None
 
     return config
+
+
+def configure_logging(config_path: str) -> None:
+    try:
+        with open(config_path) as f:
+            logging.config.dictConfig(json.load(f))
+    except Exception:
+        logging.warning(
+            f"External server: Could not find a logging configuration file (entered path: {config_path}. Using default logging configuration."
+        )
+        logging.basicConfig(level=logging.INFO)

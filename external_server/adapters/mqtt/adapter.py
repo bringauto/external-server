@@ -1,5 +1,4 @@
 import logging.config
-import json
 import random
 import string
 from queue import Queue, Empty
@@ -20,7 +19,7 @@ from paho.mqtt.client import (
     MQTTMessage as MQTTMessage,
 )
 from paho.mqtt.enums import CallbackAPIVersion
-
+from external_server.config import configure_logging
 from ExternalProtocol_pb2 import (  # type: ignore
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
@@ -45,8 +44,7 @@ ClientConnectionState = _ConnectionState
 
 
 _logger = logging.getLogger(__name__)
-with open("./config/logging.json", "r") as f:
-    logging.config.dictConfig(json.load(f))
+configure_logging("config/logging.json")
 
 
 def create_mqtt_client() -> _Client:
@@ -152,8 +150,10 @@ class MQTTClientAdapter:
                 self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
                 self._start_client_loop()
                 self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
-                _logger.debug(f"\nListening on topic: {self._subscribe_topic}"
-                              f"\nPublishing on topic: {self._publish_topic}")
+                _logger.debug(
+                    f"\nListening on topic: {self._subscribe_topic}"
+                    f"\nPublishing on topic: {self._publish_topic}"
+                )
             else:
                 _logger.error(
                     f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
@@ -193,8 +193,14 @@ class MQTTClientAdapter:
             _logger.info("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
-            other_type = "status" if msg.HasField("status") else ("command response" if msg.HasField("commandResponse") else "unknown")
-            _logger.warning(f"Received message is not a connect message. Received message type: {other_type}")
+            other_type = (
+                "status"
+                if msg.HasField("status")
+                else ("command response" if msg.HasField("commandResponse") else "unknown")
+            )
+            _logger.warning(
+                f"Received message is not a connect message. Received message type: {other_type}"
+            )
             return None
         _logger.info("Connect message has been received.")
         return msg.connect

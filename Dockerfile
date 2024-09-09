@@ -60,8 +60,8 @@ COPY config/for_docker.json /home/bringauto/external_server/config/for_docker.js
 COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 COPY external_server_main.py /home/bringauto/external_server/
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-COPY log /home/bringauto/external_server/log
-COPY config /home/bringauto/external_server/config
+COPY log /home/bringauto/log
+COPY config /home/bringauto/config
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules

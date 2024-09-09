@@ -4,20 +4,18 @@ import logging.config
 import sys
 import argparse
 import os
-import json
 
 from rich.logging import RichHandler
 
 from external_server.server import ExternalServer, logger as eslogger
-from external_server.config import load_config, InvalidConfigError
+from external_server.config import load_config, InvalidConfigError, configure_logging
 
 
 _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 _LOG_FILE_NAME = "external_server.log"
 
 
-with open("config/logging.json") as f:
-    logging.config.dictConfig(json.load(f))
+configure_logging("config/logging.json")
 
 
 def parsed_script_args() -> argparse.Namespace:
