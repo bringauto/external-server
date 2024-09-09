@@ -108,3 +108,4 @@ def configure_logging(config_path: str) -> None:
             f"External server: Could not find a logging configuration file (entered path: {config_path}. Using default logging configuration."
         )
         logging.basicConfig(level=logging.INFO)
+        logging.getLogger().addHandler(logging.FileHandler("log/external_server.log"))

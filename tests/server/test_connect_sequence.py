@@ -1,6 +1,5 @@
 import unittest
 import sys
-import logging
 import time
 
 sys.path.append(".")

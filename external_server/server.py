@@ -1,9 +1,9 @@
 from functools import partial
-import time
 import sys
 import enum
 import logging
-from typing import Any, Literal, Type
+from typing import Any, Type
+import time
 
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -64,14 +64,14 @@ DeviceStatusName = {
 }
 
 
-_LoggingLevel = {"INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR}
-
-
 LOG_LEVELS: dict[Type[Exception], int] = {
-    CommandResponseTimeout: logging.WARNING,
     ConnectSequenceFailure: logging.WARNING,
+    NoPublishedMessage: logging.WARNING,
+
+    CommandResponseTimeout: logging.WARNING,
     SessionTimeout: logging.WARNING,
     StatusTimeout: logging.WARNING,
+
     UnexpectedMQTTDisconnect: logging.WARNING,
 }
 
@@ -509,7 +509,9 @@ class ExternalServer:
             if self._config.send_invalid_command:
                 self._publish_command(data, device)
             else:
-                logger.warning(f"Command to device {device_repr(device)} with module ID mismatch will not be sent.")
+                logger.warning(
+                    f"Command to device {device_repr(device)} with module ID mismatch will not be sent."
+                )
 
     def _get_api_command(self, module_id: int) -> tuple[bytes, _Device] | None:
         """Pop the next command from the module's command waiting thread."""
