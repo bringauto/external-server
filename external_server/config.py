@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import os
 import logging.config
 
 from typing import Annotated, TypeVar, Mapping
@@ -108,4 +109,6 @@ def configure_logging(config_path: str) -> None:
             f"External server: Could not find a logging configuration file (entered path: {config_path}. Using default logging configuration."
         )
         logging.basicConfig(level=logging.INFO)
+        if not os.path.exists("log"):
+            os.makedirs("log")
         logging.getLogger().addHandler(logging.FileHandler("log/external_server.log"))

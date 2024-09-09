@@ -3,6 +3,7 @@ import sys
 import time
 
 sys.path.append(".")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
 

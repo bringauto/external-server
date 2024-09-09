@@ -758,8 +758,7 @@ class ExternalServer:
         try:
             self._run_initial_sequence()
             self._run_normal_communication()
-        except Exception as e:
-            logger.error(e)
+        except Exception:
             time.sleep(self._config.sleep_duration_after_connection_refused)
         finally:
             self._clear_context()

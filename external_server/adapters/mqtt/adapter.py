@@ -212,7 +212,7 @@ class MQTTClientAdapter:
         """
         msg = self._get_message()
         if msg is None:
-            _logger.error("Expected valid status message has not been received.")
+            _logger.warning("Expected valid status message has not been received.")
             return None
         if not msg.HasField("status"):
             _logger.error("Received message is not a status message.")
