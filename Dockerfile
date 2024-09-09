@@ -55,8 +55,8 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /home/bringauto/external_server
 
 # Copy project files into the docker image
-COPY external_server /home/bringauto/external_server/external_server/
-COPY config/for_docker.json /home/bringauto/config/for_docker.json
+COPY external_server /home/bringauto/external_server/external_server
+COPY config/for_docker.json /home/bringauto/external_server/config/for_docker.json
 COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 COPY external_server_main.py /home/bringauto/external_server/
 COPY requirements.txt /home/bringauto/external_server/requirements.txt

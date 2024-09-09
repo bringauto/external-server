@@ -3,8 +3,9 @@ import time
 import sys
 import enum
 import logging
-from typing import Any
+from typing import Any, Literal, Type
 
+sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -60,6 +61,18 @@ DeviceStatusName = {
     _Status.DISCONNECT: "DISCONNECT",
     _Status.ERROR: "ERROR",
     _Status.RUNNING: "RUNNING",
+}
+
+
+_LoggingLevel = {"INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR}
+
+
+LOG_LEVELS: dict[Type[Exception], int] = {
+    CommandResponseTimeout: logging.WARNING,
+    ConnectSequenceFailure: logging.WARNING,
+    SessionTimeout: logging.WARNING,
+    StatusTimeout: logging.WARNING,
+    UnexpectedMQTTDisconnect: logging.WARNING,
 }
 
 
@@ -254,7 +267,8 @@ class ExternalServer:
         if not isinstance(module_id, int):
             raise ValueError(f"Invalid module ID: {module_id}.")
         while (cmd := self._get_api_command(module_id)) is not None:
-            self._handle_command(module_id, cmd)
+            data, device = cmd
+            self._handle_command(module_id, data, device)
 
     def _check_at_least_one_device_is_connected(self) -> None:
         """Raise an exception if all devices have been disconnected."""
@@ -333,13 +347,14 @@ class ExternalServer:
         No action is taken if the device is already connected.
         """
         drepr = device_repr(device)
+        logger.info(f"Connecting device {drepr}.")
         if self._known_devices.is_connected(device):
-            logger.error(f"Device {drepr} already connected.")
+            logger.info(f"Device {drepr} is already connected.")
         else:
             code = self._modules[device.module].api.device_connected(device)
             if code == GeneralErrorCode.OK:
                 self._add_connected_devices(device)
-                logger.info(f"Connected device {drepr}.")
+                logger.info(f"Device {drepr} has been connected.")
                 return True
             logger.error(f"Device {drepr} could not connect. Response code: {code}")
         return False
@@ -362,10 +377,12 @@ class ExternalServer:
 
         If the device has already not been connected, log an error.
         """
+        drepr = device_repr(device)
+        logger.info(f"Disconnecting device {drepr}.")
         if not self._known_devices.is_connected(device):
-            logger.error(f"Device {device_repr(device)} is not connected.")
+            logger.warning(f"Device {drepr} is already disconnected.")
         else:
-            logger.warning(f"Disconnecting device {device_repr(device)}.")
+            logger.info(f"Device {drepr} has been disconnected.")
             self._known_devices.remove(DevicePy.from_device(device))
             code = self._modules[device.module].api.device_disconnected(disconnect_types, device)
             if code == GeneralErrorCode.OK:
@@ -430,13 +447,11 @@ class ExternalServer:
                     logger.error("Skipping command response with different session ID.")
             else:
                 # ignore other messages
-                logger.error(
+                logger.warning(
                     f"Expected command response, received other type of external client message. Skipping"
                 )
         # response is None
-        error_msg = "Command response has not been received."
-        logger.error(error_msg)
-        raise ConnectSequenceFailure(error_msg)
+        raise ConnectSequenceFailure("Command response has not been received.")
 
     def _handle_connect(self, connect_msg: _Connect) -> None:
         """Handle connect message received during normal communication, i.e., after init sequence."""
@@ -463,7 +478,7 @@ class ExternalServer:
         """Handle the status that has been checked by the status checker."""
         module_and_dev = self._module_and_device(status)
         if not module_and_dev:
-            logger.error(f"Received status from unsupported device. Status is ignored.")
+            logger.info(f"Received status from unsupported device. Ignoring status.")
         else:
             module, device = module_and_dev
             status_ok = True
@@ -478,29 +493,23 @@ class ExternalServer:
                 case _Status.DISCONNECT:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
                 case _:  # unhandled state
-                    logger.error(f"Unknown device state: {status.deviceState}.")
+                    logger.warning(f"Unknown device state: {status.deviceState}. Ignoring status.")
             if status_ok:
                 module.api.forward_status(status)
                 self._publish_status_response(status)
 
-    def _handle_command(self, module_id: int, command: tuple[bytes, _Device]) -> None:
+    def _handle_command(self, module_id: int, data: bytes, device: _Device) -> None:
         """Handle the command received from API during normal communication (after init sequence)."""
-        cmd_data, device = command
-        if not self._known_devices.is_connected(device):
-            logger.warning(f"Sending command to a not connected device ({device_repr(device)}).")
-        if not cmd_data:
-            logger.warning(f"Data of command for device {device_repr(device)} is empty.")
         if device.module == module_id:
-            self._publish_command(cmd_data, device)
+            self._publish_command(data, device)
         else:
             logger.warning(
-                f"Device ID {device_repr(device)} from API of module {module_id} contains different module ID."
+                f"Module ID {module_id} stored by API does not match module ID in Device ID {device_repr(device)} carried by the command."
             )
             if self._config.send_invalid_command:
-                logger.warning("Sending command with possibly invalid device.")
-                self._publish_command(cmd_data, device)
+                self._publish_command(data, device)
             else:
-                logger.warning("Invalid command will not be sent.")
+                logger.warning(f"Command to device {device_repr(device)} with module ID mismatch will not be sent.")
 
     def _get_api_command(self, module_id: int) -> tuple[bytes, _Device] | None:
         """Pop the next command from the module's command waiting thread."""
@@ -542,7 +551,7 @@ class ExternalServer:
             case EventType.TIMEOUT_OCCURRED:
                 self._handle_timeout_event(event.data)
             case _:
-                logger.error("Uknown event during normal communication. Ignoring.")
+                logger.warning("Uknown event during normal communication. Ignoring.")
 
     def _handle_timeout_event(self, timeout_type: Any) -> None:
         """Handle the timeout event and put it in the event queue."""
@@ -630,6 +639,12 @@ class ExternalServer:
         info = f"Received status, counter={status.messageCounter}."
         logger.info(info)
 
+    def _log_and_set_error_and_raise(self, exception: Exception) -> None:
+        """Log the exception and raise it. Set the server's state to ERROR."""
+        logging.log(LOG_LEVELS.get(type(exception), logging.ERROR), exception)
+        self._set_state(ServerState.ERROR)
+        raise exception
+
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule, _Device] | None:
         """Return server module and device referenced by the status messages.
 
@@ -647,6 +662,12 @@ class ExternalServer:
 
     def _publish_command(self, data: bytes, device: _Device) -> None:
         """Publish the external command to the MQTT broker on publish topic."""
+
+        if not self._known_devices.is_connected(device):
+            logger.warning(f"Sending command to a not connected device ({device_repr(device)}).")
+        if not data:
+            logger.warning(f"Data of command for device {device_repr(device)} is empty.")
+
         handled_cmd = _HandledCommand(data=data, device=device, from_api=True)
         self._command_checker.add(handled_cmd)
         # the following has to be called before publishing in order to assign counter to the command
@@ -662,7 +683,7 @@ class ExternalServer:
     def _publish_status_response(self, status: _Status) -> None:
         """Publish the status response message to the MQTT broker on publish topic."""
         if status.sessionId != self._mqtt_session.id:
-            logger.error(
+            logger.warning(
                 "Status session ID does not match current session ID of the server. Status response"
                 f" to the device {device_repr(status.deviceStatus.device)} will not be sent."
             )
@@ -688,8 +709,7 @@ class ExternalServer:
                 self._set_running_flag(True)
             self._init_sequence()
         except Exception as e:
-            self._set_state(ServerState.ERROR)
-            raise e
+            self._log_and_set_error_and_raise(e)
 
     def _run_normal_communication(self) -> None:
         """Start the normal communication over MQTT. An init sequence must have been completed successfully."""
@@ -706,9 +726,7 @@ class ExternalServer:
                 event = self._event_queue.get()
                 self._handle_communication_event(event)
             except Exception as e:
-                logger.error(e)
-                self._set_state(ServerState.ERROR)
-                raise e
+                self._log_and_set_error_and_raise(e)
 
     def _set_state(self, state: ServerState) -> None:
         """Set the server's state variable to the given value if the transition is allowed.

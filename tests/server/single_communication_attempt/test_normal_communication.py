@@ -287,7 +287,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
 
     def test_nonempty_error_msg_from_status_is_logged(self):
         topic = self.es.mqtt.subscribe_topic
-        with self.assertLogs(_eslogger, logging.ERROR):
+        with self.assertLogs(_eslogger, logging.INFO):
             with futures.ThreadPoolExecutor() as ex:
                 self.es._status_checker.set_counter(1)
                 ex.submit(self.es._run_normal_communication)
@@ -481,8 +481,7 @@ class Test_Handling_Command(unittest.TestCase):
 
     def test_cmd_is_published_if_module_id_matches_device_id(self, mock: Mock):
         mock.side_effect = self.publish
-        cmd = (b"cmd", self.device)
-        self.es._handle_command(module_id=1000, command=cmd)
+        self.es._handle_command(module_id=1000, data=b"cmd", device=self.device)
         self.assertEqual(self.published_commands, [command("id", 0, self.device, b"cmd")])
 
     def test_cmd_is_published_when_module_id_does_not_match_device_id_and_sending_invalid_cmd_is_allowed(
@@ -490,9 +489,8 @@ class Test_Handling_Command(unittest.TestCase):
     ):
         self.es._config.send_invalid_command = True
         mock.side_effect = self.publish
-        cmd = (b"cmd", self.device)
         with self.assertLogs(_eslogger, logging.WARNING):
-            self.es._handle_command(module_id=1001, command=cmd)
+            self.es._handle_command(module_id=1001, data=b"cmd", device=self.device)
             self.assertEqual(
                 self.published_commands, [command("id", 0, self.device, b"cmd")]
             )
@@ -502,24 +500,21 @@ class Test_Handling_Command(unittest.TestCase):
     ):
         self.es._config.send_invalid_command = False
         mock.side_effect = self.publish
-        cmd = (b"cmd", self.device)
         with self.assertLogs(_eslogger, logging.WARNING):
-            self.es._handle_command(module_id=1001, command=cmd)
+            self.es._handle_command(module_id=1001, data=b"cmd", device=self.device)
             self.assertEqual(self.published_commands, [])
 
     def test_cmd_is_published_and_warning_is_logged_when_data_is_empty(self, mock: Mock):
         mock.side_effect = self.publish
-        cmd = (b"", self.device)
         with self.assertLogs(_eslogger, logging.WARNING):
-            self.es._handle_command(module_id=1000, command=cmd)
+            self.es._handle_command(module_id=1000, data=b"", device=self.device)
             self.assertEqual(self.published_commands, [command("id", 0, self.device, b"")])
 
     def test_cmd_is_published_and_warning_is_logged_when_device_is_not_connected(self, mock: Mock):
         mock.side_effect = self.publish
-        cmd = (b"cmd", self.device)
         self.es._known_devices.not_connected(self.device)
         with self.assertLogs(_eslogger, logging.WARNING) as cm:
-            self.es._handle_command(module_id=1000, command=cmd)
+            self.es._handle_command(module_id=1000, data=b"cmd", device=self.device)
             self.assertIn("not connected", cm.output[0])
             self.assertEqual(
                 self.published_commands, [command("id", 0, self.device, b"cmd")]
@@ -536,7 +531,7 @@ class Test_Response_Session_ID(unittest.TestCase):
         self.es._mqtt_session.set_id("id")
 
     def test_status_response_is_not_sent_if_session_id_of_status_does_not_match_current_session(self):
-        with self.assertLogs(_eslogger, logging.ERROR):
+        with self.assertLogs(_eslogger, logging.WARNING):
             self.es._handle_checked_status(
                 status("some_other_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
             )

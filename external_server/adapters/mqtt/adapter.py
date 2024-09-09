@@ -190,11 +190,11 @@ class MQTTClientAdapter:
     def get_connect_message(self) -> _Connect | None:
         msg = self._get_message()
         if msg is None:
-            _logger.error("Connect message has not been received.")
+            _logger.info("Connect message has not been received.")
             return None
         elif not msg.HasField("connect"):
             other_type = "status" if msg.HasField("status") else ("command response" if msg.HasField("commandResponse") else "unknown")
-            _logger.error(f"Received message is not a connect message. Received message type: {other_type}")
+            _logger.warning(f"Received message is not a connect message. Received message type: {other_type}")
             return None
         _logger.info("Connect message has been received.")
         return msg.connect

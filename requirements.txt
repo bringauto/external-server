@@ -1,6 +1,5 @@
-#libraries used by our code
 paho-mqtt==2.0.0
-protobuf==4.25.3
+protobuf>=4.25.3
 rich==13.7.1
 pydantic==2.6.
 coverage>=7.5.4
