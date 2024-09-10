@@ -211,11 +211,8 @@ class MQTTClientAdapter:
         Raise an exception if the message is not received or is not a status message.
         """
         msg = self._get_message()
-        if msg is None:
-            _logger.warning("Expected valid status message has not been received.")
-            return None
-        if not msg.HasField("status"):
-            _logger.error("Received message is not a status message.")
+        if msg is None or not msg.HasField("status"):
+            _logger.error("Got event status message arrived, but the message is not of a type status. Ignoring.")
             return None
         return msg.status
 
