@@ -6,11 +6,7 @@ from enum import Enum, auto
 import logging.config
 
 
-from external_server.config import configure_logging
-
-
 logger = logging.getLogger(__name__)
-configure_logging("config/logging.json")
 
 
 class SingletonMeta(type):

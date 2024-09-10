@@ -106,22 +106,30 @@ def configure_logging(config_path: str) -> None:
             logging.config.dictConfig(json.load(f))
     except Exception:
         logger = logging.getLogger()
-        logger.setLevel(level=logging.INFO)
         logger.warning(
             f"External server: Could not find a logging configuration file (entered path: {config_path}. Using default logging configuration."
         )
+
+        if not os.path.isfile("log/external_server.log"):
+            if not os.path.exists("log"):
+                os.makedirs("log")
+            with open("log/external_server.log", "w") as f:
+                f.write("")
+
         if not logger.hasHandlers(): # Prevents adding hanlders multiple times
             logger.propagate = False
             formatter = logging.Formatter(
                 fmt="[%(asctime)s.%(msecs)03d] [external-server] [%(levelname)s]\t %(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S",
             )
-            file_handler = logging.FileHandler("./log/external_server.log")
+            file_handler = logging.FileHandler("log/external_server.log")
+            file_handler.setLevel(level=logging.INFO)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
             stream_handler = logging.StreamHandler()
             stream_handler.setFormatter(formatter)
+            stream_handler.setLevel(level=logging.INFO)
             logger.addHandler(stream_handler)
 
             logger.setLevel(level=logging.INFO)

@@ -36,7 +36,7 @@ def parsed_script_args() -> argparse.Namespace:
     args = parser.parse_args()
 
     if not os.path.isfile(args.config):
-        raise FileNotFoundError(f"Config file {args.config} not found")
+        raise FileNotFoundError(f"Config file {os.path.abspath(args.config)} not found.")
     if args.tls:
         missing_fields = []
         if not args.ca:

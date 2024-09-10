@@ -326,19 +326,13 @@ class ExternalServer:
                 elif device in devices_received_cmd:
                     logger.warning(f"Multiple commands for '{drepr}'. Only the first is accepted.")
                 else:  # device could not be in the list of connected devices
-                    logger.warning(
-                        f"Command from API for not connected device '{drepr}' is ignored."
-                    )
+                    logger.warning(f"Device {drepr} is not connected. Command retrieved from API will be ignored.")
         for device in devices_expecting_cmd:
             commands.append(_HandledCommand(b"", device=device, from_api=False))
-            logger.warning(
-                f"No command received for device {device_repr(device)}. Creating empty command."
-            )
+            logger.info(f"No command received for device {device_repr(device)}. Creating empty command.")
         for device_py in self._known_devices.list_not_connected():
             commands.append(_HandledCommand(b"", device=device_py.to_device(), from_api=False))
-            logger.warning(
-                f"Device {device_repr(device_py)} is not connected. Creating empty command."
-            )
+            logger.info(f"Device {device_repr(device_py)} is not connected. No command is being sent.")
         return commands
 
     def _connect_device(self, device: _Device) -> bool:
@@ -380,7 +374,7 @@ class ExternalServer:
         drepr = device_repr(device)
         logger.info(f"Disconnecting device {drepr}.")
         if not self._known_devices.is_connected(device):
-            logger.warning(f"Device {drepr} is already disconnected.")
+            logger.info(f"Device {drepr} is already disconnected.")
         else:
             logger.info(f"Device {drepr} has been disconnected.")
             self._known_devices.remove(DevicePy.from_device(device))

@@ -51,8 +51,9 @@ FROM bringauto/python-environment:test-ubuntu-24-04
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=$PYTHONPATH:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
-WORKDIR /home/bringauto/external_server
+WORKDIR /home/bringauto
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server

@@ -6,8 +6,8 @@ services:
     entrypoint: ["python3", "/home/bringauto/external_server/external_server_main.py", "-c", "./config/for_docker.json"]
     restart: always
     volumes:
-      - "./config:/home/bringauto/external_server/config"
-      - "./log:/home/bringauto/external_server/log"
+      - "./config:/home/bringauto/config"
+      - "./log:/home/bringauto/log"
     networks:
       - bring-emulator
 
