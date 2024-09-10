@@ -46,28 +46,33 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREF
     make install
 
 
-FROM bringauto/python-environment:test-ubuntu-24-04
+FROM bringauto/python-environment:test-ubuntu-24-04 as external_server
 
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
+# ensure PYTHONPATH is defined
+RUN if [ "$PYTHONPATH" = "" ]; then export PYTHONPATH=""; fi
+# append to the PYTHONPATH
 ENV PYTHONPATH=$PYTHONPATH:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
 WORKDIR /home/bringauto
 
-# Copy project files into the docker image
-COPY external_server /home/bringauto/external_server/external_server
-COPY config/for_docker.json /home/bringauto/config/for_docker.json
-COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
-COPY external_server_main.py /home/bringauto/external_server/
+# Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-COPY log /home/bringauto/log
-COPY config /home/bringauto/config
-COPY config/logging.json /home/bringauto/config/logging.json
+RUN pip3 install -r /home/bringauto/external_server/requirements.txt --break-system-packages
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 
-# Install Python dependencies while ignoring overriding system packages inside the container
-RUN pip3 install -r /home/bringauto/external_server/requirements.txt --break-system-packages
+# Copy project files into the docker image
+COPY external_server /home/bringauto/external_server/external_server
+COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
+COPY external_server_main.py /home/bringauto/external_server/
+
+# Copy configuration files
+COPY config/for_docker.json /home/bringauto/config/for_docker.json
+COPY log /home/bringauto/log
+COPY config /home/bringauto/config
+COPY config/logging.json /home/bringauto/config/logging.json
