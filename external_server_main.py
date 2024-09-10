@@ -15,7 +15,7 @@ _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 _LOG_FILE_NAME = "external_server.log"
 
 
-configure_logging("config/logging.json")
+configure_logging("./config/logging.json")
 
 
 def parsed_script_args() -> argparse.Namespace:

@@ -111,4 +111,4 @@ def configure_logging(config_path: str) -> None:
         logging.basicConfig(level=logging.INFO)
         if not os.path.exists("log"):
             os.makedirs("log")
-        logging.getLogger().addHandler(logging.FileHandler("log/external_server.log"))
+        logging.getLogger().addHandler(logging.FileHandler("./log/external_server.log"))
