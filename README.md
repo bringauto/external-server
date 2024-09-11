@@ -9,17 +9,26 @@ This implementation of the External Server can handle only one car. To handle mu
 # Requirements
 
 - Python (version >= 3.10)
-- Other Python requirements can be installed by `pip3 install -r requirements.txt`
 
 # Usage
 
-# Preparing libraries for server modules
+## Installing Python packages
+
+Install the required Python packages in virtual environment by running the following
+
+```bash
+python3 -m venv .venv && \
+source .venv/bin/activate && \
+pip3 install -r requirements.txt
+```
+
+## Preparing libraries for server modules
 
 Prepare your shared library of module implementation (implementation of `external_server_api.h`). To use this library with External Server, you need to fill the module ID and path to this library into the External Server config file.
 
 ## Options in the config file
 
-Prepare your config file for the External Server. THe config file can be found in `config/config.json`. It contains the following options:
+Prepare your config file for the External Server. The config file can be found in `config/config.json`. It contains the following options:
 
 - `company_name`, `car_name` (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` (required) - IP address of the MQTT broker.
@@ -34,6 +43,8 @@ Prepare your config file for the External Server. THe config file can be found i
 - `modules` (required) - supported modules specified by module number.
   - `lib_path` (required) - path to module shared library.
   - `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
+
+As an example of a filled-up config file including the module configuration, see `config/config.json.example`.
 
 ## Starting the External Server
 
