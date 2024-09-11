@@ -8,7 +8,7 @@ This directory contains a fake external server that communicates with an externa
 ## Requirements
 
 - Python (version >= 3.10)
-- Other Python requirements can be installed by `pip3 install -r requirements.txt`
+- Other Python requirements can be installed by `pip3 install -r requirements.txt -r tests/test-requirements.txt`
 
 ## Arguments
 

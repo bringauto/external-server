@@ -220,7 +220,7 @@ class ExternalServer:
         - starting the MQTT connection.
         """
 
-        logger.debug("> Starting the external server.")
+        logger.debug("Starting the external server.")
         self._start_module_threads()
         self._start_communication_loop()
 
