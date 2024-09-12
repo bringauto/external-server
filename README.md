@@ -29,7 +29,7 @@ pip3 install -r requirements.txt
 Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule and compile the protobuf
 
 ```bash
-git submodule update lib/fleet-protocol && \
+git submodule update --init lib/fleet-protocol && \
 pushd lib/fleet-protocol/protobuf && \
 find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
 popd
@@ -112,7 +112,7 @@ Compile a shared library for the [Example Module](https://github.com/bringauto/e
 - the CMakelib installed (see [here](https://github.com/cmakelib/cmakelib)) and the `CMLIB_DIR` env variable set to the installation directory and exported,
 - the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
 
-Run the following in the `tests/utils/example_module` directory
+Run the following
 
 ```bash
 pushd tests/utils/example_module && \
