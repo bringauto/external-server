@@ -12,7 +12,7 @@ This implementation of the External Server can handle only one car. To handle mu
 
 # Usage
 
-## Installing Python packages
+## Install Python packages
 
 Install the required Python packages in virtual environment by running the following
 
@@ -22,13 +22,26 @@ source .venv/bin/activate && \
 pip3 install -r requirements.txt
 ```
 
-## Preparing libraries for server modules
+## Update the submodules
 
-Prepare your shared library of module implementation (implementation of `external_server_api.h`). To use this library with External Server, you need to fill the module ID and path to this library into the External Server config file.
+Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule and compile the protobuf
 
-## Options in the config file
+```bash
+git submodule update lib/fleet-protocol && \
+pushd lib/fleet-protocol/protobuf && \
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} + && \
+popd
+```
 
-Prepare your config file for the External Server. The config file can be found in `config/config.json`. It contains the following options:
+## Configure the External Server
+
+Prepare your config file for the External Server. The config file can be found in `config/config.json`.
+
+As an example of a filled-up config file, see the `config/config.json.example`.
+
+### Server configuration
+
+Set up the MQTT connection parameters, company and car name and the External server behavior.
 
 - `company_name`, `car_name` (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` (required) - IP address of the MQTT broker.
@@ -40,15 +53,19 @@ Prepare your config file for the External Server. The config file can be found i
 - `log_files_directory` (required) - path to a directory in which the logs will be stored. If left empty, the current working directory will be used.
 - `log_files_to_keep` (required) - number of log files that will be kept (can be 0).
 - `log_file_max_size_bytes` (required) - max file size of a log in bytes (0 means unlimited).
-- `modules` (required) - supported modules specified by module number.
-  - `lib_path` (required) - path to module shared library.
-  - `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
 
-As an example of a filled-up config file including the module configuration, see `config/config.json.example`.
+### Modules
+
+The last item in the config file is `modules`, represented by key-value pairs. The key is the ID of the module, the value contains following
+
+- `lib_path` (required) - path to module shared library (`*.so`).
+- `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
+
+See the `config/config.json.example` for an example of modules configuration. When using the modified `config/config.json.example`, remove the `example` suffix from the file name.
 
 ## Starting the External Server
 
-After filling in the config, you can run External Server with this command:
+After configuration and installation of the dependencies, run External Server with this command:
 
 ```bash
 python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
