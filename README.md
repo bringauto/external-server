@@ -12,7 +12,9 @@ This implementation of the External Server can handle only one car. To handle mu
 
 # Usage
 
-## Install Python packages
+## Install dependencies
+
+### Python packages
 
 Install the required Python packages in virtual environment by running the following
 
@@ -22,14 +24,14 @@ source .venv/bin/activate && \
 pip3 install -r requirements.txt
 ```
 
-## Update the submodules
+### Submodules
 
 Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule and compile the protobuf
 
 ```bash
 git submodule update lib/fleet-protocol && \
 pushd lib/fleet-protocol/protobuf && \
-find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} + && \
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
 popd
 ```
 
@@ -37,7 +39,7 @@ popd
 
 Prepare your config file for the External Server. The config file can be found in `config/config.json`.
 
-As an example of a filled-up config file, see the `config/config.json.example`.
+As an example of a filled-up config file, see the `config/config.json.example`. When using the modified `config/config.json.example`, remove the `example` suffix from the file name.
 
 ### Server configuration
 
@@ -61,9 +63,9 @@ The last item in the config file is `modules`, represented by key-value pairs. T
 - `lib_path` (required) - path to module shared library (`*.so`).
 - `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
 
-See the `config/config.json.example` for an example of modules configuration. When using the modified `config/config.json.example`, remove the `example` suffix from the file name.
+See the `config/config.json.example` for an example of modules configuration.
 
-## Starting the External Server
+## Start the External Server
 
 After configuration and installation of the dependencies, run External Server with this command:
 
@@ -71,14 +73,10 @@ After configuration and installation of the dependencies, run External Server wi
 python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
 ```
 
-### Arguments
-
 - `-c or --config <str>` = path to the config file, default = `./config/config.json`
 - `--tls` = tls mqtt authentication
 
-### TLS arguments
-
-following arguments are used if argument `tls` is set:
+Following arguments are used if argument `tls` is set:
 
 - `--ca <str>` = path to ca certification
 - `--cert <str>` = path to cert file"
@@ -87,6 +85,10 @@ following arguments are used if argument `tls` is set:
 # Unit tests
 
 ## Necessary steps before testing
+
+First, do the steps from the [Install dependencies](#install-dependencies) section.
+
+The proceed with the following steps.
 
 ### Install the external server package
 
@@ -97,19 +99,28 @@ pip install -e .
 pip install -r tests/requirements.txt
 ```
 
-### Install the shared library
-
-to be able to run tests for the External Server API client, you need to compile a shared library for the [Example Module](https://github.com/bringauto/example-module/). To be able to do so, you need to have
-
-- the CMakelib installed (see [here](https://github.com/cmakelib/cmakelib)) and the `CMLIB_DIR` environment variable set to the directory and exported (see the instructions in the CMakelib README),
-- the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
-
-Run the following in the `tests/utils/example-module` directory.
+Update submodules
 
 ```bash
-mkdir _build && cd _build
-cmake .. -DCMLIB_DIR=<github-url-to-cmakelib-repository-root-dir>
+git submodule update --init --recursive
+```
+
+### Install the shared library
+
+Compile a shared library for the [Example Module](https://github.com/bringauto/example-module/). This requires
+
+- the CMakelib installed (see [here](https://github.com/cmakelib/cmakelib)) and the `CMLIB_DIR` env variable set to the installation directory and exported,
+- the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
+
+Run the following in the `tests/utils/example_module` directory
+
+```bash
+pushd tests/utils/example_module && \
+if [ ! -d "_build" ]; then mkdir _build; fi && \
+cd _build && \
+cmake .. -DCMLIB_DIR=https://github.com/cmakelib/cmakelib && \
 make
+popd
 ```
 
 ## Running the tests
@@ -137,3 +148,9 @@ The External Server is ready to use with Docker. You can build Docker image with
 These compiled modules are inserted into image and are ready to use with External Server in Docker container.
 
 The External Server can be also used with docker compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
+
+# Development
+
+## Type checking
+
+To allow for type checking of the classes from compiler protobuf of fleet protocol, add `<project-root-directory>/lib/fleet-protocol/protobuf/compiled/python`to the `PYTHONPATH` environment variable.

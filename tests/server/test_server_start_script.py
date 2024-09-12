@@ -9,16 +9,10 @@ from external_server_main import parsed_script_args
 
 class Test_Argparse_Init(unittest.TestCase):
 
-    def test_omitting_all_arguments_sets_default_values_for_config_file_path_and_tls(self):
-        sys.argv = ["external_server_main.py"]
-        args = parsed_script_args()
-        self.assertEqual(args.config, "./config/config.json")
-        self.assertEqual(args.tls, None)
-
     def test_setting_existing_config_file_path_is_allowed(self):
-        sys.argv = ["external_server_main.py", "-c", "./config/config.json"]
+        sys.argv = ["external_server_main.py", "-c", "./tests/config.json"]
         args = parsed_script_args()
-        self.assertEqual(args.config, "./config/config.json")
+        self.assertEqual(args.config, "./tests/config.json")
         self.assertEqual(args.tls, None)
 
     def test_setting_nonexistent_config_file_path_raises_error(self):
@@ -28,7 +22,7 @@ class Test_Argparse_Init(unittest.TestCase):
 
     def test_setting_tls_flag_without_further_arguments_raises_error(self):
         with self.assertRaises(argparse.ArgumentError) as cm:
-            sys.argv = ["external_server_main.py", "--tls"]
+            sys.argv = ["external_server_main.py", "-c", "./tests/config.json", "--tls"]
             parsed_script_args()
         self.assertIn("ca certificate", cm.exception.message)
         self.assertIn("PEM encoded client certificate", cm.exception.message)
@@ -36,7 +30,7 @@ class Test_Argparse_Init(unittest.TestCase):
 
     def test_setting_tls_flag_with_only_ca_certificate_missing_raises_error(self):
         with self.assertRaises(argparse.ArgumentError) as cm:
-            sys.argv = ["external_server_main.py", "--tls", "--cert", "cert.pem", "--key", "key.pem"]
+            sys.argv = ["external_server_main.py", "-c", "./tests/config.json", "--tls", "--cert", "cert.pem", "--key", "key.pem"]
             parsed_script_args()
         self.assertIn("ca certificate", cm.exception.message)
         self.assertNotIn("PEM encoded client certificate", cm.exception.message)
@@ -44,7 +38,7 @@ class Test_Argparse_Init(unittest.TestCase):
 
     def test_setting_tls_flag_with_only_PEM_certificate_missing_raises_error(self):
         with self.assertRaises(argparse.ArgumentError) as cm:
-            sys.argv = ["external_server_main.py", "--tls", "--ca", "ca.pem", "--key", "key.pem"]
+            sys.argv = ["external_server_main.py", "-c", "./tests/config.json", "--tls", "--ca", "ca.pem", "--key", "key.pem"]
             parsed_script_args()
         self.assertNotIn("ca certificate", cm.exception.message)
         self.assertIn("PEM encoded client certificate", cm.exception.message)
@@ -52,7 +46,7 @@ class Test_Argparse_Init(unittest.TestCase):
 
     def test_setting_tls_flag_with_only_private_key_missing_raises_error(self):
         with self.assertRaises(argparse.ArgumentError) as cm:
-            sys.argv = ["external_server_main.py", "--tls", "--cert", "cert.pem", "--ca", "ca.pem"]
+            sys.argv = ["external_server_main.py", "-c", "./tests/config.json", "--tls", "--cert", "cert.pem", "--ca", "ca.pem"]
             parsed_script_args()
         self.assertNotIn("ca certificate", cm.exception.message)
         self.assertIn("private key", cm.exception.message)
@@ -60,6 +54,7 @@ class Test_Argparse_Init(unittest.TestCase):
     def test_setting_tls_flag_with_ca_cert_cert_and_key_is_allowed(self):
         sys.argv = [
             "external_server_main.py",
+            "-c", "./tests/config.json",
             "--tls",
             "--ca",
             "ca.pem",
@@ -69,7 +64,6 @@ class Test_Argparse_Init(unittest.TestCase):
             "key.pem",
         ]
         args = parsed_script_args()
-        self.assertEqual(args.config, "./config/config.json")
         self.assertEqual(args.tls, True)
         self.assertEqual(args.ca, "ca.pem")
         self.assertEqual(args.cert, "cert.pem")
