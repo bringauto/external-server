@@ -56,14 +56,28 @@ Set up the MQTT connection parameters and company name and the External server b
 - `log_files_to_keep` (required) - number of log files that will be kept (can be 0).
 - `log_file_max_size_bytes` (required) - max file size of a log in bytes (0 means unlimited).
 
-### Modules
+### Common modules
 
-The last item in the config file is `modules`, represented by key-value pairs. The key is the ID of the module, the value contains following
+One of the last items in the config file is `common_modules`, represented by key-value pairs. The key is the ID of the module, the value contains following
 
 - `lib_path` (required) - path to module shared library (`*.so`).
 - `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
 
+A common module will be used for all cars. No such module can be defined in the car configuration.
+
 See the `config/config.json.example` for an example of modules configuration.
+
+### Cars
+
+The last item in the config file is `cars`, represented by key-value pairs. The key is the name of the car, the value is a dictionary containing car-specific modules keyed as `specific_modules`.
+
+The structure of the `specific_modules` is the same as the `common_modules` structure.
+
+See the `config/config.json.example` for an example of car configuration.
+
+Configuring module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
+
+Note that for each car, at least one module has to be defined, either in `common_modules` or `specific_modules`.
 
 ## Start the External Server
 
