@@ -6,7 +6,7 @@ from pydantic import FilePath
 from tests.utils._mqtt_broker_test import MQTTBrokerTest
 from tests.utils._threads import ExternalServerThreadExecutor
 from external_server import ExternalServer
-from external_server.config import Config as ServerConfig, ModuleConfig
+from external_server.config import ServerConfig as ServerConfig, ModuleConfig
 
 
 EXAMPLE_MODULE_SO_LIB_PATH: FilePath = \

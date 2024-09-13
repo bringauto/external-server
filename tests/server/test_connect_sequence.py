@@ -15,7 +15,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as _ExternalServerMsg,
     Status as _Status,
 )
-from external_server.config import Config, ModuleConfig
+from external_server.config import ServerConfig, ModuleConfig
 from external_server.server import ExternalServer, logger
 from external_server.models.messages import (
     connect_msg,
@@ -53,7 +53,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es)
@@ -137,7 +137,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
 
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.2)
@@ -192,7 +192,7 @@ class Test_Command_Response(unittest.TestCase):
 
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.1)
@@ -221,7 +221,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
 
     def setUp(self):
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-        self.config = Config(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
+        self.config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
         self.es = ExternalServer(config=self.config)
         self.timeout = self.es.mqtt.timeout
         self.broker = MQTTBrokerTest(start=True)

@@ -8,7 +8,7 @@ sys.path.append(".")
 from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.config import Config as ServerConfig, ModuleConfig as _ModuleConfig
+from external_server.config import ServerConfig as ServerConfig, ModuleConfig as _ModuleConfig
 from external_server.server import ExternalServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
 

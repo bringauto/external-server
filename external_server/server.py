@@ -31,7 +31,7 @@ from external_server.models.messages import (
     status_response as _status_response,
 )
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
-from external_server.config import Config as ServerConfig
+from external_server.config import ServerConfig as ServerConfig
 from external_server.models.structures import (
     GeneralErrorCode,
     DisconnectTypes,
@@ -104,12 +104,15 @@ class ExternalServer:
 
     def __init__(self, config: ServerConfig) -> None:
         self._running = False
+
         self._config = config
+
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
         self._mqtt_session = MQTTSession(self._config.mqtt_timeout)
         self._mqtt = self.mqtt_adapter_from_config(config)
+
         self._status_checker = StatusChecker(self._config.timeout)
         self._command_checker = PublishedCommandChecker(self._config.timeout)
         self._modules = self._initialized_modules(config)

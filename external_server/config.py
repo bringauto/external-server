@@ -25,7 +25,7 @@ _MQTT_ADDRESS_PATTERN = r"^((http|https)://)?([\w-]+\.)?+[\w-]+$"
 _MODULE_ID_PATTERN = r"^\d+$"
 
 
-class Config(BaseModel):
+class ServerConfig(BaseModel):
     company_name: Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
     car_name: Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
     mqtt_address: Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
@@ -85,7 +85,7 @@ class InvalidConfigError(Exception):
     pass
 
 
-def load_config(config_path: str) -> Config:
+def load_config(config_path: str) -> ServerConfig:
     try:
         with open(config_path) as config_file:
             data = config_file.read()
@@ -93,7 +93,7 @@ def load_config(config_path: str) -> Config:
         raise InvalidConfigError(f"Config could not be loaded: {e}") from None
 
     try:
-        config = Config.model_validate_json(data)
+        config = ServerConfig.model_validate_json(data)
     except ValidationError as e:
         raise InvalidConfigError(e) from None
 
