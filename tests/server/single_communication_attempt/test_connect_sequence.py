@@ -312,7 +312,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
     def setUp(self):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        self.es._mqtt_session.set_id("id")
+        self.es._mqtt.session.set_id("id")
         self.forwarded_statuses = list()
 
     def test_status_from_supported_device_is_forwarded(self, mock_get: Mock, mock_forward: Mock):

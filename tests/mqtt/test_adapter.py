@@ -627,7 +627,7 @@ class Test_Expecting_Status(unittest.TestCase):
 
     def setUp(self) -> None:
         self.broker = MQTTBrokerTest(start=True)
-        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT)
+        self.adapter = MQTTClientAdapter("some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT, 1.0)
         self.adapter.connect()
 
     def test_without_any_message_published_yields_none(self):
