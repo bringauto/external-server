@@ -3,10 +3,9 @@ import os as _os
 
 from pydantic import FilePath
 
-from tests.utils._mqtt_broker_test import MQTTBrokerTest
 from tests.utils._threads import ExternalServerThreadExecutor
 from external_server import ExternalServer
-from external_server.config import ServerConfig as ServerConfig, ModuleConfig
+from external_server.config import CarConfig as CarConfig, ModuleConfig
 
 
 EXAMPLE_MODULE_SO_LIB_PATH: FilePath = \
@@ -30,7 +29,7 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def get_test_server(mqtt_timeout: float = -1, timeout: float = -1) -> ExternalServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    config = ServerConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+    config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
     if mqtt_timeout > 0:
         config.mqtt_timeout = mqtt_timeout
     if timeout > 0:

@@ -36,7 +36,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.models.events import EventType  # type: ignore
 from external_server.models.events import EventQueueSingleton  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
-from tests.utils import MQTTBrokerTest  # type: ignore
+from tests.utils.mqtt_broker import MQTTBrokerTest  # type: ignore
 
 
 TEST_ADDRESS = "127.0.0.1"

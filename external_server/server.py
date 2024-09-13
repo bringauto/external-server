@@ -31,7 +31,10 @@ from external_server.models.messages import (
     status_response as _status_response,
 )
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
-from external_server.config import ServerConfig as ServerConfig
+from external_server.config import (
+    CarConfig as CarConfig,
+    ServerConfig as ServerConfig
+)
 from external_server.models.structures import (
     GeneralErrorCode,
     DisconnectTypes,
@@ -103,18 +106,26 @@ ExternalClientMessage = _Connect | _Status | _CommandResponse
 class MainExtServer:
 
     def __init__(self, config: ServerConfig) -> None:
-        self._car_server = ExternalServer(config)
+        self._car_servers: dict[str, ExternalServer] = {}
+        for car_name in config.cars:
+            self._car_servers[car_name] = ExternalServer(CarConfig.from_server_config(car_name, config))
 
     def start(self) -> None:
-        self._car_server.start()
+        for car_server in self._car_servers.values():
+            car_server.start()
 
     def stop(self, reason: str = "") -> None:
-        self._car_server.stop(reason)
+        for car_server in self._car_servers.values():
+            car_server.stop(reason)
+
+    def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+        for car_server in self._car_servers.values():
+            car_server.tls_set(ca_certs, certfile, keyfile)
 
 
 class ExternalServer:
 
-    def __init__(self, config: ServerConfig) -> None:
+    def __init__(self, config: CarConfig) -> None:
         self._running = False
 
         self._config = config
@@ -633,7 +644,7 @@ class ExternalServer:
             msg = f"Connection sequence has failed. {e}"
             raise ConnectSequenceFailure(msg)
 
-    def _initialized_modules(self, server_config: ServerConfig) -> dict[int, _ServerModule]:
+    def _initialized_modules(self, server_config: CarConfig) -> dict[int, _ServerModule]:
         """Return dictionary of ServerModule instances created.
 
         Each instance corresponds to a module defined in the server configuration.
@@ -788,7 +799,7 @@ class ExternalServer:
             raise ConnectSequenceFailure(msg)
 
     @staticmethod
-    def mqtt_adapter_from_config(config: ServerConfig) -> MQTTClientAdapter:
+    def mqtt_adapter_from_config(config: CarConfig) -> MQTTClientAdapter:
         return MQTTClientAdapter(
             config.company_name,
             config.car_name,

@@ -19,7 +19,8 @@ from external_server.models.messages import (
     connect_msg,
     status
 )
-from tests.utils import get_test_server, MQTTBrokerTest
+from tests.utils import get_test_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
 
 
 class Test_Unexpected_MQTT_Client_Disconnection(unittest.TestCase):

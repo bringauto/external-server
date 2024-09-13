@@ -6,7 +6,7 @@ import os
 sys.path.append(".")
 
 from pydantic import FilePath
-from external_server.config import ServerConfig, ModuleConfig
+from external_server.config import CarConfig, ModuleConfig
 from external_server.server import ExternalServer
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, ES_CONFIG_WITHOUT_MODULES
@@ -68,7 +68,7 @@ class Test_TLS(unittest.TestCase):
         example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         _create_test_files()
 

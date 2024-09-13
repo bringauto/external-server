@@ -1,7 +1,6 @@
 {
   "company_name": "company_x",
-  "car_name": "car_a",
-  "mqtt_address": "mqtt://mqtt-broker",
+  "mqtt_address": "http://mqtt-broker",
   "mqtt_port": 1883,
   "mqtt_timeout": 30,
   "timeout": 30,
@@ -10,7 +9,7 @@
   "log_files_directory": "",
   "log_files_to_keep": 0,
   "log_file_max_size_bytes": 0,
-  "modules": {
+  "common_modules": {
     "1": {
       "lib_path": "/home/company/modules/mission_module/lib/libmission-external-server-shared.so",
       "config": {
@@ -33,5 +32,8 @@
            "retry_requests_delay_ms": "200"
       }
     }
+  },
+  "cars": {
+    "car_a": {}
   }
 }

@@ -4,6 +4,7 @@ import logging
 import sys
 
 sys.path.append(".")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device  # type: ignore
 from ExternalProtocol_pb2 import CommandResponse, ExternalServer as ExternalServerMsg  # type: ignore
@@ -11,7 +12,8 @@ from external_server.server import logger as es_logger
 from external_server.checkers.command_checker import logger as command_checker_logger
 from external_server.models.structures import HandledCommand
 from external_server.models.messages import cmd_response
-from tests.utils import get_test_server, MQTTBrokerTest
+from tests.utils import get_test_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
 from external_server.models.exceptions import ConnectSequenceFailure
 
 

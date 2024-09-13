@@ -7,11 +7,12 @@ from unittest.mock import Mock, patch
 sys.path.append(".")
 
 from external_server.server import ServerState
-from InternalProtocol_pb2 import Device # type: ignore
+from InternalProtocol_pb2 import Device  # type: ignore
 from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server.models.devices import DevicePy, device_status as _device_status
-from tests.utils import MQTTBrokerTest, get_test_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
+from tests.utils import get_test_server
 from external_server.models.messages import connect_msg, status, cmd_response
 
 
@@ -350,7 +351,9 @@ class Test_Forwarding_First_Status(unittest.TestCase):
                 None,
             ]
         )
-        self.es._handle_init_connect(connect_msg("id", "company", "car", [self.device, other_device]).connect)
+        self.es._handle_init_connect(
+            connect_msg("id", "company", "car", [self.device, other_device]).connect
+        )
         self.es._get_all_first_statuses_and_respond()
         self.assertEqual(len(self.forwarded_statuses), 0)
 
@@ -367,9 +370,15 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")).status,
-                status("id", Status.CONNECTING, 2, _device_status(device_3, b"from_device_3")).status,
-                status("id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")).status
+                status(
+                    "id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")
+                ).status,
+                status(
+                    "id", Status.CONNECTING, 2, _device_status(device_3, b"from_device_3")
+                ).status,
+                status(
+                    "id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")
+                ).status,
             ]
         )
         self.es._get_all_first_statuses_and_respond()
@@ -378,22 +387,28 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         self.assertEqual(self.forwarded_statuses[1][0].data, b"from_device_3")
         self.assertEqual(self.forwarded_statuses[2][0].data, b"from_device_2")
 
-    def test_status_from_not_connected_device_is_forwarded(
-        self, mock_g: Mock, mock_f: Mock
-    ):
+    def test_status_from_not_connected_device_is_forwarded(self, mock_g: Mock, mock_f: Mock):
         mock_f.side_effect = self.forward_status
         device_1 = Device(module=1000, deviceType=0, deviceName="Other device", deviceRole="test1")
         device_2 = Device(module=1000, deviceType=0, deviceName="Other device", deviceRole="test2")
-        not_connected = Device(module=1000, deviceType=0, deviceName="Other device", deviceRole="test3")
+        not_connected = Device(
+            module=1000, deviceType=0, deviceName="Other device", deviceRole="test3"
+        )
         self.es._handle_init_connect(
             connect_msg("id", "company", "car", [device_1, device_2]).connect
         )
         mock_g.side_effect = (
             r
             for r in [
-                status("id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")).status,
-                status("id", Status.CONNECTING, 2, _device_status(not_connected, b"from_not_connected")).status,
-                status("id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")).status
+                status(
+                    "id", Status.CONNECTING, 1, _device_status(device_1, b"from_device_1")
+                ).status,
+                status(
+                    "id", Status.CONNECTING, 2, _device_status(not_connected, b"from_not_connected")
+                ).status,
+                status(
+                    "id", Status.CONNECTING, 3, _device_status(device_2, b"from_device_2")
+                ).status,
             ]
         )
         self.es._get_all_first_statuses_and_respond()

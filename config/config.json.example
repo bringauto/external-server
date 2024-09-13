@@ -9,7 +9,7 @@
   "log_files_directory": "",
   "log_files_to_keep": 0,
   "log_file_max_size_bytes": 0,
-  "modules": {
+  "common_modules": {
     "1": {
       "lib_path": "/home/company/modules/mission_module/lib/libmission-external-server-shared.so",
       "config": {
@@ -35,10 +35,10 @@
   },
   "cars": {
     "vehicle_a": {
-      "modules": {}
+      "specific_modules": {}
     },
     "vehicle_b": {
-      "modules": {}
+      "specific_modules": {}
     }
   }
 }

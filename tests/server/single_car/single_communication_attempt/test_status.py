@@ -12,7 +12,6 @@ from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from external_server.server import logger as _eslogger
 from tests.utils import get_test_server
 from external_server.models.messages import status, status_response
-from tests.utils._mqtt_broker_test import MQTTBrokerTest
 
 
 @patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")

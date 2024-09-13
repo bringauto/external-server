@@ -1,4 +1,8 @@
 import unittest
+import sys
+
+sys.path.append(".")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server import ExternalServer as ES

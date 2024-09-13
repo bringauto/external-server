@@ -9,7 +9,8 @@ from external_server.models.structures import HandledCommand
 from external_server.models.messages import cmd_response
 from external_server.models.exceptions import ConnectSequenceFailure
 from ExternalProtocol_pb2 import CommandResponse  # type: ignore
-from tests.utils import get_test_server, MQTTBrokerTest
+from tests.utils import get_test_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
 
 
 class Test_Commands_For_Single_Connected_Device(unittest.TestCase):

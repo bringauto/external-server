@@ -4,18 +4,20 @@ import concurrent.futures as futures
 import time
 
 sys.path.append(".")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.config import ServerConfig as ServerConfig, ModuleConfig as _ModuleConfig
+from external_server.config import CarConfig as CarConfig, ServerConfig as ServerConfig, ModuleConfig as _ModuleConfig
 from external_server.server import ExternalServer, ServerState
-from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, MQTTBrokerTest
+from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
+from tests.utils.mqtt_broker import MQTTBrokerTest
 
 
 ES_CONFIG_WITHOUT_MODULES = {
     "company_name": "bring_auto",
-    "car_name": "car_1",
+    "car_name": "test_car",
     "mqtt_address": "127.0.0.1",
     "mqtt_port": 1883,
     "mqtt_timeout": 2,
@@ -37,14 +39,14 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
 
     def test_module_dict_key_in_config_equal_to_the_module_id_is_accepted(self):
         correct_id = "1000"
-        self.config = ServerConfig(
+        self.config = CarConfig(
             modules={correct_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
         self.es = ExternalServer(config=self.config)
 
     def test_module_dict_key_in_config_not_equal_to_the_module_id_raises_error(self):
         incorrect_id = "111111111"
-        self.config = ServerConfig(
+        self.config = CarConfig(
             modules={incorrect_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
         with self.assertRaises(RuntimeError):
@@ -57,7 +59,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
 
     def test_external_server_initially_has_no_connected_devices(self):
@@ -83,7 +85,7 @@ class Test_Server_State(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
 
     def test_server_state_is_read_only(self):
@@ -97,7 +99,7 @@ class Test_External_Server_Start(unittest.TestCase):
         example_module_config = _ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = ServerConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = ExternalServer(config=self.config)
         self.device = _Device(
             module=_Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"

@@ -15,7 +15,8 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as ExternalServerMsg,
     Status,
 )
-from tests.utils import MQTTBrokerTest, get_test_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
+from tests.utils import get_test_server
 from external_server.models.messages import status_response, command, connect_msg, status, cmd_response
 from external_server.models.events import EventType
 from external_server.models.structures import HandledCommand

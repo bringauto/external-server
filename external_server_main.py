@@ -7,8 +7,8 @@ import os
 
 from rich.logging import RichHandler
 
-from external_server.server import ExternalServer, logger as eslogger
-from external_server.config import load_config, InvalidConfigError, configure_logging
+from external_server.server import MainExtServer, logger as eslogger
+from external_server.config import load_config, InvalidConfiguration, configure_logging
 
 
 _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
@@ -64,7 +64,7 @@ def main() -> None:
 
     try:
         config = load_config(args.config)
-    except InvalidConfigError as exc:
+    except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
         sys.exit(1)
@@ -92,7 +92,7 @@ def main() -> None:
 
     eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 
-    server = ExternalServer(config)
+    server = MainExtServer(config)
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
             eslogger.error(
