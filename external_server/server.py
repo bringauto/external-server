@@ -122,7 +122,6 @@ class ExternalServer:
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
-
         self._mqtt = self.mqtt_adapter_from_config(config)
 
         self._status_checker = StatusChecker(self._config.timeout)

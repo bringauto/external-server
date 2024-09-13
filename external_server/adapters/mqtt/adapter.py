@@ -19,6 +19,7 @@ from paho.mqtt.client import (
     MQTTMessage as MQTTMessage,
 )
 from external_server.checkers.mqtt_session import MQTTSession
+from external_server.checkers.mqtt_session import MQTTSession
 from paho.mqtt.enums import CallbackAPIVersion
 from external_server.config import configure_logging
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -83,7 +84,7 @@ class MQTTClientAdapter:
     _MODULE_GATEWAY_SUFFIX = "module_gateway"
 
     def __init__(
-        self, company: str, car: str, timeout: float, broker_host: str, port: int, mqtt_timeout: float
+        self, company: str, car: str, timeout: float, broker_host: str, port: int, mqtt_timeout: float = 0.5
     ) -> None:
         self._publish_topic = f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
         self._subscribe_topic = f"{company}/{car}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
@@ -94,6 +95,7 @@ class MQTTClientAdapter:
         self._keepalive = _KEEPALIVE
         self._broker_host = broker_host
         self._broker_port = port
+        self._session = MQTTSession(mqtt_timeout)
         self._session = MQTTSession(mqtt_timeout)
         self._set_up_callbacks()
 
@@ -126,6 +128,11 @@ class MQTTClientAdapter:
     def received_messages(self) -> Queue[_ExternalClientMsg]:
         """A queue to store received messages."""
         return self._received_msgs
+
+    @property
+    def session(self) -> MQTTSession:
+        """The session of the MQTT client."""
+        return self._session
 
     @property
     def session(self) -> MQTTSession:
@@ -221,6 +228,9 @@ class MQTTClientAdapter:
         """
         msg = self._get_message()
         if msg is None or not msg.HasField("status"):
+            _logger.error(
+                "Got event status message arrived, but the message is not of a type status. Ignoring."
+            )
             _logger.error(
                 "Got event status message arrived, but the message is not of a type status. Ignoring."
             )

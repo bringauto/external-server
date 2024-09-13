@@ -23,7 +23,7 @@ class Test_Handling_Command(unittest.TestCase):
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.es.mqtt.connect()
         self.es._add_connected_devices(self.device_1)
-        self.es._mqtt_session.set_id("id")
+        self.es._mqtt.session.set_id("id")
 
     @patch("external_server.checkers.command_checker.CommandQueue.get")
     def test_missing_expected_commands_response_raises_exception(self, mock: Mock):
@@ -43,7 +43,7 @@ class Test_Handling_Command_Response(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
-        self.es._mqtt_session.set_id("id")
+        self.es._mqtt.session.set_id("id")
 
     def test_to_sent_command_logs_info_and_empties_checked_commands(self):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
@@ -87,7 +87,7 @@ class Test_Command_Response_With_Type_Device_Not_Connected(unittest.TestCase):
         self.device_2 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test2")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device_1, self.device_2)
-        self.es._mqtt_session.set_id("id")
+        self.es._mqtt.session.set_id("id")
 
     def test_with_counter_matching_oldest_command_disconnects_device(self):
         self.assertTrue(self.es._known_devices.is_connected(self.device_1))

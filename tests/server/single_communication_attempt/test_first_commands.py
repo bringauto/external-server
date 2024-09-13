@@ -141,7 +141,7 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.es.mqtt.connect()
         self.es._add_connected_devices(self.device_1)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._mqtt.session.set_id("session_id")
 
     def test_missing_expected_commands_response_raises_exception(self, mock: Mock):
         mock.return_value = None
