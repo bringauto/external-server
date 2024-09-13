@@ -135,11 +135,6 @@ class MQTTClientAdapter:
         return self._session
 
     @property
-    def session(self) -> MQTTSession:
-        """The session of the MQTT client."""
-        return self._session
-
-    @property
     def state(self) -> ClientConnectionState:
         """The state of the MQTT client."""
         return self._mqtt_client._state
