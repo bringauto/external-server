@@ -4,6 +4,7 @@ import enum
 import logging
 from typing import Any, Type
 import time
+import threading
 
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -109,14 +110,25 @@ class MainExtServer:
         self._car_servers: dict[str, ExternalServer] = {}
         for car_name in config.cars:
             self._car_servers[car_name] = ExternalServer(CarConfig.from_server_config(car_name, config))
+        logger.info(f"External server has been created for the cars: {', '.join(self._car_servers.keys())}.")
 
     def start(self) -> None:
-        for car_server in self._car_servers.values():
-            car_server.start()
+        threads: dict[str, threading.Thread] = {}
+        for car in self._car_servers:
+            threads[car] = threading.Thread(target=self._car_servers[car].start)
+        for t in threads.values():
+            t.start()
+        for t in threads.values():
+            t.join()
 
     def stop(self, reason: str = "") -> None:
-        for car_server in self._car_servers.values():
-            car_server.stop(reason)
+        threads: dict[str, threading.Thread] = {}
+        for car in self._car_servers:
+            threads[car] = threading.Thread(target=self._car_servers[car].stop)
+        for t in threads.values():
+            t.start()
+        for t in threads.values():
+            t.join()
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         for car_server in self._car_servers.values():
@@ -245,7 +257,7 @@ class ExternalServer:
         - starting the MQTT connection.
         """
 
-        logger.debug("Starting the external server.")
+        logger.debug(f"Starting the external server for car {self._config.car_name}.")
         self._start_module_threads()
         self._start_communication_loop()
 
