@@ -5,6 +5,7 @@ import sys
 import time
 
 sys.path.append(".")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # type: ignore
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
@@ -22,7 +23,7 @@ class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unit
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._mqtt.session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)
@@ -70,7 +71,7 @@ class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._mqtt.session.set_id("session_id")
 
     def publish(self, msg: ExternalServerMsg) -> None:
         self.published_responses.append(msg)
@@ -116,7 +117,7 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._mqtt.session.set_id("session_id")
 
     def test_connecting_state_connects_the_device_and_send_response(self, mock: Mock):
         self.es._known_devices.not_connected(self.device)
@@ -160,7 +161,7 @@ class Test_Forwarding_Status(unittest.TestCase):
         self.es = get_test_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.es._add_connected_devices(self.device)
-        self.es._mqtt_session.set_id("session_id")
+        self.es._mqtt.session.set_id("session_id")
         self.forwarded_statuses = list()
 
     def test_status_from_supported_device_is_forwarded(self, mock: Mock):
