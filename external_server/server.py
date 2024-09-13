@@ -100,6 +100,18 @@ StateTransitionTable: dict[ServerState, set[ServerState]] = {
 ExternalClientMessage = _Connect | _Status | _CommandResponse
 
 
+class MainExtServer:
+
+    def __init__(self, config: ServerConfig) -> None:
+        self._car_server = ExternalServer(config)
+
+    def start(self) -> None:
+        self._car_server.start()
+
+    def stop(self, reason: str = "") -> None:
+        self._car_server.stop(reason)
+
+
 class ExternalServer:
 
     def __init__(self, config: ServerConfig) -> None:
@@ -110,6 +122,7 @@ class ExternalServer:
         self._state: ServerState = ServerState.UNINITIALIZED
         self._event_queue = EventQueueSingleton()
         self._known_devices = KnownDevices()
+
         self._mqtt = self.mqtt_adapter_from_config(config)
 
         self._status_checker = StatusChecker(self._config.timeout)
