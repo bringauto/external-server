@@ -1,10 +1,10 @@
 # External Server
 
-This directory contains a fake external server that communicates with an external client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
+This directory contains a external server that communicates with an external client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
 
 # Fleet protocol deviations
 
-This implementation of the External Server can handle only one car. To handle multiple cars, more instances of this External Server must be created. This is a deviation from Fleet protocol where one External Server instance can handle multiple cars.
+This implementation of the External Server handles multiple cars registered under a single company.
 
 # Requirements
 
@@ -43,9 +43,9 @@ As an example of a filled-up config file, see the `config/config.json.example`. 
 
 ### Server configuration
 
-Set up the MQTT connection parameters, company and car name and the External server behavior.
+Set up the MQTT connection parameters and company name and the External server behavior.
 
-- `company_name`, `car_name` (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
+- `company_name` (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` (required) - IP address of the MQTT broker.
 - `mqtt_port` (required) - port of the MQTT broker.
 - `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
