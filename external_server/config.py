@@ -8,9 +8,9 @@ from typing import Annotated, TypeVar, Mapping
 from pydantic import (
     BaseModel,
     DirectoryPath,
-    field_validator,
     Field,
     FilePath,
+    model_validator,
     StringConstraints,
     ValidationError,
 )
@@ -25,10 +25,23 @@ _MQTT_ADDRESS_PATTERN = r"^((http|https)://)?([\w-]+\.)?+[\w-]+$"
 _MODULE_ID_PATTERN = r"^\d+$"
 
 
+class InvalidConfiguration(Exception):
+    pass
+
+
+class CarConfig(BaseModel):
+    modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)], ModuleConfig] = {}
+
+
+CompanyName = Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
+CarName = Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
+MQTTAdress = Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
+ModuleID = Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)]
+
+
 class ServerConfig(BaseModel):
-    company_name: Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
-    car_name: Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
-    mqtt_address: Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
+    company_name: CompanyName
+    mqtt_address: MQTTAdress
     mqtt_port: int = Field(ge=0, le=65535)
     mqtt_timeout: float = Field(ge=0)
     timeout: float = Field(ge=0)
@@ -37,25 +50,25 @@ class ServerConfig(BaseModel):
     log_files_directory: DirectoryPath
     log_files_to_keep: int = Field(ge=0)
     log_file_max_size_bytes: int = Field(ge=0)
-    modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)], ModuleConfig]
+    modules: dict[ModuleID, ModuleConfig]
+    cars: dict[str, CarConfig]
 
-    @field_validator("modules")
+    @model_validator(mode="before")
     @classmethod
-    def _modules_validator(cls, modules: T) -> T:
-        if not len(modules):
-            raise ValueError("Modules must contain at least 1 module.")
-        for module in modules.values():
-            if module.config.get("company_name") is not None:
-                raise ValueError("Module configs can not contain company_name.")
-            if module.config.get("car_name") is not None:
-                raise ValueError("Module configs can not contain car_name.")
-        return modules
+    def modules_validator(cls, fields: T) -> T:
+        modules = fields.get("modules")
+        cars = fields.get("cars")
+        if not cars:
+            raise InvalidConfiguration("Cars must contain at least 1 car.")
+        else:
+            if not modules and not all(car.get("modules") for car in cars.values()):
+                raise InvalidConfiguration("Modules must contain at least 1 module for each car.")
+        return fields
 
     def get_config_dump_string(self) -> str:
         """Returns a string representation of the config. Values need to be added explicitly."""
         config_json: dict = {}
         config_json["company_name"] = self.company_name
-        config_json["car_name"] = self.car_name
         config_json["mqtt_address"] = self.mqtt_address
         config_json["mqtt_port"] = self.mqtt_port
         config_json["mqtt_timeout"] = self.mqtt_timeout
@@ -116,7 +129,7 @@ def configure_logging(config_path: str) -> None:
             with open("log/external_server.log", "w") as f:
                 f.write("")
 
-        if not logger.hasHandlers(): # Prevents adding hanlders multiple times
+        if not logger.hasHandlers():  # Prevents adding hanlders multiple times
             logger.propagate = False
             formatter = logging.Formatter(
                 fmt="[%(asctime)s.%(msecs)03d] [external-server] [%(levelname)s]\t %(message)s",
