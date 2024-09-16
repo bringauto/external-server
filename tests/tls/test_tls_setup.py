@@ -10,6 +10,7 @@ from external_server.config import CarConfig, ModuleConfig
 from external_server.server import ExternalServer
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, ES_CONFIG_WITHOUT_MODULES
+from external_server.models.events import EventQueue
 
 
 def _create_test_files():
@@ -24,7 +25,7 @@ def _create_test_files():
 class Test_Setting_Up_TLS_In_MQTT_Client(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.adapter = MQTTClientAdapter("company", "car", 2, "localhost", 1883)
+        self.adapter = MQTTClientAdapter("company", "car", 2, "localhost", 1883, EventQueue())
         _create_test_files()
 
     def test_by_default_tls_is_not_set(self):

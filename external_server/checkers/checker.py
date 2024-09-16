@@ -1,10 +1,7 @@
 import threading
 
 from external_server.models.structures import TimeoutType as _TimeoutType
-from external_server.models.events import (
-    EventQueueSingleton as _EventQueueSingleton,
-    EventType as _EventType,
-)
+from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue
 
 
 class Checker:
@@ -14,7 +11,9 @@ class Checker:
 
     DEFAULT_COUNTER_VALUE = 0
 
-    def __init__(self, timeout_type: _TimeoutType, timeout: float) -> None:
+    def __init__(
+        self, timeout_type: _TimeoutType, timeout: float, event_queue: _EventQueue
+    ) -> None:
         """
         Initializes a new instance of the Checker class with the specified timeout type to signal when timeout occurs.
 
@@ -24,7 +23,7 @@ class Checker:
         self._timeout_event = threading.Event()
         self._timeout_type = timeout_type
         self._timeout = timeout
-        self._event_queue = _EventQueueSingleton()
+        self._event_queue = event_queue
         self._counter = Checker.DEFAULT_COUNTER_VALUE
 
     @property

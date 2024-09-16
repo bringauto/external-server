@@ -14,6 +14,7 @@ from external_server.models.structures import (
     TimeoutType as _TimeoutType,
 )
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from external_server.models.events import EventQueue as _EventQueue
 
 
 logger = logging.getLogger(__name__)
@@ -110,8 +111,8 @@ class PublishedCommandChecker(_Checker):
     received Command response yet.
     """
 
-    def __init__(self, timeout: float) -> None:
-        super().__init__(_TimeoutType.COMMAND_RESPONSE_TIMEOUT, timeout=timeout)
+    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
+        super().__init__(_TimeoutType.COMMAND_RESPONSE_TIMEOUT, timeout=timeout, event_queue=event_queue)
         self._commands = CommandQueue()
         self._received_response_counters: list[_Counter] = []
         self._counter = 0

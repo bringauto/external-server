@@ -47,7 +47,7 @@ class Event:
     data: Any | None = None
 
 
-class EventQueueSingleton(metaclass=SingletonMeta):
+class EventQueue:
     """An event queue used for synchronization of different parts of the system."""
 
     __slots__ = "_queue"

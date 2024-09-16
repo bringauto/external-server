@@ -6,6 +6,7 @@ sys.path.append(".")
 
 from external_server.server_module.server_module import ServerModule
 from external_server.config import ModuleConfig
+from external_server.models.events import EventQueue
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 
 
@@ -14,7 +15,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
     def test_creating_server_module(self):
         module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
         module = ServerModule(
-            1000, "company", "car", module_config, lambda: True
+            1000, "company", "car", module_config, lambda: True, event_queue=EventQueue()
         )  # pragma: no cover
         self.assertIsNotNone(module.api)
         self.assertEqual(module.car, "car")
@@ -27,7 +28,7 @@ class Test_Creating_Server_Module(unittest.TestCase):
         config = ModuleConfig(lib_path="test_file.so", config={})
         os.remove("test_file.so")
         with self.assertRaises(RuntimeError):
-            ServerModule(1000, "company", "car", config, lambda: True)  # pragma: no cover
+            ServerModule(1000, "company", "car", config, lambda: True, event_queue=EventQueue())  # pragma: no cover
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -28,7 +28,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as _ExternalServerMsg,
     Status as _Status,
 )
-from external_server.models.events import EventQueueSingleton, EventType
+from external_server.models.events import EventType, EventQueue
 
 
 # maximum number of messages in outgoing queue
@@ -84,19 +84,18 @@ class MQTTClientAdapter:
     _MODULE_GATEWAY_SUFFIX = "module_gateway"
 
     def __init__(
-        self, company: str, car: str, timeout: float, broker_host: str, port: int, mqtt_timeout: float = 0.5
+        self, company: str, car: str, timeout: float, broker_host: str, port: int,event_queue: EventQueue, mqtt_timeout: float = 0.5
     ) -> None:
         self._publish_topic = f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
         self._subscribe_topic = f"{company}/{car}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = create_mqtt_client()
-        self._event_queue = EventQueueSingleton()
+        self._event_queue = event_queue
         self._timeout = timeout
         self._keepalive = _KEEPALIVE
         self._broker_host = broker_host
         self._broker_port = port
-        self._session = MQTTSession(mqtt_timeout)
-        self._session = MQTTSession(mqtt_timeout)
+        self._session = MQTTSession(mqtt_timeout, event_queue)
         self._set_up_callbacks()
 
     @property

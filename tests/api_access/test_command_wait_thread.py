@@ -17,6 +17,7 @@ from external_server.models.structures import (
 )
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from external_server.server_module.command_waiting_thread import logger
+from external_server.models.events import EventQueue
 
 
 class APIClientAdapterTest(APIClientAdapter):
@@ -67,7 +68,7 @@ class Test_Creating_Command_Waiting_Thread(unittest.TestCase):
         self.client.init()
         self.connected = False
         self.thread = CommandWaitingThread(
-            self.client, lambda: self.connected, timeout_ms=100
+            self.client, lambda: self.connected, event_queue=EventQueue(), timeout_ms=100
         )  # pragma: no cover
 
     def test_thread_is_initially_not_started(self):
@@ -94,7 +95,7 @@ class Test_Uninitialized_API_Client(unittest.TestCase):
     def test_polling_commands_from_uninitialized_api_logs_error(self):
         module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
         client = APIClientAdapterTest(module_config, "BringAuto", "Car1", module_id=4)
-        thread = CommandWaitingThread(client, lambda: True, timeout_ms=1000)  # pragma: no cover
+        thread = CommandWaitingThread(client, lambda: True, event_queue=EventQueue(), timeout_ms=1000)  # pragma: no cover
         with self.assertLogs(logger=logger, level=logging.ERROR):
             thread.poll_commands()
 
@@ -108,7 +109,7 @@ class Test_Disconnected_Module(unittest.TestCase):
         )
         client.init()
         module_connected = False
-        thread = CommandWaitingThread(client, lambda: module_connected, timeout_ms=100)
+        thread = CommandWaitingThread(client, lambda: module_connected, event_queue=EventQueue(), timeout_ms=100)
         client.define_commands(
             [
                 (b"command1", Device(), 0),
@@ -131,7 +132,7 @@ class Test_Polling_Commands(unittest.TestCase):
         )
         self.client.init()
         self.connection = False
-        self.thread = CommandWaitingThread(self.client, lambda: self.connection, timeout_ms=100)
+        self.thread = CommandWaitingThread(self.client, lambda: self.connection, event_queue=EventQueue(), timeout_ms=100)
 
     def test_command_queue_remains_empty_if_no_command_occurs_on_api_before_timeout(self):
         self.thread.poll_commands()

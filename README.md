@@ -140,7 +140,7 @@ popd
 ## Running the tests
 
 In the root folder, run the following
-
++
 ```bash
 python -m tests [-h] [PATH1] [PATH2] ...
 ```

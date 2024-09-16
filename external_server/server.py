@@ -42,7 +42,7 @@ from external_server.models.structures import (
     TimeoutType,
 )
 from external_server.models.devices import DevicePy, KnownDevices, device_repr
-from external_server.models.events import EventQueueSingleton, EventType, Event as _Event
+from external_server.models.events import EventType, Event as _Event, EventQueue as _EventQueue
 from external_server.server_module.server_module import ServerModule as _ServerModule
 from external_server.models.structures import HandledCommand as _HandledCommand
 
@@ -143,12 +143,12 @@ class ExternalServer:
         self._config = config
 
         self._state: ServerState = ServerState.UNINITIALIZED
-        self._event_queue = EventQueueSingleton()
+        self._event_queue = _EventQueue()
         self._known_devices = KnownDevices()
-        self._mqtt = self.mqtt_adapter_from_config(config)
+        self._mqtt = self.mqtt_adapter_from_config(config, self._event_queue)
 
-        self._status_checker = StatusChecker(self._config.timeout)
-        self._command_checker = PublishedCommandChecker(self._config.timeout)
+        self._status_checker = StatusChecker(self._config.timeout, self._event_queue)
+        self._command_checker = PublishedCommandChecker(self._config.timeout, self._event_queue)
         self._modules = self._initialized_modules(config)
 
     @property
@@ -667,7 +667,7 @@ class ExternalServer:
             car, company = server_config.car_name, server_config.company_name
             connection_check = partial(self._known_devices.any_connected_device, module_id)
             modules[module_id] = _ServerModule(
-                module_id, company, car, module_config, connection_check
+                module_id, company, car, module_config, connection_check, event_queue=self._event_queue
             )
         return modules
 
@@ -811,14 +811,15 @@ class ExternalServer:
             raise ConnectSequenceFailure(msg)
 
     @staticmethod
-    def mqtt_adapter_from_config(config: CarConfig) -> MQTTClientAdapter:
+    def mqtt_adapter_from_config(config: CarConfig, event_queue: _EventQueue) -> MQTTClientAdapter:
         return MQTTClientAdapter(
             config.company_name,
             config.car_name,
             config.timeout,
             config.mqtt_address,
             config.mqtt_port,
-            config.mqtt_timeout
+            event_queue,
+            config.mqtt_timeout,
         )
 
     @staticmethod

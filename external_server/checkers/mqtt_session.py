@@ -2,13 +2,14 @@ from threading import Event as _Event, Timer as _Timer
 
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
+from external_server.models.events import EventQueue as _EventQueue
 
 
 class MQTTSession:
     """A class managing MQTT session context and activity."""
 
-    def __init__(self, timeout: float) -> None:
-        self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout)
+    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
+        self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout, event_queue=event_queue)
         self._timer: _Timer | None = None
         self._timer_running = False
         self._id: str = ""

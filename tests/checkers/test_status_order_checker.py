@@ -8,6 +8,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status  # type: ignore
 from external_server.checkers.status_checker import StatusChecker
+from external_server.models.events import EventQueue
 
 
 logging.getLogger(StatusChecker.__name__).setLevel(logging.CRITICAL)
@@ -17,12 +18,12 @@ ORDER_CHECKER_TIMEOUT = 0.05
 class Test_Initializing_Status_Checker_Counter(unittest.TestCase):
 
     def test_status_checker_can_be_set_if_no_statuses_were_yet_received(self):
-        checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         checker.set_counter(5)
         self.assertEqual(checker.counter, 5)
 
     def test_status_checker_is_not_set_if_statuses_were_yet_received(self):
-        checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         checker.set_counter(0)
         checker.check(Status(messageCounter=0))
 
@@ -36,7 +37,7 @@ class Test_Initializing_Status_Checker_Counter(unittest.TestCase):
 class Test_Receiving_Status(unittest.TestCase):
 
     def setUp(self):
-        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(4)
 
     def test_checker_accepts_status_with_counter_matching_checkers_counter(self):
@@ -85,7 +86,7 @@ class Test_Receiving_Status(unittest.TestCase):
 class Test_Checking_Multiple_Statuses(unittest.TestCase):
 
     def setUp(self):
-        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(1)
 
     def test_in_any_order_eventually_not_skipping_any_counter_value_yields_statuses_in_correct_order(
@@ -121,7 +122,7 @@ class Test_Checking_Multiple_Statuses(unittest.TestCase):
 class Test_Skipped_Values(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.checker = StatusChecker(timeout=ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(1)
 
     def test_skipped_values_are_stored_and_checked_for_timeout(self):
@@ -147,7 +148,7 @@ class Test_Skipped_Values(unittest.TestCase):
 class Test_Checking_Statuses(unittest.TestCase):
 
     def setUp(self):
-        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(1)
 
     def test_status_is_stored_as_received_when_counter_is_greater_than_expected(self):
@@ -254,7 +255,7 @@ class Test_Checking_Statuses(unittest.TestCase):
 class Test_Timeout(unittest.TestCase):
 
     def setUp(self):
-        self.checker = StatusChecker(timeout=ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(1)
 
     def test_single_message_with_correct_counter_value_does_not_cause_timeout(self):
@@ -290,7 +291,7 @@ class Test_Timeout(unittest.TestCase):
 class Test_Resetting_Checker(unittest.TestCase):
 
     def setUp(self):
-        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT)
+        self.checker = StatusChecker(ORDER_CHECKER_TIMEOUT, EventQueue())
         self.checker.set_counter(1)
         self.checker.check(Status(messageCounter=1))
         self.checker.check(Status(messageCounter=2))

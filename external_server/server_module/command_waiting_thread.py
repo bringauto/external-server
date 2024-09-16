@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 import threading
 from queue import Queue, Empty
 import sys
@@ -9,7 +9,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api.adapter import APIClientAdapter  # type: ignore
-from external_server.models.events import EventQueueSingleton, EventType
+from external_server.models.events import EventType, EventQueue as _EventQueue
 
 
 logger = logging.getLogger(__name__)
@@ -60,11 +60,12 @@ class CommandWaitingThread:
         self,
         api_client: APIClientAdapter,
         module_connection_check: Callable[[], bool],
+        event_queue: _EventQueue,
         timeout_ms: int = 1000,
     ) -> None:
 
         self._api_adapter: APIClientAdapter = api_client
-        self._events = EventQueueSingleton()
+        self._event_queue = event_queue
         self._waiting_thread = threading.Thread(target=self._main_thread)
         self._commands = _CommandQueue()
         self._module_connected: Callable[[], bool] = module_connection_check
@@ -127,7 +128,7 @@ class CommandWaitingThread:
                     self._commands.put(command, device)
         if self._module_connected():
             module_id = self._api_adapter.get_module_number()
-            self._events.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
+            self._event_queue.add(event_type=EventType.COMMAND_AVAILABLE, data=module_id)
 
     def _main_thread(self) -> None:
         while self._continue_thread:

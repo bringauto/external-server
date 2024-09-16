@@ -8,6 +8,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
+from external_server.models.events import EventQueue as _EventQueue
 
 
 logger = logging.getLogger(__name__)
@@ -24,8 +25,8 @@ class StatusChecker(_Checker):
 
     DEFAULT_INIT_COUNTER = 1
 
-    def __init__(self, timeout: float, init_counter_value: int = 0) -> None:
-        super().__init__(_TimeoutType.STATUS_TIMEOUT, timeout=timeout)
+    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
+        super().__init__(_TimeoutType.STATUS_TIMEOUT, timeout=timeout, event_queue=event_queue)
         # priority queues instead of ordinary queues ensure the statuses are stored in ascending
         # order of their counter values
         self._received: _PriorityQueue[QueuedStatus] = _PriorityQueue()
