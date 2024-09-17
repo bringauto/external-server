@@ -75,7 +75,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             time.sleep(0.5)
             self.assertFalse(self.es._known_devices.is_connected(self.device_1))
 
-    def _test_sending_disconnect_state_from_the_only_connected_device_produces_status_response(self):
+    def test_sending_disconnect_state_from_the_only_connected_device_produces_status_response(self):
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
             time.sleep(0.1)

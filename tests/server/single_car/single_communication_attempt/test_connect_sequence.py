@@ -328,7 +328,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
     def test_status_from_unsupported_device_is_not_forwarded(self, mock_g: Mock, mock_f: Mock):
         mock_f.side_effect = self.forward_status
         unsup_device = Device(module=1000, deviceType=123, deviceName="Test", deviceRole="test")
-        mock_g.side_effect = (
+        mock_g.side_effect = (  # pragma: no cover
             r
             for r in [
                 status("id", Status.CONNECTING, 1, _device_status(unsup_device)).status,
@@ -344,7 +344,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
     ):
         mock_f.side_effect = self.forward_status
         other_device = Device(module=1000, deviceType=777, deviceName="Other", deviceRole="test")
-        mock_g.side_effect = (
+        mock_g.side_effect = (   # pragma: no cover
             r
             for r in [
                 status("id", Status.CONNECTING, 1, _device_status(other_device)).status,
@@ -367,7 +367,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         self.es._handle_init_connect(
             connect_msg("id", "company", "car", [device_1, device_2, device_3]).connect
         )
-        mock_g.side_effect = (
+        mock_g.side_effect = (  # pragma: no cover
             r
             for r in [
                 status(
@@ -397,7 +397,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         self.es._handle_init_connect(
             connect_msg("id", "company", "car", [device_1, device_2]).connect
         )
-        mock_g.side_effect = (
+        mock_g.side_effect = (  # pragma: no cover
             r
             for r in [
                 status(

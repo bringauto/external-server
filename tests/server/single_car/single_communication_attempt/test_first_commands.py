@@ -150,7 +150,7 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
             self.es._get_next_valid_command_response()
 
     def test_expected_command_response_is_returned(self, mock: Mock):
-        mock.side_effect = (r for r in [cmd_response("session_id", 1, CommandResponse.OK)])
+        mock.side_effect = (r for r in [cmd_response("session_id", 1, CommandResponse.OK)])  # pragma: no cover
         response = self.es._get_next_valid_command_response()
         self.assertEqual(
             response,
@@ -158,7 +158,7 @@ class Test_Next_Valid_Command_Response(unittest.TestCase):
         )
 
     def test_command_response_is_not_accepted_if_session_id_does_not_match(self, mock: Mock):
-        mock.side_effect = (r for r in [cmd_response("other_session_id", 1, CommandResponse.OK), None])
+        mock.side_effect = (r for r in [cmd_response("other_session_id", 1, CommandResponse.OK), None])  # pragma: no cover
         with self.assertRaises(ConnectSequenceFailure):
             self.es._get_next_valid_command_response()
 
