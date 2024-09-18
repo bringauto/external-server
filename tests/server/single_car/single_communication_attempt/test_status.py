@@ -10,7 +10,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # type: ignore
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from external_server.server import logger as _eslogger
-from tests.utils import get_test_server
+from tests.utils import get_test_car_server
 from external_server.models.messages import status, status_response
 
 
@@ -18,7 +18,7 @@ from external_server.models.messages import status, status_response
 class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -66,7 +66,7 @@ class Test_Handling_Checked_Status_And_Checking_Supported_Device_And_Module(unit
 class Test_Handling_Checked_Status_For_Connected_Device(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -112,7 +112,7 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
         self.published_responses.append(msg)
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -157,7 +157,7 @@ class Test_Forwarding_Status(unittest.TestCase):
         return 0
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.es._add_connected_devices(self.device)
         self.es._mqtt.session.set_id("session_id")

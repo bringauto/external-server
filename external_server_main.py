@@ -7,7 +7,7 @@ import os
 
 from rich.logging import RichHandler
 
-from external_server.server import MainExtServer, logger as eslogger
+from external_server.server import ExternalServer, logger as eslogger
 from external_server.config import load_config, InvalidConfiguration, configure_logging
 
 
@@ -92,7 +92,7 @@ def main() -> None:
 
     eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 
-    server = MainExtServer(config)
+    server = ExternalServer(config)
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
             eslogger.error(

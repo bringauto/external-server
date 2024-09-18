@@ -16,7 +16,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from external_server.config import CarConfig, ModuleConfig
-from external_server.server import ExternalServer
+from external_server.server import CarServer
 from external_server.models.messages import (
     connect_msg,
     status,
@@ -42,7 +42,7 @@ ES_CONFIG_WITHOUT_MODULES = {
 }
 
 
-def mock_publishing_from_ext_client(server: ExternalServer, broker: MQTTBrokerTest, *payload: str):
+def mock_publishing_from_ext_client(server: CarServer, broker: MQTTBrokerTest, *payload: str):
     """This mocks publishing a message by an External Client."""
     payload_str = [
         p.SerializeToString() if isinstance(p, _ExternalClientMsg) else p for p in payload
@@ -55,7 +55,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es)
         time.sleep(0.1)
@@ -139,7 +139,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.2)
 
@@ -194,7 +194,7 @@ class Test_Command_Response(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.1)
 
@@ -223,7 +223,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
     def setUp(self):
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
         self.timeout = self.es.mqtt.timeout
         self.broker = MQTTBrokerTest(start=True)
         self.executor = ExternalServerThreadExecutor(self.es, 0.1, start=False)

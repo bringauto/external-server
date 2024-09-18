@@ -80,9 +80,9 @@ def command(
     return sent_msg
 
 
-def connect_msg(session_id: str, company: str, car: str, devices: list[_Device]) -> _ExternalClientMsg:
+def connect_msg(session_id: str, company: str, devices: list[_Device]) -> _ExternalClientMsg:
     return _ExternalClientMsg(
-        connect=_Connect(sessionId=session_id, company=company, vehicleName=car, devices=devices)
+        connect=_Connect(sessionId=session_id, company=company, devices=devices)
     )
 
 

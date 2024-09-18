@@ -16,7 +16,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status,
 )
 from tests.utils.mqtt_broker import MQTTBrokerTest
-from tests.utils import get_test_server
+from tests.utils import get_test_car_server
 from external_server.models.messages import status_response, command, connect_msg, status, cmd_response
 from external_server.models.events import EventType
 from external_server.models.structures import HandledCommand
@@ -29,7 +29,7 @@ from external_server.models.exceptions import (
 class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(
             module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1"
@@ -97,7 +97,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
 class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -211,7 +211,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
 class Test_Session_Time_Out(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -271,7 +271,7 @@ class Test_Session_Time_Out(unittest.TestCase):
 class Test_Statuses_Containing_Errors(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -315,7 +315,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
 class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server(mqtt_timeout=0.5)
+        self.es = get_test_car_server(mqtt_timeout=0.5)
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -363,7 +363,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server(mqtt_timeout=0.5)
+        self.es = get_test_car_server(mqtt_timeout=0.5)
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(
             module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1"
@@ -397,7 +397,7 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
 class Test_Receiving_Command(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -431,7 +431,7 @@ class Test_Receiving_Command(unittest.TestCase):
 class Test_Command_Response(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
@@ -471,7 +471,7 @@ class Test_Command_Response(unittest.TestCase):
 class Test_Handling_Command(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_commands: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -525,7 +525,7 @@ class Test_Handling_Command(unittest.TestCase):
 class Test_Response_Session_ID(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -542,7 +542,7 @@ class Test_Response_Session_ID(unittest.TestCase):
 class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)

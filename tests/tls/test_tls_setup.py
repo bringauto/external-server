@@ -7,9 +7,9 @@ sys.path.append(".")
 
 from pydantic import FilePath
 from external_server.config import CarConfig, ModuleConfig
-from external_server.server import ExternalServer
+from external_server.server import CarServer
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
-from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, ES_CONFIG_WITHOUT_MODULES
+from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, CAR_CONFIG_WITHOUT_MODULES
 from external_server.models.events import EventQueue
 
 
@@ -69,8 +69,8 @@ class Test_TLS(unittest.TestCase):
         example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
-        self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.config = CarConfig(modules={"1000": example_module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
+        self.es = CarServer(config=self.config)
         _create_test_files()
 
     @patch("ssl.SSLContext.load_verify_locations")

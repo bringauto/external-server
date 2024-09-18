@@ -2,7 +2,7 @@ from typing import Callable
 import time
 from concurrent import futures as _futures
 
-from external_server import ExternalServer as _ExternalServer
+from external_server import CarServer as _ExternalServer
 
 
 class ExternalServerThreadExecutor:

@@ -6,7 +6,6 @@ import unittest
 import coverage
 import coverage.exceptions as _cov_exceptions
 
-
 from external_server.config import configure_logging
 
 

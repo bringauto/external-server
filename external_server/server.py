@@ -1,3 +1,4 @@
+from __future__ import annotations
 from functools import partial
 import sys
 import enum
@@ -104,13 +105,21 @@ StateTransitionTable: dict[ServerState, set[ServerState]] = {
 ExternalClientMessage = _Connect | _Status | _CommandResponse
 
 
-class MainExtServer:
+class ExternalServer:
 
     def __init__(self, config: ServerConfig) -> None:
-        self._car_servers: dict[str, ExternalServer] = {}
+        self._car_servers: dict[str, CarServer] = {}
         for car_name in config.cars:
-            self._car_servers[car_name] = ExternalServer(CarConfig.from_server_config(car_name, config))
+            self._car_servers[car_name] = CarServer(CarConfig.from_server_config(car_name, config))
         logger.info(f"External server has been created for the cars: {', '.join(self._car_servers.keys())}.")
+        self._company = config.company_name
+
+    @property
+    def company(self) -> str:
+        return self._company
+
+    def car_servers(self) -> dict[str, CarServer]:
+        return self._car_servers.copy()
 
     def start(self) -> None:
         threads: dict[str, threading.Thread] = {}
@@ -118,24 +127,17 @@ class MainExtServer:
             threads[car] = threading.Thread(target=self._car_servers[car].start)
         for t in threads.values():
             t.start()
-        for t in threads.values():
-            t.join()
 
     def stop(self, reason: str = "") -> None:
-        threads: dict[str, threading.Thread] = {}
-        for car in self._car_servers:
-            threads[car] = threading.Thread(target=self._car_servers[car].stop)
-        for t in threads.values():
-            t.start()
-        for t in threads.values():
-            t.join()
+        for e in self.car_servers().values():
+            e.stop(reason)
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         for car_server in self._car_servers.values():
             car_server.tls_set(ca_certs, certfile, keyfile)
 
 
-class ExternalServer:
+class CarServer:
 
     def __init__(self, config: CarConfig) -> None:
         self._running = False
@@ -265,7 +267,7 @@ class ExternalServer:
         """Stop the external server communication, stop the MQTT client event loop,
         clear the modules.
         """
-        msg = f"Stopping the external server."
+        msg = f"Stopping the external server part for car {self._config.car_name} of company {self._config.company_name}."
         self._set_state(ServerState.STOPPED)
         if reason:
             msg += f" Reason: {reason}"

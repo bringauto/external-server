@@ -19,14 +19,14 @@ from external_server.models.messages import (
     connect_msg,
     status
 )
-from tests.utils import get_test_server
+from tests.utils import get_test_car_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
 
 class Test_Unexpected_MQTT_Client_Disconnection(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.published_responses: list[ExternalServerMsg] = list()
         self.es._add_connected_devices(self.device)
@@ -41,7 +41,7 @@ class Test_Unexpected_MQTT_Client_Disconnection(unittest.TestCase):
 class Test_Unexpected_MQTT_Client_Disconnection_During_Normal_Communication(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server(mqtt_timeout=5)
+        self.es = get_test_car_server(mqtt_timeout=5)
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:

@@ -12,14 +12,14 @@ from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server.models.devices import DevicePy, device_status as _device_status
 from tests.utils.mqtt_broker import MQTTBrokerTest
-from tests.utils import get_test_server
+from tests.utils import get_test_car_server
 from external_server.models.messages import connect_msg, status, cmd_response
 
 
 class Test_Initial_State(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
 
     def test_initial_server_state_is_uninitialized(self):
         self.assertEqual(self.es.state, ServerState.UNINITIALIZED)
@@ -28,7 +28,7 @@ class Test_Initial_State(unittest.TestCase):
 class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
 
     def test_without_running_broker_raises_error(self):
         with self.assertRaises(ConnectionRefusedError):
@@ -40,7 +40,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 ):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
 
@@ -119,7 +119,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
 class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         # device type 123456 is not supported by module 1000
         self.unsupported = Device(
@@ -155,7 +155,7 @@ class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
 class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
@@ -246,7 +246,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
 class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
@@ -279,7 +279,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
 class Test_First_Command(unittest.TestCase):
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
         self.es.mqtt.connect()
@@ -311,7 +311,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         return 0
 
     def setUp(self):
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.es._mqtt.session.set_id("id")
         self.forwarded_statuses = list()

@@ -9,14 +9,14 @@ from external_server.models.structures import HandledCommand
 from external_server.models.messages import cmd_response
 from external_server.models.exceptions import ConnectSequenceFailure
 from ExternalProtocol_pb2 import CommandResponse  # type: ignore
-from tests.utils import get_test_server
+from tests.utils import get_test_car_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
 
 class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
         self.es.mqtt.connect()
@@ -46,7 +46,7 @@ class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
 class Test_Multiple_Connected_Devices(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
@@ -106,7 +106,7 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
 class Test_Not_Connected_Devices(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.device_2 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_2")
@@ -137,7 +137,7 @@ class Test_Not_Connected_Devices(unittest.TestCase):
 class Test_Next_Valid_Command_Response(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.es = get_test_server()
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(start=True)
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.es.mqtt.connect()

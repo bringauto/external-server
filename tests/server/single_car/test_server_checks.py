@@ -5,7 +5,7 @@ sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.models.exceptions import ConnectSequenceFailure
-from external_server import ExternalServer as ES
+from external_server import CarServer as ES
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
 
 

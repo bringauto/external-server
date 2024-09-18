@@ -10,7 +10,7 @@ from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.config import CarConfig as CarConfig, ServerConfig as ServerConfig, ModuleConfig as _ModuleConfig
-from external_server.server import ExternalServer, ServerState
+from external_server.server import CarServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
@@ -42,7 +42,7 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
         self.config = CarConfig(
             modules={correct_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
 
     def test_module_dict_key_in_config_not_equal_to_the_module_id_raises_error(self):
         incorrect_id = "111111111"
@@ -50,7 +50,7 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
             modules={incorrect_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
         with self.assertRaises(RuntimeError):
-            self.es = ExternalServer(config=self.config)
+            self.es = CarServer(config=self.config)
 
 
 class Test_Initial_State_Of_External_Server(unittest.TestCase):
@@ -60,7 +60,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
 
     def test_external_server_initially_has_no_connected_devices(self):
         self.assertEqual(self.es._known_devices.n_connected, 0)
@@ -86,7 +86,7 @@ class Test_Server_State(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
 
     def test_server_state_is_read_only(self):
         with self.assertRaises(AttributeError):
@@ -100,7 +100,7 @@ class Test_External_Server_Start(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = ExternalServer(config=self.config)
+        self.es = CarServer(config=self.config)
         self.device = _Device(
             module=_Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"
         )
