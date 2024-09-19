@@ -91,7 +91,9 @@ class HandledCommand:
 
     def copy(self) -> "HandledCommand":
         # do not set the counter to prevent unexpected match between two commands counters
-        return HandledCommand(data=self.data, device=self.device, from_api=self.from_api)
+        return HandledCommand(
+            data=self.data, device=self.device, from_api=self.from_api
+        )
 
     def external_command(self, session_id: str) -> _ExternalServerMsg:
         """Return the command as ExternalServer message."""

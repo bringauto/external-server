@@ -49,7 +49,7 @@ class Test_Unexpected_MQTT_Client_Disconnection_During_Normal_Communication(unit
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("session_id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("session_id", "company", [self.device]))
             self.broker.publish(topic, status("session_id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("session_id", 0, CommandResponse.DEVICE_NOT_CONNECTED)

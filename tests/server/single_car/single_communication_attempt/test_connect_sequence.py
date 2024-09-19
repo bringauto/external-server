@@ -54,7 +54,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            broker.publish(topic, connect_msg("id", "company", [self.device]))
         self.assertEqual(self.es.state, ServerState.ERROR)
 
     def test_without_receiving_command_responses_sets_the_state_to_error(self):
@@ -63,7 +63,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
         self.assertEqual(self.es.state, ServerState.ERROR)
 
@@ -76,7 +76,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
             time.sleep(0.1)
             device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
-            broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
@@ -89,7 +89,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
             ex.submit(self.es._run_initial_sequence)
             device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
-            broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.DISCONNECT, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.ERROR)
@@ -106,7 +106,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
             time.sleep(0.2)
             device_status = _device_status(self.device)
             topic = self.es.mqtt.subscribe_topic
-            broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
@@ -135,7 +135,7 @@ class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
             time.sleep(0.1)
             broker.publish(
                 topic,
-                connect_msg("id", "company", "car", [self.supported, self.unsupported]),
+                connect_msg("id", "company", [self.supported, self.unsupported]),
             )
             supported_status = _device_status(self.supported)
             unsupported_status = _device_status(self.unsupported)
@@ -172,7 +172,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             time.sleep(0.2)
             broker.publish(
                 topic,
-                connect_msg("id", "company", "car", [self.device_1, self.device_2, self.device_3]),
+                connect_msg("id", "company", [self.device_1, self.device_2, self.device_3]),
             )
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status_1))
             broker.publish(topic, status("id", Status.CONNECTING, 1, device_status_2))
@@ -198,7 +198,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             time.sleep(0.2)
             broker.publish(
                 topic,
-                connect_msg("id", "company", "car", [self.device_1, self.device_2, self.device_3]),
+                connect_msg("id", "company", [self.device_1, self.device_2, self.device_3]),
             )
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status_2))
             broker.publish(topic, status("id", Status.CONNECTING, 2, device_status_3))
@@ -224,7 +224,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
             time.sleep(0.2)
             broker.publish(
                 topic,
-                connect_msg("id", "company", "car", [self.device_1, self.device_2, self.device_3]),
+                connect_msg("id", "company", [self.device_1, self.device_2, self.device_3]),
             )
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status_1))
             broker.publish(topic, status("id", Status.CONNECTING, 1, device_status_2))
@@ -259,7 +259,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
             future = ex.submit(self.es._run_initial_sequence)
             broker.publish(
                 topic,
-                connect_msg("id", "company", "car", [self.device_1, self.device_2, self.device_3]),
+                connect_msg("id", "company", [self.device_1, self.device_2, self.device_3]),
             )
             broker.publish(topic, status("id", Status.CONNECTING, 0, _device_status(self.device_1)))
             broker.publish(topic, status("id", Status.CONNECTING, 1, _device_status(self.device_2)))
@@ -321,7 +321,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         mock_get.return_value = status(
             "id", Status.CONNECTING, 1, _device_status(self.device)
         ).status
-        self.es._handle_init_connect(connect_msg("id", "company", "car", [self.device]).connect)
+        self.es._handle_init_connect(connect_msg("id", "company", [self.device]).connect)
         self.es._get_all_first_statuses_and_respond()
         self.assertEqual(len(self.forwarded_statuses), 1)
 
@@ -335,7 +335,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
                 None,
             ]
         )
-        self.es._handle_init_connect(connect_msg("id", "company", "car", [self.device]).connect)
+        self.es._handle_init_connect(connect_msg("id", "company", [self.device]).connect)
         self.es._get_all_first_statuses_and_respond()
         self.assertEqual(len(self.forwarded_statuses), 0)
 
@@ -344,7 +344,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
     ):
         mock_f.side_effect = self.forward_status
         other_device = Device(module=1000, deviceType=777, deviceName="Other", deviceRole="test")
-        mock_g.side_effect = (   # pragma: no cover
+        mock_g.side_effect = (  # pragma: no cover
             r
             for r in [
                 status("id", Status.CONNECTING, 1, _device_status(other_device)).status,
@@ -352,7 +352,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
             ]
         )
         self.es._handle_init_connect(
-            connect_msg("id", "company", "car", [self.device, other_device]).connect
+            connect_msg("id", "company", [self.device, other_device]).connect
         )
         self.es._get_all_first_statuses_and_respond()
         self.assertEqual(len(self.forwarded_statuses), 0)
@@ -365,7 +365,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         device_2 = Device(module=1000, deviceType=0, deviceName="Other device", deviceRole="test2")
         device_3 = Device(module=1000, deviceType=0, deviceName="Other device", deviceRole="test3")
         self.es._handle_init_connect(
-            connect_msg("id", "company", "car", [device_1, device_2, device_3]).connect
+            connect_msg("id", "company", [device_1, device_2, device_3]).connect
         )
         mock_g.side_effect = (  # pragma: no cover
             r
@@ -394,9 +394,7 @@ class Test_Forwarding_First_Status(unittest.TestCase):
         not_connected = Device(
             module=1000, deviceType=0, deviceName="Other device", deviceRole="test3"
         )
-        self.es._handle_init_connect(
-            connect_msg("id", "company", "car", [device_1, device_2]).connect
-        )
+        self.es._handle_init_connect(connect_msg("id", "company", [device_1, device_2]).connect)
         mock_g.side_effect = (  # pragma: no cover
             r
             for r in [

@@ -1,5 +1,5 @@
 from typing import Callable
-import logging
+
 
 from external_server.adapters.api.adapter import APIClientAdapter as _ApiAdapter
 from external_server.server_module.command_waiting_thread import (
@@ -8,9 +8,10 @@ from external_server.server_module.command_waiting_thread import (
 from external_server.config import ModuleConfig as _ModuleConfig
 from external_server.models.events import EventQueue as _EventQueue
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from external_server.logs import CarLogger as _CarLogger
 
 
-logger = logging.getLogger(__name__)
+logger = _CarLogger(__name__)
 
 
 class ServerModule:
@@ -43,12 +44,12 @@ class ServerModule:
             self._api_adapter.init()
         except:
             msg = f"Module {module_id}: Error in init function. Check the configuration file."
-            logger.error(msg)
+            logger.error(msg, car)
             raise RuntimeError(msg)
         real_mod_number = self._api_adapter.get_module_number()
         if real_mod_number != module_id:
             msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
-            logger.error(msg)
+            logger.error(msg, car)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(
             self._api_adapter, connection_check, event_queue=event_queue

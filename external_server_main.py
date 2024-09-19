@@ -7,15 +7,16 @@ import os
 
 from rich.logging import RichHandler
 
-from external_server.server import ExternalServer, logger as eslogger
+from external_server.server import ExternalServer, eslogger as eslogger
 from external_server.config import load_config, InvalidConfiguration, configure_logging
 
 
 _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 _LOG_FILE_NAME = "external_server.log"
+LOGGING_CONFIG_PATH = "config/logging.json"
 
 
-configure_logging("./config/logging.json")
+configure_logging(LOGGING_CONFIG_PATH)
 
 
 def parsed_script_args() -> argparse.Namespace:

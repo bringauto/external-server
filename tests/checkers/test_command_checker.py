@@ -1,7 +1,6 @@
 import unittest
 import time
 import sys
-import logging
 
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -14,25 +13,24 @@ from external_server.models.events import EventQueue
 
 
 CHECKER_TIMEOUT = 0.09
-# logging.getLogger("CommandMessagesChecker").setLevel(logging.CRITICAL)
 
 
 class Test_No_Commands_Stored_By_Checker(unittest.TestCase):
 
     def test_pop_commands_yields_empty_list_of_commands(self):
-        checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue())
+        checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
         cmd = checker.pop(cmd_response("id", 0).commandResponse)
         self.assertEqual(len(cmd), 0)
 
     def test_oldest_counter_yields_none(self):
-        checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue())
+        checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
         self.assertEqual(checker._commands.oldest_command_counter, None)
 
 
 class Test_Pop_Command(unittest.TestCase):
 
     def setUp(self):
-        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue())
+        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
         device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         self.cmd_0 = HandledCommand(b"", device=device)
         self.cmd_1 = HandledCommand(b"", device=device)
@@ -81,7 +79,7 @@ class Test_Pop_Command(unittest.TestCase):
 class Test_Popping_Commands(unittest.TestCase):
 
     def setUp(self):
-        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue())
+        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
         self.checker.set_counter(5)
         self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
 
@@ -166,7 +164,7 @@ class Test_Popping_Commands(unittest.TestCase):
 class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
 
     def setUp(self):
-        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue())
+        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
         self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
         command = HandledCommand(b"", device=self.device)
         self.checker.add(command)

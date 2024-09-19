@@ -1,17 +1,17 @@
 from threading import Timer as _Timer
 from queue import PriorityQueue as _PriorityQueue, Queue as _Queue
-import logging
 import sys
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
+from external_server.logs import CarLogger as _CarLogger
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
 
 
-logger = logging.getLogger(__name__)
+logger = _CarLogger(__name__)
 CounterValue = int
 QueuedStatus = tuple[CounterValue, _Status]
 QueuedTimer = tuple[CounterValue, _Timer]
@@ -25,7 +25,7 @@ class StatusChecker(_Checker):
 
     DEFAULT_INIT_COUNTER = 1
 
-    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
+    def __init__(self, timeout: float, event_queue: _EventQueue, car: str = "") -> None:
         super().__init__(_TimeoutType.STATUS_TIMEOUT, timeout=timeout, event_queue=event_queue)
         # priority queues instead of ordinary queues ensure the statuses are stored in ascending
         # order of their counter values
@@ -33,6 +33,7 @@ class StatusChecker(_Checker):
         self._skipped: _PriorityQueue[QueuedTimer] = _PriorityQueue()
         self._checked: _Queue[_Status] = _Queue()
         self._allow_counter_reset = True
+        self._car = car
 
     @property
     def checked(self) -> _Queue[_Status]:
@@ -61,7 +62,10 @@ class StatusChecker(_Checker):
         """
 
         if status.messageCounter < self._counter:
-            logger.warning(f"Status with counter {status.messageCounter} smaller than expected value {self._counter} is ignored.")
+            logger.warning(
+                f"Status with counter {status.messageCounter} smaller than expected value {self._counter} is ignored.",
+                self._car,
+            )
         else:
             if self._allow_counter_reset:
                 self._counter = status.messageCounter
@@ -136,4 +140,4 @@ class StatusChecker(_Checker):
         timer = _Timer(self._timeout, self.set_timeout)
         timer.start()
         self._skipped.put((counter, timer))
-        logger.warning(f"Status with counter {counter} is missing.")
+        logger.warning(f"Status with counter {counter} is missing.", self._car)

@@ -2,11 +2,11 @@ from queue import Queue
 from threading import Timer as _Timer
 import sys
 import dataclasses
-import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.checkers.checker import Checker as _Checker
+from external_server.logs import CarLogger as _CarLogger
 from ExternalProtocol_pb2 import CommandResponse as _CommandResponse  # type: ignore
 from external_server.models.structures import (
     Counter as _Counter,
@@ -17,7 +17,7 @@ from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.events import EventQueue as _EventQueue
 
 
-logger = logging.getLogger(__name__)
+logger = _CarLogger(__name__)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -40,8 +40,9 @@ class CommandQueue:
     them from the queue.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, car: str) -> None:
         self._queue: Queue[QueuedCommand] = Queue()
+        self._car = car
 
     @property
     def command_counters(self) -> list[_Counter]:
@@ -86,7 +87,7 @@ class CommandQueue:
         cmd: QueuedCommand = self._queue.get()
         cmd.stop_timer()
         logger.debug(
-            f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}"
+            f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}", self._car
         )
         return cmd.command
 
@@ -98,7 +99,7 @@ class CommandQueue:
         """Put the command (instance of `HandledCommand`) into the queue."""
         self._queue.put(QueuedCommand(command, timer))
         logger.debug(
-            f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}"
+            f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}", self._car
         )
 
 
@@ -111,11 +112,16 @@ class PublishedCommandChecker(_Checker):
     received Command response yet.
     """
 
-    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
-        super().__init__(_TimeoutType.COMMAND_RESPONSE_TIMEOUT, timeout=timeout, event_queue=event_queue)
-        self._commands = CommandQueue()
+    def __init__(self, timeout: float, event_queue: _EventQueue, car: str) -> None:
+        super().__init__(
+            _TimeoutType.COMMAND_RESPONSE_TIMEOUT,
+            timeout=timeout,
+            event_queue=event_queue,
+        )
+        self._commands = CommandQueue(car)
         self._received_response_counters: list[_Counter] = []
         self._counter = 0
+        self._car = car
 
     @property
     def n_of_commands(self) -> int:
@@ -156,7 +162,9 @@ class PublishedCommandChecker(_Checker):
 
         if oldest_counter == counter:
             cmds = [self._commands.get()]
-            logger.info(f"Command delivery to a car has been acknowledged (counter={counter}).")
+            logger.info(
+                f"Command delivery to a car has been acknowledged (counter={counter}).", self._car
+            )
             next_counter = self._commands.oldest_command_counter
             while next_counter in sorted(self._received_response_counters):
                 cmd = self._commands.get()
@@ -164,29 +172,29 @@ class PublishedCommandChecker(_Checker):
                 cmds.append(cmd)
                 self._received_response_counters.remove(next_counter)
                 logger.info(
-                    f"Command delivery to a car has been acknowledged (counter={next_counter})."
+                    f"Command delivery to a car has been acknowledged (counter={next_counter}).", self._car
                 )
                 next_counter = self._commands.oldest_command_counter
             logger.debug(
-                f"Popping commands with counters: {', '.join(str(cmd.counter) for cmd in cmds)}"
+                f"Popping commands with counters: {', '.join(str(cmd.counter) for cmd in cmds)}", self._car
             )
             return cmds
         else:
             if oldest_counter is None:
                 logger.warning(
                     "No commands in the queue awaiting a response. "
-                    f"Ignoring the recevied response (counter={counter})."
+                    f"Ignoring the recevied response (counter={counter}).", self._car
                 )
             elif oldest_counter < counter <= self._commands.newest_command_counter:
                 self._received_response_counters.append(counter)
                 logger.warning(
                     f"Cannot pop command with counter={counter} "
-                    f"because it is not the oldest command (counter={oldest_counter})."
+                    f"because it is not the oldest command (counter={oldest_counter}).", self._car
                 )
             else:
                 logger.warning(
                     f"Ignoring received response (counter={counter}) as it "
-                    f"corresponds to a command that is not in the queue."
+                    f"corresponds to a command that is not in the queue.", self._car
                 )
             return []
 
@@ -197,7 +205,7 @@ class PublishedCommandChecker(_Checker):
         """
         command.update_counter_value(self._counter)
         self._commands.put(command, self._get_started_timer())
-        logger.debug(f"Command added to checker, counter={self._counter}")
+        logger.debug(f"Command added to checker, counter={self._counter}", self._car)
         self._counter += 1
         return command
 

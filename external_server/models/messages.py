@@ -20,7 +20,9 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 
 
-def connect_response(session_id: str, response_type: _ConnectResponse.Type) -> _ExternalServerMsg:
+def connect_response(
+    session_id: str, response_type: _ConnectResponse.Type
+) -> _ExternalServerMsg:
     """Creates a connect response message with the given session ID and response type.
 
     Args:
@@ -80,15 +82,21 @@ def command(
     return sent_msg
 
 
-def connect_msg(session_id: str, company: str, devices: list[_Device]) -> _ExternalClientMsg:
+def connect_msg(
+    session_id: str, company: str, devices: list[_Device]
+) -> _ExternalClientMsg:
     return _ExternalClientMsg(
         connect=_Connect(sessionId=session_id, company=company, devices=devices)
     )
 
 
-def cmd_response(session_id: str, counter: int, type: _CommandResponse.Type = _CommandResponse.OK) -> _ExternalClientMsg:
+def cmd_response(
+    session_id: str, counter: int, type: _CommandResponse.Type = _CommandResponse.OK
+) -> _ExternalClientMsg:
     return _ExternalClientMsg(
-        commandResponse=_CommandResponse(sessionId=session_id, type=type, messageCounter=counter)
+        commandResponse=_CommandResponse(
+            sessionId=session_id, type=type, messageCounter=counter
+        )
     )
 
 
@@ -101,7 +109,7 @@ def status(
 ) -> _ExternalClientMsg:
 
     assert isinstance(error_message, bytes) or error_message is None
-    status=_Status(
+    status = _Status(
         sessionId=session_id,
         deviceState=state,
         messageCounter=counter,
@@ -109,5 +117,3 @@ def status(
         errorMessage=error_message,
     )
     return _ExternalClientMsg(status=status)
-
-

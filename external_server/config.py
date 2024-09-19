@@ -31,7 +31,9 @@ class InvalidConfiguration(Exception):
 
 
 class CarModulesConfig(BaseModel):
-    specific_modules: dict[Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)], ModuleConfig] = {}
+    specific_modules: dict[
+        Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)], ModuleConfig
+    ] = {}
 
 
 CompanyName = Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
@@ -75,7 +77,9 @@ class CarConfig(BaseModel):
 
     @field_validator("modules")
     @classmethod
-    def modules_validator(cls, modules: dict[ModuleID, ModuleConfig]) -> dict[ModuleID, ModuleConfig]:
+    def modules_validator(
+        cls, modules: dict[ModuleID, ModuleConfig]
+    ) -> dict[ModuleID, ModuleConfig]:
         if not modules:
             raise ValueError("Modules must contain at least 1 module.")
         return modules
@@ -102,14 +106,20 @@ class ServerConfig(BaseModel):
         cars = fields.get("cars")
         if not cars:
             raise InvalidConfiguration("Cars must contain at least 1 car.")
-        elif not modules and not all(car.get("specific_modules") for car in cars.values()):
-            raise InvalidConfiguration("Modules must contain at least 1 module for each car.")
+        elif not modules and not all(
+            car.get("specific_modules") for car in cars.values()
+        ):
+            raise InvalidConfiguration(
+                "Modules must contain at least 1 module for each car."
+            )
         elif modules:
             car_specific_modules = set.union(
                 *[set(car.get("specific_modules", {}).keys()) for car in cars.values()]
             )
             global_modules = set(modules.keys())
-            duplicates = [int(i) for i in car_specific_modules.intersection(global_modules)]
+            duplicates = [
+                int(i) for i in car_specific_modules.intersection(global_modules)
+            ]
             if duplicates:
                 raise InvalidConfiguration(
                     "Each module can be configured either globally or per car, but not both. \n"
@@ -144,7 +154,10 @@ class ServerConfig(BaseModel):
             module_json = {}
             for key, value in self.common_modules.items():
                 if not key in config_json["common_modules"]:
-                    module_json[key] = {"lib_path": str(value.lib_path), "config": "HIDDEN"}
+                    module_json[key] = {
+                        "lib_path": str(value.lib_path),
+                        "config": "HIDDEN",
+                    }
             car_json[car_name] = {"specific_modules": module_json}
         config_json["cars"] = car_json
 

@@ -61,14 +61,14 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         time.sleep(0.1)
 
     def test_connect_message_with_no_devices_has_no_effect(self):
-        payload = connect_msg("id", company="ba", car="car1", devices=[])
+        payload = connect_msg("id", company="ba", devices=[])
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertEqual(self.es._known_devices.n_all, 0)
 
     def test_from_supported_device_adds_the_device_to_connected_devices(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg("id", company="ba", car="car1", devices=[device])
+        payload = connect_msg("id", company="ba", devices=[device])
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertTrue(self.es._known_devices.is_connected(device))
@@ -76,14 +76,14 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def test_from_unsupported_device_does_not_add_the_device_to_known_devices(self):
         device = _Device(module=1000, deviceType=1251, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg(session_id="id", company="ba", car="car1", devices=[device])
+        payload = connect_msg(session_id="id", company="ba", devices=[device])
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertFalse(self.es._known_devices.is_known(device))
 
     def test_from_device_in_unsupported_module_does_not_add_the_device_to_known_devices(self):
         device = _Device(module=1100, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg(session_id="id", company="ba", car="car1", devices=[device])
+        payload = connect_msg(session_id="id", company="ba", devices=[device])
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload)
             self.assertFalse(self.es._known_devices.is_known(device))
@@ -91,7 +91,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
     def test_from_multiple_devices_from_supported_module_adds_them_to_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
         device_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
-        payload = connect_msg("id", company="ba", car="car1", devices=[device_1, device_2])
+        payload = connect_msg("id", company="ba", devices=[device_1, device_2])
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
             self.assertTrue(self.es._known_devices.is_connected(device_1))
@@ -99,7 +99,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def test_from_supported_device_of_supported_module_makes_server_to_send_connect_response(self):
         device = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg("id", company="ba", car="car1", devices=[device])
+        payload = connect_msg("id", company="ba", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload)
@@ -110,7 +110,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def test_from_supported_device_of_unsupported_module_makes_server_to_send_conn_response(self):
         device = _Device(module=1516, deviceType=0, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg("id", company="ba", car="car1", devices=[device])
+        payload = connect_msg("id", company="ba", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
@@ -121,7 +121,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
 
     def test_from_unsupported_device_of_supported_module_makes_server_to_send_conn_response(self):
         device = _Device(module=100, deviceType=154, deviceName="TestDevice", deviceRole="test")
-        payload = connect_msg("id", company="ba", car="car1", devices=[device])
+        payload = connect_msg("id", company="ba", devices=[device])
         with self.executor as ex:
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, payload.SerializeToString())
@@ -145,7 +145,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
 
     def test_from_single_connected_devices(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", "car1", [device_1])
+        connect_payload = connect_msg("id", "ba", [device_1])
         status_1 = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         with self.executor as ex:
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
@@ -158,7 +158,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
         device_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_2")
         device_3 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_3")
-        connect_payload = connect_msg("id", "ba", "car1", [device_1, device_2, device_3])
+        connect_payload = connect_msg("id", "ba", [device_1, device_2, device_3])
         status_1 = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         status_2 = status("id", _Status.CONNECTING, 1, _DeviceStatus(device=device_2))
         status_3 = status("id", _Status.CONNECTING, 2, _DeviceStatus(device=device_3))
@@ -172,7 +172,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
     def test_yields_response_only_to_devices_from_the_connect_message(self):
         dev_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         dev_2 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="other_role")
-        connect_payload = connect_msg("id", company="ba", car="car1", devices=[dev_1])
+        connect_payload = connect_msg("id", company="ba", devices=[dev_1])
         status_1 = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=dev_1))
         status_2 = status("id", _Status.CONNECTING, 1, _DeviceStatus(device=dev_2))
         with self.executor as ex:
@@ -200,7 +200,7 @@ class Test_Command_Response(unittest.TestCase):
 
     def test_command_response_is_received_at_the_end_of_the_conn_sequence_for_single_device(self):
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", "car1", [device_1])
+        connect_payload = connect_msg("id", "ba", [device_1])
         status_1 = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         command_response = cmd_response("id", 0, _CommandResponse.OK)
         with self.executor as ex:
@@ -231,7 +231,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
 
     def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", "car1", [device_1])
+        connect_payload = connect_msg("id", "ba", [device_1])
 
         delayed_status = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         command_response = cmd_response("id", 0, _CommandResponse.OK)
@@ -261,7 +261,7 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
 
     def test_if_command_response_is_not_delivered_before_timeout(self) -> None:
         device_1 = _Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", "car1", [device_1])
+        connect_payload = connect_msg("id", "ba", [device_1])
         status_payload = status("id", _Status.CONNECTING, 0, _DeviceStatus(device=device_1))
         cmd_response_payload = cmd_response("id", 0, _CommandResponse.OK)
         with self.executor as ex:

@@ -9,11 +9,7 @@ from InternalProtocol_pb2 import (  # type: ignore
     Device,
     DeviceStatus,
 )
-from ExternalProtocol_pb2 import (  # type: ignore
-    Connect,
-    ExternalClient as ExternalClientMsg,
-    Status
-)
+from ExternalProtocol_pb2 import Status  # type: ignore
 from tests.utils import get_test_server
 from external_server.server import ServerState
 from tests.utils.mqtt_broker import MQTTBrokerTest
@@ -66,6 +62,7 @@ class Test_Multiple_Cars(unittest.TestCase):
         self.broker.publish(f"company_x/car_a/module_gateway", cmd_response_a.SerializeToString())
         time.sleep(0.1)
         self.assertEqual(self.es.car_servers()["car_a"].state, ServerState.RUNNING)
+        time.sleep(1)
 
     def tearDown(self) -> None:
         self.es.stop()

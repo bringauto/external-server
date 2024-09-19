@@ -1,13 +1,13 @@
 import threading
 
 from external_server.models.structures import TimeoutType as _TimeoutType
-from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue
-
+from external_server.models.events import (
+    EventType as _EventType,
+    EventQueue as _EventQueue,
+)
 
 class Checker:
-    """
-    A class that provides a mechanism to check for a timeout in a threaded operation.
-    """
+    """A class that provides a mechanism to check for a timeout in a threaded operation."""
 
     DEFAULT_COUNTER_VALUE = 0
 
@@ -43,4 +43,6 @@ class Checker:
     def set_timeout(self) -> None:
         """Puts event to event queue."""
         self._timeout_event.set()
-        self._event_queue.add(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)
+        self._event_queue.add(
+            event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type
+        )

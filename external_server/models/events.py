@@ -1,32 +1,13 @@
 from queue import Queue as _Queue
-import threading
 from typing import Any
 import dataclasses
 from enum import Enum, auto
-import logging.config
 
 
-logger = logging.getLogger(__name__)
+from external_server.logs import CarLogger as _CarLogger
 
 
-class SingletonMeta(type):
-    """
-    This is a thread-safe implementation of Singleton.
-    """
-
-    _instances: dict = dict()
-    _lock: threading.Lock = threading.Lock()
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        with cls._lock:
-            if cls not in cls._instances:
-                instance = super().__call__(*args, **kwargs)
-                cls._instances[cls] = instance
-        return cls._instances[cls]
+logger = _CarLogger(__name__)
 
 
 class EventType(Enum):
@@ -50,14 +31,19 @@ class Event:
 class EventQueue:
     """An event queue used for synchronization of different parts of the system."""
 
-    __slots__ = "_queue"
+    __slots__ = "_queue", "_car"
 
-    def __init__(self) -> None:
+    def __init__(self, car: str = "") -> None:
         self._queue: _Queue[Any] = _Queue()
+        self._car = car
 
     def add(self, event_type: EventType, data: Any = None) -> None:
         """Add new item to the queue."""
         self._queue.put(Event(event_type=event_type, data=data))
+        msg = f"Adding new event: {event_type}"
+        if data:
+            msg += f" with data: {data}"
+        logger.debug(msg, self._car)
 
     def empty(self) -> bool:
         """Return True if the queue is empty, False otherwise."""
@@ -71,3 +57,4 @@ class EventQueue:
         """Remove all items from the queue without returning them."""
         while self._queue.qsize():
             _ = self._queue.get()
+        logger.debug("Event queue has been emptied.", self._car)

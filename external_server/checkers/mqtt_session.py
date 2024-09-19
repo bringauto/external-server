@@ -9,7 +9,11 @@ class MQTTSession:
     """A class managing MQTT session context and activity."""
 
     def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
-        self._checker = _Checker(timeout_type=_TimeoutType.SESSION_TIMEOUT, timeout=timeout, event_queue=event_queue)
+        self._checker = _Checker(
+            timeout_type=_TimeoutType.SESSION_TIMEOUT,
+            timeout=timeout,
+            event_queue=event_queue,
+        )
         self._timer: _Timer | None = None
         self._timer_running = False
         self._id: str = ""
@@ -55,4 +59,3 @@ class MQTTSession:
                 self._timer.join()
             self._checker._timeout_event.clear()
             self._timer_running = False
-

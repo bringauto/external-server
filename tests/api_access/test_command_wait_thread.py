@@ -96,7 +96,7 @@ class Test_Uninitialized_API_Client(unittest.TestCase):
         module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
         client = APIClientAdapterTest(module_config, "BringAuto", "Car1", module_id=4)
         thread = CommandWaitingThread(client, lambda: True, event_queue=EventQueue(), timeout_ms=1000)  # pragma: no cover
-        with self.assertLogs(logger=logger, level=logging.ERROR):
+        with self.assertLogs(logger=logger._logger, level=logging.ERROR):
             thread.poll_commands()
 
 
@@ -141,7 +141,7 @@ class Test_Polling_Commands(unittest.TestCase):
 
     def test_no_error_is_logged_if_no_command_occurs_on_api_before_timeout(self):
         self.client.init()
-        with self.assertNoLogs(logger=logger, level=logging.ERROR) as cm:
+        with self.assertNoLogs(logger=logger._logger, level=logging.ERROR) as cm:
             self.thread.poll_commands()
             time.sleep(self.thread.timeout_ms / 1000.0)
 

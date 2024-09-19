@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 
 sys.path.append(".")
 
-from external_server.server import ServerState, logger as _eslogger
+from external_server.server import ServerState, eslogger as _logger
 from external_server.models.structures import Buffer
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -26,6 +26,9 @@ from external_server.models.exceptions import (
 )
 
 
+_eslogger = _logger._logger
+
+
 class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.TestCase):
 
     def setUp(self):
@@ -39,7 +42,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device_1]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device_1]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
@@ -106,7 +109,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
@@ -219,7 +222,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
@@ -279,7 +282,7 @@ class Test_Statuses_Containing_Errors(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
@@ -324,7 +327,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             time.sleep(0.2)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
@@ -339,7 +342,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             time.sleep(0.1)
             with self.assertLogs(_eslogger, logging.ERROR) as cm:
                 self.broker.publish(
-                    sub_topic, connect_msg("id", "company", "car", [self.device])
+                    sub_topic, connect_msg("id", "company", [self.device])
                 )
                 time.sleep(0.1)
                 self.assertIn("already existing session", cm.records[0].message)
@@ -352,7 +355,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             time.sleep(0.1)
             with self.assertNoLogs(_eslogger, logging.WARNING):
                 self.broker.publish(
-                    sub_topic, connect_msg("other_session_id", "company", "car", [self.device])
+                    sub_topic, connect_msg("other_session_id", "company", [self.device])
                 )
 
     def tearDown(self) -> None:
@@ -373,7 +376,7 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device_1]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device_1]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(
                 topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED)
@@ -405,7 +408,7 @@ class Test_Receiving_Command(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
             time.sleep(0.5)
@@ -439,7 +442,7 @@ class Test_Command_Response(unittest.TestCase):
             time.sleep(0.1)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
-            self.broker.publish(topic, connect_msg("id", "company", "car", [self.device]))
+            self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
 
@@ -560,7 +563,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
     def test_connect_message_logs_error_and_produces_connect_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es.mqtt._received_msgs.put(
-            connect_msg("id", company="company", car="car", devices=[])
+            connect_msg("id", company="company", devices=[])
         )
         with self.assertLogs(_eslogger, logging.WARNING) as cm:
             self.es._handle_car_message()
@@ -570,7 +573,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         self
     ):
         self.es.mqtt._received_msgs.put(
-            connect_msg("other_session_id", company="company", car="car", devices=[])
+            connect_msg("other_session_id", company="company", devices=[])
         )
         with self.assertLogs(_eslogger, logging.ERROR) as cm:
             self.es._handle_car_message()

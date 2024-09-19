@@ -8,7 +8,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from InternalProtocol_pb2 import Device  # type: ignore
 from ExternalProtocol_pb2 import CommandResponse, ExternalServer as ExternalServerMsg  # type: ignore
-from external_server.server import logger as es_logger
+from external_server.server import eslogger as es_logger
 from external_server.checkers.command_checker import logger as command_checker_logger
 from external_server.models.structures import HandledCommand
 from external_server.models.messages import cmd_response
@@ -51,21 +51,21 @@ class Test_Handling_Command_Response(unittest.TestCase):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
         self.es.mqtt._received_msgs.put(cmd_response("id", 0, CommandResponse.OK) )
         self.assertEqual(self.es._command_checker.n_of_commands, 1)
-        with self.assertLogs(es_logger, level=logging.INFO):
+        with self.assertLogs(es_logger._logger, level=logging.INFO):
             self.es._handle_car_message()
             self.assertEqual(self.es._command_checker.n_of_commands, 0)
 
     def test_to_command_not_sent_logs_warning_and_empties_checked_commands(self):
         self.es.mqtt._received_msgs.put(cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es._command_checker.n_of_commands, 0)
-        with self.assertLogs(command_checker_logger, level=logging.WARNING) as cm:
+        with self.assertLogs(command_checker_logger._logger, level=logging.WARNING) as cm:
             self.es._handle_car_message()
             self.assertIn("no commands", cm.output[0].lower())
 
     def test_to_sent_command_but_with_session_id_not_matching_server_logs_warning_and_does_not_accept_response(self):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
         self.es.mqtt._received_msgs.put(cmd_response("wrong_id", 0, CommandResponse.OK))
-        with self.assertLogs(es_logger, level=logging.WARNING) as cm:
+        with self.assertLogs(es_logger._logger, level=logging.WARNING) as cm:
             self.es._handle_car_message()
             self.assertIn("session id", cm.output[0].lower())
             # the response has not been accepted, checker still expects the response
@@ -74,7 +74,7 @@ class Test_Handling_Command_Response(unittest.TestCase):
     def test_to_sent_command_but_with_counter_not_matching_server_logs_warning_and_does_not_accept_response(self):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
         self.es.mqtt._received_msgs.put(cmd_response("id", 1, CommandResponse.OK))
-        with self.assertLogs(command_checker_logger, level=logging.WARNING) as cm:
+        with self.assertLogs(command_checker_logger._logger, level=logging.WARNING) as cm:
             self.es._handle_car_message()
             self.assertIn("counter", cm.output[0].lower())
             # the response has not been accepted, checker still expects the response

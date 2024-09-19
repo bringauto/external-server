@@ -9,9 +9,12 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # type: ignore
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
-from external_server.server import logger as _eslogger
+from external_server.server import eslogger as _logger
 from tests.utils import get_test_car_server
 from external_server.models.messages import status, status_response
+
+
+_eslogger = _logger._logger
 
 
 @patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")

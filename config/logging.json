@@ -37,6 +37,11 @@
       "handlers": ["console", "file"],
       "propagate": false
     },
+    "external_server.server_module.command_waiting_thread": {
+      "level": "DEBUG",
+      "handlers": ["console", "file"],
+      "propagate": false
+    },
     "external_server.checkers.command_checker.py": {
       "level": "DEBUG",
       "handlers": ["console", "file"],
@@ -70,6 +75,6 @@
   },
   "root": {
     "level": "INFO",
-    "handlers": ["console", "file"]
+    "handlers": []
   }
 }
