@@ -8,10 +8,10 @@ from external_server.server_module.command_waiting_thread import (
 from external_server.config import ModuleConfig as _ModuleConfig
 from external_server.models.events import EventQueue as _EventQueue
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.logs import CarLogger as _CarLogger
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
 
 
-logger = _CarLogger(__name__)
+logger = _CarLogger(LOGGER_NAME)
 
 
 class ServerModule:

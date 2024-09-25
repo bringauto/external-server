@@ -2,7 +2,7 @@ from __future__ import annotations
 from functools import partial
 import sys
 import enum
-from typing import Any, Type
+from typing import Any
 import time
 import threading
 
@@ -17,7 +17,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.logs import CarLogger as _CarLogger, ESLogger as _ESLogger
+from external_server.logs import CarLogger as _CarLogger, ESLogger as _ESLogger, LOGGER_NAME
 from external_server.checkers import PublishedCommandChecker, StatusChecker
 from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
@@ -49,8 +49,8 @@ from external_server.server_module.server_module import ServerModule as _ServerM
 from external_server.models.structures import HandledCommand as _HandledCommand
 
 
-eslogger = _ESLogger(__name__)
-carlogger = _CarLogger(__name__)
+eslogger = _ESLogger(LOGGER_NAME)
+carlogger = _CarLogger(LOGGER_NAME)
 
 
 class ServerState(enum.Enum):

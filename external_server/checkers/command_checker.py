@@ -6,6 +6,7 @@ import dataclasses
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.checkers.checker import Checker as _Checker
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
 from external_server.logs import CarLogger as _CarLogger
 from ExternalProtocol_pb2 import CommandResponse as _CommandResponse  # type: ignore
 from external_server.models.structures import (
@@ -17,7 +18,7 @@ from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.events import EventQueue as _EventQueue
 
 
-logger = _CarLogger(__name__)
+logger = _CarLogger(LOGGER_NAME)
 
 
 @dataclasses.dataclass(frozen=True)

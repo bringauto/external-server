@@ -23,9 +23,6 @@ class Test_Config_Validation(unittest.TestCase):
             "timeout": 5,
             "send_invalid_command": False,
             "sleep_duration_after_connection_refused": 7,
-            "log_files_directory": ".",
-            "log_files_to_keep": 5,
-            "log_file_max_size_bytes": 100000,
             "modules": {"123": self.module_config},
         }
 
@@ -99,41 +96,6 @@ class Test_Config_Validation(unittest.TestCase):
             with self.subTest(duration=duration), self.assertRaises(pydantic.ValidationError):
                 config_dict = self.valid_config_dict.copy()
                 config_dict["sleep_duration_after_connection_refused"] = duration
-                CarConfig(**config_dict)
-
-    def test_log_file_directory_must_exist(self):
-        config_dict = self.valid_config_dict.copy()
-        config_dict["log_files_directory"] = "."
-        CarConfig(**config_dict)  # ok
-        with self.assertRaises(pydantic.ValidationError):
-            config_dict = self.valid_config_dict.copy()
-            config_dict["log_files_directory"] = "invalid_path"
-            CarConfig(**config_dict)
-
-    def test_log_files_to_keep_must_be_nonegative_integer(self):
-        for num in [0, 1, 1000, "1883"]:
-            with self.subTest(num=num):
-                config_dict = self.valid_config_dict.copy()
-                config_dict["log_files_to_keep"] = num
-                CarConfig(**config_dict)
-
-        for num in [-1, -1000, 0.1, ""]:
-            with self.subTest(num=num), self.assertRaises(pydantic.ValidationError):
-                config_dict = self.valid_config_dict.copy()
-                config_dict["log_files_to_keep"] = num
-                CarConfig(**config_dict)
-
-    def test_log_file_max_size_bytes_must_be_nonegative_integer(self):
-        for num in [0, 1, 1000, "1883"]:
-            with self.subTest(num=num):
-                config_dict = self.valid_config_dict.copy()
-                config_dict["log_file_max_size_bytes"] = num
-                CarConfig(**config_dict)
-
-        for num in [-1, -1000, 0.1, ""]:
-            with self.subTest(num=num), self.assertRaises(pydantic.ValidationError):
-                config_dict = self.valid_config_dict.copy()
-                config_dict["log_file_max_size_bytes"] = num
                 CarConfig(**config_dict)
 
     def test_no_modules_raise_validation_error(self):

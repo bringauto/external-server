@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
-import logging.handlers
-import logging.config
 import sys
 import argparse
 import os
-
-from rich.logging import RichHandler
+import json
 
 from external_server.server import ExternalServer, eslogger as eslogger
-from external_server.config import load_config, InvalidConfiguration, configure_logging
-
-
-_LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-_LOG_FILE_NAME = "external_server.log"
-LOGGING_CONFIG_PATH = "config/logging.json"
-
-
-configure_logging(LOGGING_CONFIG_PATH)
+from external_server.config import load_config, InvalidConfiguration
+from external_server.logs import configure_logging
 
 
 def parsed_script_args() -> argparse.Namespace:
@@ -65,31 +55,32 @@ def main() -> None:
 
     try:
         config = load_config(args.config)
+        configure_logging("External Server", json.loads(args.config))
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
-    if config.log_files_to_keep:
-        file_handler = logging.handlers.RotatingFileHandler(
-            filename=str(config.log_files_directory) + "/" + _LOG_FILE_NAME,
-            maxBytes=config.log_file_max_size_bytes,
-            backupCount=config.log_files_to_keep - 1,
-        )
-        file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(name)s: %(message)s",
-            datefmt="[%X]",
-            handlers=[RichHandler(), file_handler],
-        )
-    else:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(name)s: %(message)s",
-            datefmt="[%X]",
-            handlers=[RichHandler()],
-        )
+    # if config.log_files_to_keep:
+    #     file_handler = logging.handlers.RotatingFileHandler(
+    #         filename=str(config.log_files_directory) + "/" + _LOG_FILE_NAME,
+    #         maxBytes=config.log_file_max_size_bytes,
+    #         backupCount=config.log_files_to_keep - 1,
+    #     )
+    #     file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+    #     logging.basicConfig(
+    #         level=logging.INFO,
+    #         format="%(name)s: %(message)s",
+    #         datefmt="[%X]",
+    #         handlers=[RichHandler(), file_handler],
+    #     )
+    # else:
+    #     logging.basicConfig(
+    #         level=logging.INFO,
+    #         format="%(name)s: %(message)s",
+    #         datefmt="[%X]",
+    #         handlers=[RichHandler()],
+    #     )
 
     eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
 

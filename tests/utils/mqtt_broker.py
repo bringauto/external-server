@@ -5,18 +5,14 @@ import logging.config
 import time
 
 import external_server as _external_server
-from external_server.config import configure_logging
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
 from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
 
 
-logger = logging.getLogger(__name__)
-configure_logging("config/logging.json")
-
-
-logging.getLogger().setLevel(logging.ERROR)
+logger = logging.getLogger("MQTT Broker")
+logger.setLevel(logging.ERROR)
 
 
 _EXTERNAL_SERVER_PATH = _external_server.PATH

@@ -1,13 +1,10 @@
 from __future__ import annotations
 import json
-import os
-import logging.config
 
 from typing import Annotated, TypeVar, Mapping
 
 from pydantic import (
     BaseModel,
-    DirectoryPath,
     Field,
     FilePath,
     field_validator,
@@ -51,9 +48,6 @@ class CarConfig(BaseModel):
     timeout: float = Field(ge=0)
     send_invalid_command: bool
     sleep_duration_after_connection_refused: float = Field(ge=0)
-    log_files_directory: DirectoryPath
-    log_files_to_keep: int = Field(ge=0)
-    log_file_max_size_bytes: int = Field(ge=0)
     modules: dict[ModuleID, ModuleConfig]
 
     @staticmethod
@@ -69,9 +63,6 @@ class CarConfig(BaseModel):
             timeout=config.timeout,
             send_invalid_command=config.send_invalid_command,
             sleep_duration_after_connection_refused=config.sleep_duration_after_connection_refused,
-            log_files_directory=config.log_files_directory,
-            log_files_to_keep=config.log_files_to_keep,
-            log_file_max_size_bytes=config.log_file_max_size_bytes,
             modules=modules,
         )
 
@@ -93,9 +84,6 @@ class ServerConfig(BaseModel):
     timeout: float = Field(ge=0)
     send_invalid_command: bool
     sleep_duration_after_connection_refused: float = Field(ge=0)
-    log_files_directory: DirectoryPath
-    log_files_to_keep: int = Field(ge=0)
-    log_file_max_size_bytes: int = Field(ge=0)
     common_modules: dict[ModuleID, ModuleConfig]
     cars: dict[str, CarModulesConfig]
 
@@ -140,10 +128,6 @@ class ServerConfig(BaseModel):
         config_json["sleep_duration_after_connection_refused"] = (
             self.sleep_duration_after_connection_refused
         )
-        config_json["log_files_directory"] = str(self.log_files_directory)
-        config_json["log_files_to_keep"] = self.log_files_to_keep
-        config_json["log_file_max_size_bytes"] = self.log_file_max_size_bytes
-
         module_json = {}
         for key, value in self.common_modules.items():
             module_json[key] = {"lib_path": str(value.lib_path), "config": "HIDDEN"}
@@ -183,39 +167,3 @@ def load_config(config_path: str) -> ServerConfig:
 
     return config
 
-
-def configure_logging(config_path: str) -> None:
-    try:
-        with open(config_path) as f:
-            logging.config.dictConfig(json.load(f))
-    except Exception:
-        logger = logging.getLogger()
-        logger.warning(
-            f"External server: Could not find a logging configuration file (entered path: {config_path}. Using default logging configuration."
-        )
-
-        if not os.path.isfile("log/external_server.log"):
-            if not os.path.exists("log"):
-                os.makedirs("log")
-            with open("log/external_server.log", "w") as f:
-                f.write("")
-
-        if not logger.hasHandlers():  # Prevents adding hanlders multiple times
-            logger.propagate = False
-            formatter = logging.Formatter(
-                fmt="[%(asctime)s.%(msecs)03d] [external-server] [%(levelname)s]\t %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
-            file_handler = logging.FileHandler("log/external_server.log")
-            file_handler.setLevel(level=logging.INFO)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-
-            stream_handler = logging.StreamHandler()
-            stream_handler.setFormatter(formatter)
-            stream_handler.setLevel(level=logging.INFO)
-            logger.addHandler(stream_handler)
-
-            logger.setLevel(level=logging.INFO)
-            if not os.path.exists("log"):
-                os.makedirs("log")

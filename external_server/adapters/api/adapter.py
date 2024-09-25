@@ -12,12 +12,12 @@ from external_server.models.structures import (
     DeviceIdentification,
     DisconnectTypes,
 )
-from external_server.config import ModuleConfig, configure_logging
 from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
     ReturnCode,
 )
 from external_server.models.devices import device_repr
+from external_server.config import ModuleConfig
 from external_server.adapters.api.module_lib import (
     empty_command_buffer as _empty_command_buffer,
     empty_device_identification as _empty_device_identification,

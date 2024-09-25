@@ -6,11 +6,6 @@ import unittest
 import coverage
 import coverage.exceptions as _cov_exceptions
 
-from external_server.config import configure_logging
-
-
-configure_logging("config/logging.json")
-
 
 TEST_DIR_NAME = "tests"
 OMITTED_FILES = ["__init__.py", "tests/__main__.py", "*_pb2.py"]

@@ -21,7 +21,6 @@ from external_server.logs import CarLogger as _CarLogger
 from external_server.checkers.mqtt_session import MQTTSession
 from external_server.checkers.mqtt_session import MQTTSession
 from paho.mqtt.enums import CallbackAPIVersion
-from external_server.config import configure_logging
 from ExternalProtocol_pb2 import (  # type: ignore
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,

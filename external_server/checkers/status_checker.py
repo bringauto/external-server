@@ -5,13 +5,13 @@ import sys
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
-from external_server.logs import CarLogger as _CarLogger
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
 
 
-logger = _CarLogger(__name__)
+logger = _CarLogger(LOGGER_NAME)
 CounterValue = int
 QueuedStatus = tuple[CounterValue, _Status]
 QueuedTimer = tuple[CounterValue, _Timer]

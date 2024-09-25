@@ -9,10 +9,10 @@ from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api.adapter import APIClientAdapter  # type: ignore
 from external_server.models.events import EventType, EventQueue as _EventQueue
-from external_server.logs import CarLogger as _CarLogger
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
 
 
-logger = _CarLogger(__name__)
+logger = _CarLogger(LOGGER_NAME)
 
 
 class _CommandQueue:
