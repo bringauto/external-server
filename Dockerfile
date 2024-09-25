@@ -72,7 +72,5 @@ COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 COPY external_server_main.py /home/bringauto/external_server/
 
 # Copy configuration files
-COPY config/for_docker.json /home/bringauto/config/for_docker.json
 COPY log /home/bringauto/log
 COPY config /home/bringauto/config
-COPY config/logging.json /home/bringauto/config/logging.json
