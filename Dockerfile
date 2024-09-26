@@ -51,16 +51,16 @@ FROM bringauto/python-environment:test-ubuntu-24-04 as external_server
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
-# ensure PYTHONPATH is defined
-RUN if [ "$PYTHONPATH" = "" ]; then export PYTHONPATH=""; fi
-# append to the PYTHONPATH
-ENV PYTHONPATH=$PYTHONPATH:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
+# ensure PYTHONPATH is defined and append to it
+ENV PYTHONPATH=${PYTHONPATH:-}:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
 WORKDIR /home/bringauto
 
 # Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-RUN pip3 install -r /home/bringauto/external_server/requirements.txt --break-system-packages
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+RUN pip3 install --no-cache-dir -r /home/bringauto/external_server/requirements.txt
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
