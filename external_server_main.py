@@ -54,9 +54,10 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        config_dict = json.loads(open(args.config).read())
-        config = load_config(args.config)
-        configure_logging("External Server", config_dict)
+        with open(args.config) as f:
+            config_dict = json.loads(f.read())
+            config = load_config(args.config)
+            configure_logging("External Server", config_dict)
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
