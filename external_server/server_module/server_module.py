@@ -42,8 +42,8 @@ class ServerModule:
         self._api_adapter = _ApiAdapter(config=config, company=company, car=car)
         try:
             self._api_adapter.init()
-        except:
-            msg = f"Module {module_id}: Error in init function. Check the configuration file."
+        except Exception as e:
+            msg = f"Module {module_id}: Error in init function. Check the configuration file. {e}"
             logger.error(msg, car)
             raise RuntimeError(msg)
         real_mod_number = self._api_adapter.get_module_number()

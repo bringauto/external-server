@@ -348,9 +348,9 @@ class MQTTClientAdapter:
         """
         try:
             self._event_queue.add(event_type=EventType.MQTT_BROKER_DISCONNECTED)
-        except:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
             _logger.error(
-                "MQTT on disconnect callback: Failed to disconnect from the broker", self._car
+                f"MQTT on disconnect callback: Failed to disconnect from the broker. {e}", self._car
             )
 
     def _on_message(self, client: _Client, data, message: MQTTMessage) -> None:
@@ -369,9 +369,9 @@ class MQTTClientAdapter:
                 msg = _ExternalClientMsg().FromString(message.payload)
                 self._received_msgs.put(msg)
                 self._event_queue.add(event_type=EventType.CAR_MESSAGE_AVAILABLE)
-        except:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
             _logger.error(
-                "MQTT on message callback: Failed to parse the received message", self._car
+                f"MQTT on message callback: Failed to parse the received message. {e}", self._car
             )
 
     def _set_up_callbacks(self) -> None:
