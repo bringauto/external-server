@@ -71,6 +71,8 @@ COPY external_server /home/bringauto/external_server/external_server
 COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 COPY external_server_main.py /home/bringauto/external_server/
 
+# Prepare the log directory
+RUN mkdir /home/bringauto/log
+
 # Copy configuration files
-COPY log /home/bringauto/log
 COPY config /home/bringauto/config
