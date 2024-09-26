@@ -54,36 +54,15 @@ def main() -> None:
         sys.exit(1)
 
     try:
+        config_dict = json.loads(open(args.config).read())
         config = load_config(args.config)
-        configure_logging("External Server", json.loads(args.config))
+        configure_logging("External Server", config_dict)
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
-    # if config.log_files_to_keep:
-    #     file_handler = logging.handlers.RotatingFileHandler(
-    #         filename=str(config.log_files_directory) + "/" + _LOG_FILE_NAME,
-    #         maxBytes=config.log_file_max_size_bytes,
-    #         backupCount=config.log_files_to_keep - 1,
-    #     )
-    #     file_handler.setFormatter(logging.Formatter(_LOG_FORMAT))
-    #     logging.basicConfig(
-    #         level=logging.INFO,
-    #         format="%(name)s: %(message)s",
-    #         datefmt="[%X]",
-    #         handlers=[RichHandler(), file_handler],
-    #     )
-    # else:
-    #     logging.basicConfig(
-    #         level=logging.INFO,
-    #         format="%(name)s: %(message)s",
-    #         datefmt="[%X]",
-    #         handlers=[RichHandler()],
-    #     )
-
     eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
-
     server = ExternalServer(config)
     if args.tls:
         if args.ca is None or args.cert is None or args.key is None:
