@@ -66,11 +66,6 @@ def main() -> None:
     eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
     server = ExternalServer(config)
     if args.tls:
-        if args.ca is None or args.cert is None or args.key is None:
-            eslogger.error(
-                "TLS requires ca certificate, PEM encoded client certificate and private key to this certificate"
-            )
-            sys.exit(1)
         server.tls_set(args.ca, args.cert, args.key)
 
     try:
