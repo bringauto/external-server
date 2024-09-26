@@ -43,18 +43,18 @@ As an example of a filled-up config file, see the `config/config.json.example`. 
 
 ### Server configuration
 
-Set up the MQTT connection parameters and company name and the External server behavior.
+Set up the logging, the MQTT connection parameters and company name and the External server behavior.
 
-- `company_name` (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
-- `mqtt_address` (required) - IP address of the MQTT broker.
-- `mqtt_port` (required) - port of the MQTT broker.
+- `logging` - contains the following keys:
+  - `log-path` - path to the directory where logs will be stored.
+  - `verbosity` - if `True`, the server will print logs to the console and set the logging level to `DEBUG`. If `False`, the server will only print logs to the console and set the logging level to `INFO`.
+- `company_name` - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
+- `mqtt_address` - IP address of the MQTT broker.
+- `mqtt_port` - port of the MQTT broker.
 - `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
 - `timeout` (in seconds) - Maximum time amount between Status and Command messages.
 - `send_invalid_command` - sends command to Module gateway even if External Server detects invalid command returned from external_server_api; affects only normal communication.
 - `sleep_duration_after_connection_refused` - if the connection to Module Gateway was refused, the External Server will sleep for a defined duration before the next connection attempt proceeds.
-- `log_files_directory` (required) - path to a directory in which the logs will be stored. If left empty, the current working directory will be used.
-- `log_files_to_keep` (required) - number of log files that will be kept (can be 0).
-- `log_file_max_size_bytes` (required) - max file size of a log in bytes (0 means unlimited).
 
 ### Common modules
 
