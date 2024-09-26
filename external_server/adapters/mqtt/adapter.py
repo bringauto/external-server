@@ -325,7 +325,7 @@ class MQTTClientAdapter:
             _logger.info(f"Connected to a MQTT broker ({address}).", self._car)
         else:
             _logger.error(
-                f"Cannot connect to broker ({address})." f"{mqtt_error_from_code(code)}", self._car
+                f"Cannot connect to broker ({address}). {mqtt_error_from_code(code)}", self._car
             )
 
     def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:

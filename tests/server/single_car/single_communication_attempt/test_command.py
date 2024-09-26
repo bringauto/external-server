@@ -108,8 +108,8 @@ class Test_Command_Response_With_Type_Device_Not_Connected(unittest.TestCase):
 
     def test_with_counter_not_matching_any_published_command_does_not_disconnect_device(self):
         self.assertTrue(self.es._known_devices.is_connected(self.device_1))
-        self.es._handle_command(module_id=1000, data=b"cmd", device=self.device_1) # counter=0
-        self.es._handle_command(module_id=1000, data=b"cmd", device=self.device_1)  # counter=1
+        self.es._handle_command(module_id=1000, data=b"cmd", device=self.device_1) # counter equals 0
+        self.es._handle_command(module_id=1000, data=b"cmd", device=self.device_1)  # counter equals 1
         self.es._handle_command_response(cmd_response("id", 2, CommandResponse.DEVICE_NOT_CONNECTED).commandResponse)
         # device remains connected - the response was not relevant to any command
         self.assertTrue(self.es._known_devices.is_connected(self.device_1))

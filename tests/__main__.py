@@ -41,10 +41,10 @@ def _run_tests(show_test_names: bool = True) -> None:
         if os.path.isfile(path):
             file_name = os.path.basename(path)
             if file_name.endswith(".py"):
-                pattern, dir = file_name, os.path.dirname(path)
+                pattern, directory = file_name, os.path.dirname(path)
         else:
-            pattern, dir = "test_*.py", path
-        suite.addTests(unittest.TestLoader().discover(dir, pattern=pattern))
+            pattern, directory = "test_*.py", path
+        suite.addTests(unittest.TestLoader().discover(directory, pattern=pattern))
     verbosity = 2 if show_test_names else 1
     unittest.TextTestRunner(verbosity=verbosity, buffer=True).run(suite)
 

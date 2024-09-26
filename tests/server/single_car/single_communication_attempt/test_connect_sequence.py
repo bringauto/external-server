@@ -74,8 +74,6 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.1)
-            device_status = _device_status(self.device)
-            topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
@@ -87,8 +85,6 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            device_status = _device_status(self.device)
-            topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.DISCONNECT, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
@@ -104,8 +100,6 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
             time.sleep(0.2)
-            device_status = _device_status(self.device)
-            topic = self.es.mqtt.subscribe_topic
             broker.publish(topic, connect_msg("id", "company", [self.device]))
             broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
             broker.publish(topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED))

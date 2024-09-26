@@ -169,12 +169,6 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.adapter.connect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
 
-    def test_repeated_connecting_to_broker_has_no_effect(self):
-        self.broker.start()
-        self.adapter.connect()
-        self.adapter.connect()
-        self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_CONNECTED)
-
     def test_disconnecting_client_before_calling_connect_has_no_effect(self):
         self.broker.start()
         state_before = self.adapter.state

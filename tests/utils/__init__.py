@@ -46,7 +46,6 @@ ES_CONFIG_WITHOUT_MODULES = {
 
 def get_test_server(company: str, *car_names: str, mqtt_timeout: float = -1, timeout: float = -1) -> ExternalServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    # config = CarConfig(modules={"1000": module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
     cars: dict[str, dict] = {car_name: {} for car_name in car_names}
     config = ServerConfig(common_modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES, cars = cars)  # type: ignore
     config.company_name = company

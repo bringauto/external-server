@@ -177,7 +177,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
         status_2 = status("id", _Status.CONNECTING, 1, _DeviceStatus(device=dev_2))
         with self.executor as ex:
             # the next thread will wait for the broker receiving the status response
-            response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
+            ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, connect_payload)
             response = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
             ex.submit(mock_publishing_from_ext_client, self.es, self.broker, status_1, status_2)

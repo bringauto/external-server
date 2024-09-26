@@ -129,10 +129,9 @@ class Test_Device_Py(unittest.TestCase):
         devicepy = DevicePy.from_device(device)
         self.assertEqual(device, devicepy.to_device())
 
-    def test_comparing_device_py_to_another_type_raises_type_error(self):
+    def test_comparing_device_py_to_another_type_returns_false(self):
         devicepy = DevicePy(5, 7, "test", "Test", 0)
-        with self.assertRaises(TypeError):
-            devicepy == 5
+        self.assertFalse(devicepy == 5)
 
 
 class Test_Connected_Device_From_The_Same_Module(unittest.TestCase):

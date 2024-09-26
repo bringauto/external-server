@@ -114,8 +114,6 @@ class CommandWaitingThread:
         rc = self._api_adapter.wait_for_command(self._timeout_ms)
         if rc == GeneralErrorCode.OK:
             self._pass_available_commands_to_queue()
-        elif rc == EsErrorCode.TIMEOUT:
-            pass
         else:
             logger.error(f"Error occured in wait_for_command function in API, rc: {rc}", self._car)
 

@@ -36,7 +36,7 @@ class DevicePy:
                 and self.role == other.deviceRole
             )
         else:
-            raise TypeError
+            return False
 
     def to_device(self) -> _Device:
         """Converts the DevicePy instance to the protobuf Device message."""

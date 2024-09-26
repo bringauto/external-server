@@ -46,7 +46,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREF
     make install
 
 
-FROM bringauto/python-environment:test-ubuntu-24-04 as external_server
+FROM bringauto/python-environment:test-ubuntu-24-04 AS external_server
 
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.

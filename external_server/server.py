@@ -67,7 +67,6 @@ DeviceStatusName = {
     _Status.RUNNING: "RUNNING",
     _Status.DISCONNECT: "DISCONNECT",
     _Status.ERROR: "ERROR",
-    _Status.RUNNING: "RUNNING",
 }
 
 
@@ -493,7 +492,7 @@ class CarServer:
         while (response := self._mqtt._get_message()) is not None:
             if isinstance(response, _ExternalClientMsg) and response.HasField("commandResponse"):
                 if response.commandResponse.sessionId == self._mqtt.session.id:
-                    carlogger.info(f"Received a command response.", self._car)
+                    carlogger.info("Received a command response.", self._car)
                     return response.commandResponse
                 else:
                     carlogger.error(
@@ -502,7 +501,7 @@ class CarServer:
             else:
                 # ignore other messages
                 carlogger.warning(
-                    f"Expected command response, received other type of external client message. Skipping",
+                    "Expected command response, received other type of external client message. Skipping",
                     self._car,
                 )
         # response is None
@@ -536,7 +535,7 @@ class CarServer:
         """Handle the status that has been checked by the status checker."""
         module_and_dev = self._module_and_device(status)
         if not module_and_dev:
-            carlogger.info(f"Received status from unsupported device. Ignoring status.", self._car)
+            carlogger.info("Received status from unsupported device. Ignoring status.", self._car)
         else:
             module, device = module_and_dev
             status_ok = True
@@ -546,7 +545,7 @@ class CarServer:
                     status_ok = self._connect_device(device)
                 case _Status.RUNNING:
                     if not self._known_devices.is_connected(device):
-                        carlogger.warning(f"Device is not connected. Ignoring status.", self._car)
+                        carlogger.warning("Device is not connected. Ignoring status.", self._car)
                         status_ok = False
                 case _Status.DISCONNECT:
                     status_ok = self._disconnect_device(DisconnectTypes.announced, device)
