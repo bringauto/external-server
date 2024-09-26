@@ -64,11 +64,8 @@ def mqtt_error_from_code(code: int) -> str:
 
     If the code is not recognized, an empty string is returned.
     """
-    try:
-        enum_val = _MQTTErrorCode._value2member_map_[code]
-        return _error_string(enum_val)  # type: ignore
-    except:
-        return ""
+    enum_val = _MQTTErrorCode._value2member_map_.get(code, "")
+    return _error_string(enum_val)
 
 
 class MQTTClientAdapter:
