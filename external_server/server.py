@@ -712,11 +712,10 @@ class CarServer:
         info = f"Received status, counter={status.messageCounter}."
         carlogger.info(info, self._car)
 
-    def _log_and_set_error_and_raise(self, exception: Exception, car_name: str = "") -> None:
+    def _log_and_set_error(self, exception: Exception, car_name: str = "") -> None:
         """Log the exception and raise it. Set the server's state to ERROR."""
         carlogger.log_on_exception(exception, car_name)
         self._set_state(ServerState.ERROR)
-        raise exception
 
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule, _Device] | None:
         """Return server module and device referenced by the status messages.
@@ -789,7 +788,8 @@ class CarServer:
                 self._set_running_flag(True)
             self._init_sequence()
         except Exception as e:
-            self._log_and_set_error_and_raise(e)
+            self._log_and_set_error(e)
+            raise
 
     def _run_normal_communication(self) -> None:
         """Start the normal communication over MQTT. An init sequence must have been completed successfully."""
@@ -806,7 +806,8 @@ class CarServer:
                 event = self._event_queue.get()
                 self._handle_communication_event(event)
             except Exception as e:
-                self._log_and_set_error_and_raise(e)
+                self._log_and_set_error(e)
+                raise
 
     def _set_state(self, state: ServerState) -> None:
         """Set the server's state variable to the given value if the transition is allowed.
