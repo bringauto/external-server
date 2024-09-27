@@ -1,4 +1,4 @@
-import random
+import secrets
 import string
 from queue import Queue, Empty
 import sys
@@ -39,6 +39,7 @@ _KEEPALIVE = 15
 _QOS = 1
 # Time in seconds to wait for the client to be connected
 _MQTT_CONNECTION_STATE_UPDATE_TIMEOUT = 1.0
+_ID_LENGTH = 20
 
 
 ClientConnectionState = _ConnectionState
@@ -48,7 +49,7 @@ _logger = _CarLogger(__name__)
 
 
 def create_mqtt_client() -> _Client:
-    client_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=20))
+    client_id = "".join(secrets.choice(string.ascii_letters) for _ in range(_ID_LENGTH))
     client = _Client(
         callback_api_version=CallbackAPIVersion.VERSION2,
         client_id=client_id,

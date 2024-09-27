@@ -133,6 +133,8 @@ def configure_logging(component_name: str, config: dict) -> None:
             console_handler.setFormatter(formatter)
             logger.addHandler(console_handler)
 
+    except KeyError as e:
+        logging.error(f"{component_name}: Missing logging configuration. {e}")
     except Exception as e:
         logging.error(f"{component_name}: Could not configure logging. {e}")
 
