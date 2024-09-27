@@ -211,19 +211,14 @@ class MQTTClientAdapter:
         if msg is None:
             _logger.info("Connect message has not been received.", self._car)
             return None
-        elif not msg.HasField("connect"):
-            other_type = (
-                "status"
-                if msg.HasField("status")
-                else ("command response" if msg.HasField("commandResponse") else "unknown")
-            )
+        elif msg.HasField("connect"):
+            return msg.connect
+        else:
             _logger.warning(
-                f"Received message is not a connect message. Received message type: {other_type}",
+                f"Received message is not a status. Message type is {self._ext_client_message_type(msg)}",
                 self._car,
             )
             return None
-        _logger.info("Connect message has been received.", self._car)
-        return msg.connect
 
     def get_status(self) -> _Status | None:
         """Get expected status message from MQTT client.
@@ -234,18 +229,23 @@ class MQTTClientAdapter:
         if msg is None:
             _logger.info("Status message has not been received.", self._car)
             return None
-        if not msg.HasField("status"):
-            other_type = (
-                "connect"
-                if msg.HasField("connect")
-                else ("command response" if msg.HasField("commandResponse") else "unknown")
-            )
+        elif msg.HasField("status"):
+            return msg.status
+        else:
             _logger.warning(
-                f"Received message is not a status. Received message type: {other_type}",
+                f"Received message is not a status. Message type is {self._ext_client_message_type(msg)}",
                 self._car,
             )
             return None
-        return msg.status
+
+    def _ext_client_message_type(self, msg: _ExternalClientMsg) -> str:
+        if msg.HasField("connect"):
+            return "connect"
+        if msg.HasField("status"):
+            return "status"
+        if msg.HasField("commandResponse"):
+            return "command response"
+        return "unknown"
 
     def publish(self, msg: _ExternalServerMsg, log_msg: str = "") -> None:
         """Publish a message to the MQTT broker."""

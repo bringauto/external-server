@@ -11,10 +11,10 @@ logger = _CarLogger(__name__)
 
 
 class EventType(Enum):
-    COMMAND_AVAILABLE = auto()  # data = module number
+    COMMAND_AVAILABLE = auto()
     CAR_MESSAGE_AVAILABLE = auto()
     MQTT_BROKER_DISCONNECTED = auto()
-    TIMEOUT_OCCURRED = auto()  # data = TimeoutType
+    TIMEOUT_OCCURRED = auto()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
