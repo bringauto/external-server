@@ -42,10 +42,17 @@ class ServerModule:
         self._api_adapter = _ApiAdapter(config=config, company=company, car=car)
         try:
             self._api_adapter.init()
+
+        except FileNotFoundError as e:
+            msg = f"Module {module_id}: Library file not found. Check the configuration file. {e}"
+            logger.error(msg, car)
+            raise RuntimeError(msg) from e
+
         except Exception as e:
             msg = f"Module {module_id}: Error in init function. Check the configuration file. {e}"
             logger.error(msg, car)
-            raise RuntimeError(msg)
+            raise RuntimeError(msg) from e
+
         real_mod_number = self._api_adapter.get_module_number()
         if real_mod_number != module_id:
             msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
@@ -62,11 +69,11 @@ class ServerModule:
 
     @property
     def car(self) -> str:
-        return self._api_adapter._config.get("car_name", "")
+        return self._api_adapter.car
 
     @property
     def company(self) -> str:
-        return self._api_adapter._config.get("company_name", "")
+        return self._api_adapter.company
 
     @property
     def id(self) -> int:
@@ -79,5 +86,5 @@ class ServerModule:
         return self._thread
 
     def is_device_supported(self, device: _Device) -> bool:
-        """Return `True` if the device is not supported by the module, `False` otherwise."""
+        """Return `True` if the device is supported by the module, `False` otherwise."""
         return self._api_adapter.is_device_type_supported(device.deviceType)

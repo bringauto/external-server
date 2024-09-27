@@ -11,7 +11,7 @@ from external_server.config import ServerConfig, InvalidConfiguration
 class Test_Cars(unittest.TestCase):
 
     def setUp(self) -> None:
-        with open("./config/config.json.example") as config_file:
+        with open("./config/config.json") as config_file:
             self.config_dict = json.load(config_file)
         for item in self.config_dict["common_modules"].values():
             item["lib_path"] = "./test_lib"
@@ -41,7 +41,7 @@ class Test_Cars(unittest.TestCase):
 class Test_Modules(unittest.TestCase):
 
     def setUp(self) -> None:
-        with open("./config/config.json.example") as config_file:
+        with open("./config/config.json") as config_file:
             self.config_dict = json.load(config_file)
         for item in self.config_dict["common_modules"].values():
             item["lib_path"] = "./test_lib"

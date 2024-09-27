@@ -6,6 +6,7 @@ import ssl
 from typing import Optional, Any
 import time
 import os
+import threading
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -146,6 +147,11 @@ class MQTTClientAdapter:
     def subscribe_topic(self) -> str:
         """The topic the MQTT client is subscribed to."""
         return self._subscribe_topic
+
+    @property
+    def thread(self) -> threading.Thread | None:
+        """The thread of the MQTT client."""
+        return self._mqtt_client._thread
 
     @property
     def timeout(self) -> Optional[float]:

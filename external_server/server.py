@@ -344,7 +344,7 @@ class CarServer:
         for module in self._modules.values():
             module.thread.wait_for_join()
             code = module.api.destroy()
-            if not code == GeneralErrorCode.OK:
+            if code != GeneralErrorCode.OK:
                 carlogger.error(
                     f"Module {module.id}: Error in destroy function. Code: {code}", self._car
                 )

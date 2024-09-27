@@ -44,8 +44,8 @@ TEST_PORT = 1883
 
 class Test_Client_Error_From_Code(unittest.TestCase):
 
-    def test_empty_string_is_returned_for_unknown_error_code(self):
-        self.assertEqual(mqtt_error_from_code(-611561851), "")
+    def test_unknown_error_is_returned_for_unknown_error_code(self):
+        self.assertIn("Unknown error", mqtt_error_from_code(-611561851))
 
 
 class Test_Creating_MQTT_Client(unittest.TestCase):
@@ -118,7 +118,7 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
     ):
         adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", port=0, event_queue=EventQueue())
         self.assertEqual(adapter.state, ClientConnectionState.MQTT_CS_NEW)
-        self.assertIsNone(adapter.client._thread)
+        self.assertIsNone(adapter.thread)
 
 
 class Test_MQTT_Client_Company_And_Car_Name(unittest.TestCase):

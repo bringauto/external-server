@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable
 import threading
 from queue import Queue, Empty
 import sys
@@ -89,7 +89,7 @@ class CommandWaitingThread:
         self._waiting_thread.start()
 
     def stop(self) -> None:
-        """Stops the thread after"""
+        """Stops the thread and waits for it to finish."""
         self._continue_thread = False
         self.wait_for_join()
 

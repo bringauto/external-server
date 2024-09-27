@@ -2,7 +2,6 @@ import os as _os
 
 from pydantic import FilePath
 
-from tests.utils._threads import ExternalServerThreadExecutor
 from external_server import CarServer, ExternalServer
 from external_server.config import (
     CarConfig as CarConfig,

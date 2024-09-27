@@ -134,14 +134,17 @@ Run the following
 pushd tests/utils/example_module && \
 if [ ! -d "_build" ]; then mkdir _build; fi && \
 cd _build && \
-cmake .. -DCMLIB_DIR=https://github.com/cmakelib/cmakelib && \
+cmake .. -DCMLIB_DIR=<path-to-cmakelib-dir> && \
 make
 popd
 ```
 
+cmakelib directory is absolute path to this repo root directory.
+
 ## Running the tests
 
 In the root folder, run the following
+
 ```bash
 python -m tests [-h] [PATH1] [PATH2] ...
 ```

@@ -23,7 +23,8 @@ from external_server.models.messages import (
     cmd_response,
     status_response as _status_response,
 )
-from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, ExternalServerThreadExecutor
+from tests.utils._threads import ExternalServerThreadExecutor
+from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
 

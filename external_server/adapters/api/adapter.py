@@ -71,6 +71,10 @@ class APIClientAdapter:
         return self._car
 
     @property
+    def company(self) -> str:
+        return self._config.get("company_name", "")
+
+    @property
     def context(self):
         return self._library.context
 

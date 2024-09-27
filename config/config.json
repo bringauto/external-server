@@ -1,6 +1,6 @@
 {
   "logging": {
-    "log-path": "/home/log",
+    "log-path": "log",
     "verbose": true
   },
   "company_name": "company_x",
@@ -12,10 +12,10 @@
   "sleep_duration_after_connection_refused": 0.5,
   "common_modules": {
     "1": {
-      "lib_path": "/home/company/modules/mission_module/lib/libmission-external-server-shared.so",
+      "lib_path": "lib/libmission-external-server-shared.so",
       "config": {
         "api_url": "http://http-api:8080/v2/protocol",
-        "api_key": "ProductionKey",
+        "api_key": "",
         "max_requests_threshold_count": "10",
         "max_requests_threshold_period_ms": "5000",
         "delay_after_threshold_reached_ms": "5000",
@@ -23,10 +23,10 @@
       }
     },
     "1000": {
-      "lib_path": "/home/company/modules/io_module/lib/libio-external-server-shared.so",
+      "lib_path": "lib/libio-external-server-shared.so",
       "config": {
         "api_url": "http://http-api:8080/v2/protocol",
-        "api_key": "ProductionKey",
+        "api_key": "",
         "max_requests_threshold_count": "20",
         "max_requests_threshold_period_ms": "5000",
         "delay_after_threshold_reached_ms": "5000",
