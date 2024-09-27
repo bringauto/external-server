@@ -1,10 +1,7 @@
 # External Server
 
 This directory contains a external server that communicates with an external client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
-
-# Fleet protocol deviations
-
-This implementation of the External Server handles multiple cars registered under a single company.
+The External Server handles multiple cars registered under a single company.
 
 # Requirements
 
@@ -39,7 +36,7 @@ popd
 
 Prepare your config file for the External Server. The config file can be found in `config/config.json`.
 
-As an example of a filled-up config file, see the `config/config.json.example`. When using the modified `config/config.json.example`, remove the `example` suffix from the file name.
+As an example of a filled-up config file, see the `config/config.json`. Before running the server, update the `config/config.json` accordingly.
 
 ### Server configuration
 
@@ -52,7 +49,7 @@ Set up the logging, the MQTT connection parameters and company name and the Exte
 - `mqtt_address` - IP address of the MQTT broker.
 - `mqtt_port` - port of the MQTT broker.
 - `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
-- `timeout` (in seconds) - Maximum time amount between Status and Command messages.
+- `timeout` (in seconds) - Maximum time amount between Status or Command messages and receiving corresponding responses.
 - `send_invalid_command` - sends command to Module gateway even if External Server detects invalid command returned from external_server_api; affects only normal communication.
 - `sleep_duration_after_connection_refused` - if the connection to Module Gateway was refused, the External Server will sleep for a defined duration before the next connection attempt proceeds.
 
@@ -65,7 +62,7 @@ One of the last items in the config file is `common_modules`, represented by key
 
 A common module will be used for all cars. No such module can be defined in the car configuration.
 
-See the `config/config.json.example` for an example of modules configuration.
+See the `config/config.json` for an example of modules configuration.
 
 ### Cars
 
@@ -73,7 +70,7 @@ The last item in the config file is `cars`, represented by key-value pairs. The 
 
 The structure of the `specific_modules` is the same as the `common_modules` structure.
 
-See the `config/config.json.example` for an example of car configuration.
+See the `config/config.json` for an example of car configuration.
 
 Configuring module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
 
@@ -103,6 +100,11 @@ Following arguments are used if argument `tls` is set:
 First, do the steps from the [Install dependencies](#install-dependencies) section.
 
 The proceed with the following steps.
+
+### Requirements
+
+- [Requirements](#requirements)
+- CMLIB: https://github.com/cmakelib/cmakelib
 
 ### Install the external server package
 
@@ -140,7 +142,6 @@ popd
 ## Running the tests
 
 In the root folder, run the following
-+
 ```bash
 python -m tests [-h] [PATH1] [PATH2] ...
 ```
