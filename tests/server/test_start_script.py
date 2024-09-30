@@ -13,7 +13,7 @@ class Test_Argparse_Init(unittest.TestCase):
         sys.argv = ["external_server_main.py", "-c", "./tests/config.json"]
         args = parsed_script_args()
         self.assertEqual(args.config, "./tests/config.json")
-        self.assertEqual(args.tls, None)
+        self.assertIsNone(args.tls)
 
     def test_setting_nonexistent_config_file_path_raises_error(self):
         sys.argv = ["external_server_main.py", "-c", "./nonexistent_folder/some_config.json"]
@@ -64,7 +64,7 @@ class Test_Argparse_Init(unittest.TestCase):
             "key.pem",
         ]
         args = parsed_script_args()
-        self.assertEqual(args.tls, True)
+        self.assertTrue(args.tls)
         self.assertEqual(args.ca, "ca.pem")
         self.assertEqual(args.cert, "cert.pem")
         self.assertEqual(args.key, "key.pem")

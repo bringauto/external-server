@@ -135,8 +135,8 @@ class Test_Skipped_Values(unittest.TestCase):
 
     def test_for_each_skipped_value_timer_is_started(self):
         self.checker._store_skipped_counter_values(3) # two skipped values
-        self.assertEqual(self.checker._skipped.queue[0][1].is_alive(), True)
-        self.assertEqual(self.checker._skipped.queue[1][1].is_alive(), True)
+        self.assertTrue(self.checker._skipped.queue[0][1].is_alive())
+        self.assertTrue(self.checker._skipped.queue[1][1].is_alive())
 
     def test_adding_value_less_or_equal_to_newest_skipped_value_has_no_effect(self):
         self.checker._store_skipped_counter_values(5)
@@ -192,9 +192,9 @@ class Test_Checking_Statuses(unittest.TestCase):
 
     def test_for_every_skipped_counter_a_timer_is_started(self):
         self.checker.check(Status(messageCounter=4))
-        self.assertEqual(self.checker._skipped.queue[0][1].is_alive(), True)
-        self.assertEqual(self.checker._skipped.queue[1][1].is_alive(), True)
-        self.assertEqual(self.checker._skipped.queue[2][1].is_alive(), True)
+        self.assertTrue(self.checker._skipped.queue[0][1].is_alive())
+        self.assertTrue(self.checker._skipped.queue[1][1].is_alive())
+        self.assertTrue(self.checker._skipped.queue[2][1].is_alive())
 
     def test_all_timers_are_stopped_when_clearing_the_skipped_counter_queue(self):
         self.checker.check(Status(messageCounter=3))

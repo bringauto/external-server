@@ -24,7 +24,7 @@ class Test_No_Commands_Stored_By_Checker(unittest.TestCase):
 
     def test_oldest_counter_yields_none(self):
         checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
-        self.assertEqual(checker._commands.oldest_command_counter, None)
+        self.assertIsNone(checker._commands.oldest_command_counter)
 
 
 class Test_Pop_Command(unittest.TestCase):

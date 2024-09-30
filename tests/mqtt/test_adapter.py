@@ -100,18 +100,18 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
         self.assertEqual(adapter.client._on_connect, adapter._on_connect)
         self.assertEqual(adapter.client._on_disconnect, adapter._on_disconnect)
         self.assertEqual(adapter.client._on_message, adapter._on_message)
-        self.assertEqual(adapter.client._on_subscribe, None)
-        self.assertEqual(adapter.client._on_unsubscribe, None)
-        self.assertEqual(adapter.client._on_log, None)
-        self.assertEqual(adapter.client._on_pre_connect, None)
-        self.assertEqual(adapter.client._on_connect_fail, None)
-        self.assertEqual(adapter.client._on_subscribe, None)
-        self.assertEqual(adapter.client._on_publish, None)
-        self.assertEqual(adapter.client._on_unsubscribe, None)
-        self.assertEqual(adapter.client._on_socket_open, None)
-        self.assertEqual(adapter.client._on_socket_close, None)
-        self.assertEqual(adapter.client._on_socket_register_write, None)
-        self.assertEqual(adapter.client._on_socket_unregister_write, None)
+        self.assertIsNone(adapter.client._on_subscribe)
+        self.assertIsNone(adapter.client._on_unsubscribe)
+        self.assertIsNone(adapter.client._on_log)
+        self.assertIsNone(adapter.client._on_pre_connect)
+        self.assertIsNone(adapter.client._on_connect_fail)
+        self.assertIsNone(adapter.client._on_subscribe)
+        self.assertIsNone(adapter.client._on_publish)
+        self.assertIsNone(adapter.client._on_unsubscribe)
+        self.assertIsNone(adapter.client._on_socket_open)
+        self.assertIsNone(adapter.client._on_socket_close)
+        self.assertIsNone(adapter.client._on_socket_register_write)
+        self.assertIsNone(adapter.client._on_socket_unregister_write)
 
     def test_leaves_client_in_connection_state_equal_to_new_and_without_connection_thread_existing(
         self,
@@ -647,7 +647,7 @@ class Test_Expecting_Status(unittest.TestCase):
             ex.submit(
                 self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
             )
-            self.assertEqual(f.result(), None)
+            self.assertIsNone(f.result())
 
     def test_receiving_connect_message_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
@@ -656,7 +656,7 @@ class Test_Expecting_Status(unittest.TestCase):
             ex.submit(
                 self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
             )
-            self.assertEqual(f.result(), None)
+            self.assertIsNone(f.result())
 
     def tearDown(self) -> None:
         self.adapter.stop()
@@ -690,7 +690,7 @@ class Test_Expecting_Connect_Message(unittest.TestCase):
             ex.submit(
                 self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
             )
-            self.assertEqual(f.result(), None)
+            self.assertIsNone(f.result())
 
     def test_receiving_status_yields_none(self):
         with concurrent.futures.ThreadPoolExecutor() as ex:
@@ -700,7 +700,7 @@ class Test_Expecting_Connect_Message(unittest.TestCase):
             ex.submit(
                 self.broker.publish, self.adapter.subscribe_topic, pub_msg.SerializeToString()
             )
-            self.assertEqual(f.result(), None)
+            self.assertIsNone(f.result())
 
     def tearDown(self) -> None:
         self.adapter.stop()
