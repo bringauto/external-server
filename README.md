@@ -23,13 +23,10 @@ pip3 install -r requirements.txt
 
 ### Submodules
 
-Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule and compile the protobuf
+Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule
 
 ```bash
-git submodule update --init lib/fleet-protocol && \
-pushd lib/fleet-protocol/protobuf && \
-find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
-popd
+git submodule update --init lib/fleet-protocol
 ```
 
 ## Configure the External Server
@@ -171,4 +168,12 @@ The External Server can be also used with docker compose. In the `docker-compose
 
 ## Type checking
 
-To allow for type checking of the classes from compiler protobuf of fleet protocol, add `<project-root-directory>/lib/fleet-protocol/protobuf/compiled/python`to the `PYTHONPATH` environment variable.
+To allow for type checking of the classes from compiler protobuf of fleet protocol, run:
+
+```bash
+pushd lib/fleet-protocol/protobuf && \
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
+popd
+```
+
+Then add `<project-root-directory>/lib/fleet-protocol/protobuf/compiled/python`to the `PYTHONPATH` environment variable.
