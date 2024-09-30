@@ -19,7 +19,9 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 WORKDIR /home/bringauto
 ADD --chown=bringauto:bringauto https://github.com/bringauto/mission-module.git#$MISSION_MODULE_VERSION mission-module
 WORKDIR /home/bringauto/mission-module/_build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/mission_module/ -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/mission_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
     make install
 
 
@@ -42,7 +44,9 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 WORKDIR /home/bringauto
 ADD --chown=bringauto:bringauto https://github.com/bringauto/io-module.git#$IO_MODULE_VERSION io-module
 WORKDIR /home/bringauto/io-module/_build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/io_module/ -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/io_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
     make install
 
 
