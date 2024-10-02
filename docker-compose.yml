@@ -1,8 +1,13 @@
 services:
   external-server:
-    image: external-server
-    entrypoint: ["python3", "/home/bringauto/external_server/external_server_main.py", "-c", "/home/bringauto/config/for_docker.json"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["python3", "/home/bringauto/external_server/external_server_main.py", "-c", "./config/for_docker.json"]
     restart: always
+    volumes:
+      - "./config:/home/bringauto/config"
+      - "./log:/home/bringauto/log"
     networks:
       - bring-emulator
 

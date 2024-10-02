@@ -1,5 +1,4 @@
-#libraries used by our code
 paho-mqtt==2.0.0
 protobuf==4.25.3
+pydantic==2.6.
 rich==13.7.1
-pydantic==2.6.1
