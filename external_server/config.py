@@ -94,20 +94,14 @@ class ServerConfig(BaseModel):
         cars = fields.get("cars")
         if not cars:
             raise InvalidConfiguration("Cars must contain at least 1 car.")
-        elif not modules and not all(
-            car.get("specific_modules") for car in cars.values()
-        ):
-            raise InvalidConfiguration(
-                "Modules must contain at least 1 module for each car."
-            )
+        elif not modules and not all(car.get("specific_modules") for car in cars.values()):
+            raise InvalidConfiguration("Modules must contain at least 1 module for each car.")
         elif modules:
             car_specific_modules = set.union(
                 *[set(car.get("specific_modules", {}).keys()) for car in cars.values()]
             )
             global_modules = set(modules.keys())
-            duplicates = [
-                int(i) for i in car_specific_modules.intersection(global_modules)
-            ]
+            duplicates = [int(i) for i in car_specific_modules.intersection(global_modules)]
             if duplicates:
                 raise InvalidConfiguration(
                     "Each module can be configured either globally or per car, but not both. \n"
@@ -166,4 +160,3 @@ def load_config(config_path: str) -> ServerConfig:
         raise InvalidConfiguration(e) from None
 
     return config
-

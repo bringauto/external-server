@@ -88,7 +88,8 @@ class CommandQueue:
         cmd: QueuedCommand = self._queue.get()
         cmd.stop_timer()
         logger.debug(
-            f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}", self._car
+            f"Command retrieved from the command checker queue, number of remaining stored commands: {self._queue.qsize()}",
+            self._car,
         )
         return cmd.command
 
@@ -100,7 +101,8 @@ class CommandQueue:
         """Put the command (instance of `HandledCommand`) into the queue."""
         self._queue.put(QueuedCommand(command, timer))
         logger.debug(
-            f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}", self._car
+            f"Command added to the command checker queue. Number of stored commands: {self._queue.qsize()}",
+            self._car,
         )
 
 
@@ -173,29 +175,34 @@ class PublishedCommandChecker(_Checker):
                 cmds.append(cmd)
                 self._received_response_counters.remove(next_counter)
                 logger.info(
-                    f"Command delivery to a car has been acknowledged (counter={next_counter}).", self._car
+                    f"Command delivery to a car has been acknowledged (counter={next_counter}).",
+                    self._car,
                 )
                 next_counter = self._commands.oldest_command_counter
             logger.debug(
-                f"Popping commands with counters: {', '.join(str(cmd.counter) for cmd in cmds)}", self._car
+                f"Popping commands with counters: {', '.join(str(cmd.counter) for cmd in cmds)}",
+                self._car,
             )
             return cmds
         else:
             if oldest_counter is None:
                 logger.warning(
                     "No commands in the queue awaiting a response. "
-                    f"Ignoring the recevied response (counter={counter}).", self._car
+                    f"Ignoring the recevied response (counter={counter}).",
+                    self._car,
                 )
             elif oldest_counter < counter <= self._commands.newest_command_counter:
                 self._received_response_counters.append(counter)
                 logger.warning(
                     f"Cannot pop command with counter={counter} "
-                    f"because it is not the oldest command (counter={oldest_counter}).", self._car
+                    f"because it is not the oldest command (counter={oldest_counter}).",
+                    self._car,
                 )
             else:
                 logger.warning(
                     f"Ignoring received response (counter={counter}) as it "
-                    f"corresponds to a command that is not in the queue.", self._car
+                    f"corresponds to a command that is not in the queue.",
+                    self._car,
                 )
             return []
 

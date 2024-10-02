@@ -37,7 +37,8 @@ class _CommandQueue:
             with self._commands_lock:
                 command = self._queue.get(block=False)
                 logger.debug(
-                    f"Retrieving command from command waiting thread queue. Number of remaning commands: {self.qsize()}.", self._car
+                    f"Retrieving command from command waiting thread queue. Number of remaning commands: {self.qsize()}.",
+                    self._car,
                 )
         except Empty:
             return None
@@ -50,7 +51,8 @@ class _CommandQueue:
     def put(self, command: bytes, device: _Device) -> None:
         self._queue.put((command, device))
         logger.debug(
-            f"Command added to command waiting thread queue. Number of commands in queue: {self.qsize()}.", self._car
+            f"Command added to command waiting thread queue. Number of commands in queue: {self.qsize()}.",
+            self._car,
         )
 
 

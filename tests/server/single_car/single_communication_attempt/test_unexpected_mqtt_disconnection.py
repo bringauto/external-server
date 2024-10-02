@@ -1,9 +1,6 @@
 import unittest
-import sys
 from concurrent import futures
 import time
-
-sys.path.append(".")
 
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore

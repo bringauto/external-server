@@ -60,9 +60,7 @@ class APIClientAdapter:
         self._lib_path = config.lib_path.absolute().as_posix()
         self._config = {"company_name": company, "car_name": car}
         self._config.update(config.config)
-        self._library = _ModuleLibrary(
-            lib_path=str(config.lib_path), config=self._config
-        )
+        self._library = _ModuleLibrary(lib_path=str(config.lib_path), config=self._config)
         self._lock = threading.Lock()
         self._car = car
 
@@ -111,15 +109,11 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        device.priority = (
-            0  # Set priority to zero - the external server must ignore the priority.
-        )
+        device.priority = 0  # Set priority to zero - the external server must ignore the priority.
         device_identification = self._create_device_identification(device)
         return self._library.device_connected(device_identification)  # type: ignore
 
-    def device_disconnected(
-        self, disconnect_types: DisconnectTypes, device: _Device
-    ) -> ReturnCode:
+    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> ReturnCode:
         """Handles device disconnection by creating the device identification and calling the library function.
 
         Parameters
@@ -137,9 +131,7 @@ class APIClientAdapter:
         """
         device_identification = self._create_device_identification(device)
         with self._lock:
-            code = self._library.device_disconnected(
-                disconnect_types, device_identification
-            )
+            code = self._library.device_disconnected(disconnect_types, device_identification)
             self._check_device_disconnected_code(device.module, code, self._car)
             return code
 
@@ -204,9 +196,7 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        device_identification = self._create_device_identification(
-            status.deviceStatus.device
-        )
+        device_identification = self._create_device_identification(status.deviceStatus.device)
         status_buffer = Buffer(
             data=status.deviceStatus.statusData,
             size=len(status.deviceStatus.statusData),
@@ -249,9 +239,7 @@ class APIClientAdapter:
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         with self._lock:
             code = 0
-            code = self._library.forward_error_message(
-                error_buffer, device_identification
-            )
+            code = self._library.forward_error_message(error_buffer, device_identification)
             self._check_forward_error_message_code(device.module, code, self._car)
             if code == _GeneralErrorCode.OK:
                 _logger.debug(
@@ -351,6 +339,4 @@ class APIClientAdapter:
     @staticmethod
     def _check_command_ack_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in command_ack function, code: {code}", car
-            )
+            _logger.error(f"Module {module_id}: Error in command_ack function, code: {code}", car)

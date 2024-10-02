@@ -29,7 +29,7 @@ class Test_No_Connection_With_Module_Gateway(unittest.TestCase):
         mock_wait_result.return_value = GeneralErrorCode.OK
         # pop_commands
         command_thread.poll_commands()
-        # assert queue is empty
+
         self.assertEqual(command_thread.n_of_commands, 0)
 
     @patch('external_server.adapters.api.module_lib.ModuleLibrary.wait_for_command')

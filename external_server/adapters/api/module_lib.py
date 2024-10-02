@@ -23,9 +23,7 @@ def empty_command_buffer() -> Buffer:
 
 
 def empty_device_identification() -> DeviceIdentification:
-    return DeviceIdentification(
-        0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0
-    )
+    return DeviceIdentification(0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0)
 
 
 class ModuleLibrary:
@@ -50,9 +48,7 @@ class ModuleLibrary:
     def device_disconnected(
         self, disconnect_type: DisconnectTypes, device: DeviceIdentification
     ) -> int:
-        return int(
-            self.library.device_disconnected(disconnect_type, device, self._context)
-        )
+        return int(self.library.device_disconnected(disconnect_type, device, self._context))
 
     def device_connected(self, device: DeviceIdentification) -> int:
         with self._lock:
@@ -69,9 +65,7 @@ class ModuleLibrary:
     def deallocate(self, buffer: Buffer) -> None:
         self.library.deallocate(buffer)
 
-    def forward_error_message(
-        self, buffer: Buffer, device: DeviceIdentification
-    ) -> int:
+    def forward_error_message(self, buffer: Buffer, device: DeviceIdentification) -> int:
         return int(self.library.forward_error_message(buffer, device, self._context))
 
     def forward_status(self, buffer: Buffer, device: DeviceIdentification) -> int:
@@ -95,9 +89,7 @@ class ModuleLibrary:
     def pop_command(self, cmd_buffer: Buffer, device: DeviceIdentification) -> int:
         with self._lock:
             return int(
-                self.library.pop_command(
-                    ct.byref(cmd_buffer), ct.byref(device), self._context
-                )
+                self.library.pop_command(ct.byref(cmd_buffer), ct.byref(device), self._context)
             )
 
     def wait_for_command(self, timeout: int) -> int:
