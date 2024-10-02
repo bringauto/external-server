@@ -14,9 +14,9 @@ EXAMPLE_MODULE_SO_LIB_PATH: FilePath = \
     FilePath(_os.path.abspath("tests/utils/example_module/_build/libexample-external-server-sharedd.so"))
 
 
-CAR_CONFIG_WITHOUT_MODULES = {
-    "company_name": "ba",
-    "car_name": "car1",
+
+
+COMMON_CONFIG = {
     "mqtt_address": "127.0.0.1",
     "mqtt_port": 1883,
     "mqtt_timeout": 2,
@@ -28,18 +28,15 @@ CAR_CONFIG_WITHOUT_MODULES = {
     "log_file_max_size_bytes": 100000,
 }
 
+CAR_CONFIG_WITHOUT_MODULES = {
+    "company_name": "ba",
+    "car_name": "car1",
+    **COMMON_CONFIG
+}
 
 ES_CONFIG_WITHOUT_MODULES = {
     "company_name": "ba",
-    "mqtt_address": "127.0.0.1",
-    "mqtt_port": 1883,
-    "mqtt_timeout": 2,
-    "timeout": 2,
-    "send_invalid_command": False,
-    "sleep_duration_after_connection_refused": 2,
-    "log_files_directory": ".",
-    "log_files_to_keep": 5,
-    "log_file_max_size_bytes": 100000,
+    **COMMON_CONFIG
 }
 
 

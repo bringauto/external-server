@@ -3,7 +3,7 @@ import time
 import sys
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
+sys.path.append("lib/fleet-protocol/protobuf/compiled/python/")
 
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.models.structures import HandledCommand
@@ -203,6 +203,15 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.checker.pop(cmd_response("id", 0).commandResponse)
         time.sleep(CHECKER_TIMEOUT / 2 + 0.1)
         self.assertTrue(self.checker.timeout_occured())
+
+
+class Test_Command_Queuing_When_External_Connection_Is_Not_Available(unittest.TestCase):
+
+    def setUp(self):
+        self.checker = PublishedCommandChecker(CHECKER_TIMEOUT, EventQueue(), car="")
+        self.device = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test_1")
+        command = HandledCommand(b"", device=self.device)
+        self.checker.add(command)
 
 
 if __name__ == "__main__":  # pragma: no cover
