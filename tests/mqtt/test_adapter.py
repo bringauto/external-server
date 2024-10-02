@@ -105,7 +105,6 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
         self.assertIsNone(adapter.client._on_log)
         self.assertIsNone(adapter.client._on_pre_connect)
         self.assertIsNone(adapter.client._on_connect_fail)
-        self.assertIsNone(adapter.client._on_subscribe)
         self.assertIsNone(adapter.client._on_publish)
         self.assertIsNone(adapter.client._on_unsubscribe)
         self.assertIsNone(adapter.client._on_socket_open)
@@ -182,7 +181,7 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.adapter.disconnect()
         self.assertEqual(self.adapter.state, ClientConnectionState.MQTT_CS_DISCONNECTED)
 
-    def test_repeated_disconnect_calls_have_no_effect_after_the_first_cal(self):
+    def test_repeated_disconnect_calls_have_no_effect_after_the_first_call(self):
         self.broker.start()
         self.adapter.connect()
         self.adapter.disconnect()

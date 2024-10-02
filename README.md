@@ -69,7 +69,7 @@ The structure of the `specific_modules` is the same as the `common_modules` stru
 
 See the `config/config.json` for an example of car configuration.
 
-Configuring module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
+Configuring a module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
 
 Note that for each car, at least one module has to be defined, either in `common_modules` or `specific_modules`.
 
@@ -94,16 +94,14 @@ Following arguments are used if argument `tls` is set:
 
 ## Necessary steps before testing
 
-First, do the steps from the [Install dependencies](#install-dependencies) section.
-
-The proceed with the following steps.
-
 ### Requirements
 
 - [Requirements](#requirements)
 - CMLIB: https://github.com/cmakelib/cmakelib
 
 ### Install the external server package
+
+Do the steps from the [Install dependencies](#install-dependencies) section.
 
 Install the package in editable mode and install test requirements (assuming you already installed the requirements for the server):
 

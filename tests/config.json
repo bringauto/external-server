@@ -4,7 +4,7 @@
     "verbose": true
   },
   "company_name": "company_x",
-  "mqtt_address": "http://mqtt-broker",
+  "mqtt_address": "mosquitto",
   "mqtt_port": 1883,
   "mqtt_timeout": 30,
   "timeout": 30,

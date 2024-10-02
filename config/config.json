@@ -4,7 +4,7 @@
     "verbose": true
   },
   "company_name": "company_x",
-  "mqtt_address": "http://mqtt-broker",
+  "mqtt_address": "mosquitto",
   "mqtt_port": 1883,
   "mqtt_timeout": 30,
   "timeout": 30,
@@ -15,7 +15,7 @@
       "lib_path": "lib/libmission-external-server-shared.so",
       "config": {
         "api_url": "http://http-api:8080/v2/protocol",
-        "api_key": "",
+        "api_key": "ProductionKey",
         "max_requests_threshold_count": "10",
         "max_requests_threshold_period_ms": "5000",
         "delay_after_threshold_reached_ms": "5000",
@@ -26,7 +26,7 @@
       "lib_path": "lib/libio-external-server-shared.so",
       "config": {
         "api_url": "http://http-api:8080/v2/protocol",
-        "api_key": "",
+        "api_key": "ProductionKey",
         "max_requests_threshold_count": "20",
         "max_requests_threshold_period_ms": "5000",
         "delay_after_threshold_reached_ms": "5000",
