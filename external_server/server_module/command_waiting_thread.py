@@ -81,6 +81,10 @@ class CommandWaitingThread:
         self._car = api_client.car
 
     @property
+    def n_of_commands(self) -> int:
+        return self._commands.qsize()
+
+    @property
     def timeout_ms(self) -> int:
         return self._timeout_ms
 
@@ -112,7 +116,9 @@ class CommandWaitingThread:
 
         # The function is made public in order to be used in unit tests
         rc = self._api_adapter.wait_for_command(self._timeout_ms)
-        if rc == GeneralErrorCode.OK:
+        if not self._module_connected():
+            logger.debug("Module is not connected. No command will be stored in queue.", self._car)
+        elif rc == GeneralErrorCode.OK:
             self._pass_available_commands_to_queue()
         elif rc == EsErrorCode.TIMEOUT:
             logger.debug("No command available from API.", self._car)
