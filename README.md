@@ -52,7 +52,7 @@ Set up the logging, the MQTT connection parameters and company name and the Exte
 
 ### Common modules
 
-One of the last items in the config file is `common_modules`, represented by key-value pairs. The key is the ID of the module, the value contains following
+One of the last items in the config file is `common_modules`, represented by key-value pairs. The key is the module ID (a module number), the value contains following
 
 - `lib_path` (required) - path to module shared library (`*.so`).
 - `config` (optional) - specification of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.
@@ -87,7 +87,7 @@ python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str
 Following arguments are used if argument `tls` is set:
 
 - `--ca <str>` = path to ca certification
-- `--cert <str>` = path to cert file"
+- `--cert <str>` = path to cert file
 - `--key <str>` = path to key file
 
 # Unit tests
@@ -120,14 +120,13 @@ git submodule update --init --recursive
 
 Compile a shared library for the [Example Module](https://github.com/bringauto/example-module/). This requires
 
-- the CMakelib installed (see [here](https://github.com/cmakelib/cmakelib)) and the `CMLIB_DIR` env variable set to the installation directory and exported,
 - the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
 
 Run the following
 
 ```bash
 pushd tests/utils/example_module && \
-if [ ! -d "_build" ]; then mkdir _build; fi && \
+mkdir -p _build && \
 cd _build && \
 cmake .. -DCMLIB_DIR=<path-to-cmakelib-dir> && \
 make
@@ -153,20 +152,20 @@ The `-h` flag makes the script display tests' coverage in an HTML format, for ex
 
 # Docker
 
-The External Server is ready to use with Docker. You can build Docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
+The External Server is ready to use with Docker. You can build a Docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
 
 - module 1 - Mission module
 - module 2 - IO module
 
-These compiled modules are inserted into image and are ready to use with External Server in Docker container.
+These compiled modules are inserted into the image and are ready to use with the External Server in a Docker container.
 
-The External Server can be also used with docker compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
+The External Server can be also used with Docker Compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
 
 # Development
 
 ## Type checking
 
-To allow for type checking of the classes from compiler protobuf of fleet protocol, run:
+To allow for type checking of the classes from compiler protobuf of Fleet Protocol, run:
 
 ```bash
 pushd lib/fleet-protocol/protobuf && \
