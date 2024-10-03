@@ -53,11 +53,6 @@ class ServerModule:
             logger.error(msg, car)
             raise RuntimeError(msg) from e
 
-        real_mod_number = self._api_adapter.get_module_number()
-        if real_mod_number != module_id:
-            msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
-            logger.error(msg, car)
-            raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(
             self._api_adapter, connection_check, event_queue=event_queue
         )
@@ -88,3 +83,10 @@ class ServerModule:
     def is_device_supported(self, device: _Device) -> bool:
         """Return `True` if the device is supported by the module, `False` otherwise."""
         return self._api_adapter.is_device_type_supported(device.deviceType)
+
+    def check_module_number(self, module_id: int) -> None:
+        real_mod_number = self._api_adapter.get_module_number()
+        if real_mod_number != module_id:
+            msg = f"Module number '{real_mod_number}' returned from API does not match module ID {module_id} in config."
+            logger.error(msg, self._api_adapter.car)
+            raise RuntimeError(msg)

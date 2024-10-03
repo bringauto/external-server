@@ -1,5 +1,4 @@
 import os as _os
-
 from pydantic import FilePath
 
 from external_server import CarServer, ExternalServer
@@ -55,13 +54,21 @@ def get_test_server(company: str, *car_names: str, mqtt_timeout: float = -1, tim
     return es
 
 
+class TestCarServer(CarServer):
+
+    def check_module_number(self, module_id) -> None:
+        """This method is degenerated to allow to use a single module type (example module)
+        multiple times under different module ids."""
+        pass
+
+
 def get_test_car_server(mqtt_timeout: float = -1, timeout: float = -1) -> CarServer:
     module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    config = CarConfig(modules={"1000": module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
+    config = CarConfig(modules={"1000": module_config, "1001": module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
     if mqtt_timeout > 0:
         config.mqtt_timeout = mqtt_timeout
     if timeout > 0:
         config.timeout = timeout
-    es = CarServer(config=config)
+    es = TestCarServer(config=config)
     es.mqtt.client.disable_logger()
     return es

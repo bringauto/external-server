@@ -698,7 +698,7 @@ class CarServer:
             module_id = int(id_str)
             car, company = server_config.car_name, server_config.company_name
             connection_check = partial(self._known_devices.any_connected_device, module_id)
-            modules[module_id] = _ServerModule(
+            module = _ServerModule(
                 module_id,
                 company,
                 car,
@@ -706,7 +706,16 @@ class CarServer:
                 connection_check,
                 event_queue=self._event_queue,
             )
+            modules[module_id] = module
+            self.check_module_number(module_id)
         return modules
+
+    def check_module_number(self, module_id: int) -> None:
+        """Check if the module number is supported by the server."""
+        if module_id not in self._modules:
+            raise ValueError(f"Module ID {module_id} is not supported by the server.")
+        else:
+            self._modules[module_id].check_module_number(module_id)
 
     def _log_new_status(self, status: _Status) -> None:
         info = f"Received status, counter={status.messageCounter}."
