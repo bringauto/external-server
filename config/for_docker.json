@@ -1,6 +1,6 @@
 {
   "logging": {
-    "log-path": "/home/bringauto/log",
+    "log-path": "/home/bringauto/log/",
     "verbose": true
   },
   "company_name": "bringauto",

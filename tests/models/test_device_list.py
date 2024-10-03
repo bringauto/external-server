@@ -156,7 +156,9 @@ class Test_Connected_Device_From_The_Same_Module(unittest.TestCase):
 
 class Test_Connecting_Device_From_Internal_Proto(unittest.TestCase):
 
-    def test_connected_device_from_internal_proto_adds_device_py_to_the_list(self,):
+    def test_connected_device_from_internal_proto_adds_device_py_to_the_list(
+        self,
+    ):
         self.devices = KnownDevices()
         device = Device(module=5, deviceType=7, deviceRole="test", deviceName="Test")
         devicepy = DevicePy.from_device(device)

@@ -20,7 +20,6 @@ from paho.mqtt.client import (
 )
 from external_server.logs import CarLogger as _CarLogger
 from external_server.checkers.mqtt_session import MQTTSession
-from external_server.checkers.mqtt_session import MQTTSession
 from paho.mqtt.enums import CallbackAPIVersion
 from ExternalProtocol_pb2 import (  # type: ignore
     Connect as _Connect,
@@ -139,11 +138,6 @@ class MQTTClientAdapter:
         return self._session
 
     @property
-    def state(self) -> ClientConnectionState:
-        """The state of the MQTT client."""
-        return self._mqtt_client._state
-
-    @property
     def subscribe_topic(self) -> str:
         """The topic the MQTT client is subscribed to."""
         return self._subscribe_topic
@@ -158,7 +152,7 @@ class MQTTClientAdapter:
         """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
-    def connect(self) -> Exception | None:
+    def connect(self) -> None:
         """Connect to the MQTT broker.
 
         Returns an exception if raised, otherwise `None`.
@@ -166,32 +160,23 @@ class MQTTClientAdapter:
         try:
             code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
             if code == mqtt.MQTT_ERR_SUCCESS:
-                self._set_up_callbacks()
-                self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
-                self._start_client_loop()
-                self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
-                _logger.debug(
-                    f"\nListening on topic: {self._subscribe_topic}"
-                    f"\nPublishing on topic: {self._publish_topic}",
-                    self._car,
-                )
+                self._handle_succesfull_connection_to_mqtt_broker()
             else:
                 _logger.error(
                     f"Failed to connect to broker: {self._broker_host}:{self._broker_port}. "
                     f"{mqtt_error_from_code(code)}",
                     self._car,
                 )
-            return None
         except ConnectionRefusedError as e:
             self.stop()
             _logger.error(
                 f"Cannot connect to a broker {self._broker_host}:{self._broker_port}: {e}",
                 self._car,
             )
-            return e
+            raise
         except Exception as e:  # pragma: no cover
             _logger.error(f"Failed to connect to broker: {e}", self._car)
-            return e
+            raise
 
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker."""
@@ -323,6 +308,17 @@ class MQTTClientAdapter:
         except Empty:
             return None
 
+    def _handle_succesfull_connection_to_mqtt_broker(self) -> None:
+        self._set_up_callbacks()
+        self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
+        self._start_client_loop()
+        self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
+        _logger.debug(
+            f"\nListening on topic: {self._subscribe_topic}"
+            f"\nPublishing on topic: {self._publish_topic}",
+            self._car,
+        )
+
     def _log_connection_result(self, code: int) -> None:
         address = self.broker_address
         if code == mqtt.MQTT_ERR_SUCCESS:
@@ -401,9 +397,9 @@ class MQTTClientAdapter:
 
         `timeout` - the maximum time to wait for the connection to be established in seconds.
         """
-        start = time.time()
-        timeout_ms = max(timeout, 0) * 1000
-        while time.time() - start < timeout_ms:
+        start = time.time()  # seconds
+        timeout_s = max(timeout, 0.0) # seconds
+        while time.time() - start < timeout_s:
             if self.is_connected:
                 return True
             time.sleep(0.01)

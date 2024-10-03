@@ -46,7 +46,9 @@ class Test_Multiple_Cars(unittest.TestCase):
         for server in self.es.car_servers().values():
             self.assertEqual(server.state, ServerState.RUNNING)
 
-    def test_complete_connect_sequence_for_only_some_cars_sets_only_these_cars_servers_to_running_state(self):
+    def test_complete_connect_sequence_for_only_some_cars_sets_only_these_cars_servers_to_running_state(
+        self,
+    ):
         connect_msg_a = connect_msg("car_a_session", "company_x", [self.device])
         connect_msg_b = connect_msg("car_b_session", "company_x", [self.device])
         self.broker.publish("company_x/car_a/module_gateway", connect_msg_a.SerializeToString())

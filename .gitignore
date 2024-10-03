@@ -11,3 +11,4 @@ external_server.egg-info
 /log/*.log
 .env
 *.coverage
+dummy.py

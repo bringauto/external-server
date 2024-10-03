@@ -9,7 +9,11 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from pydantic import FilePath
 
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.config import CarConfig as CarConfig, ServerConfig as ServerConfig, ModuleConfig as _ModuleConfig
+from external_server.config import (
+    CarConfig as CarConfig,
+    ServerConfig as ServerConfig,
+    ModuleConfig as _ModuleConfig,
+)
 from external_server.server import CarServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest

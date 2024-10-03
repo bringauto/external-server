@@ -3,11 +3,16 @@ import os
 import subprocess
 import logging.config
 import time
+import threading
+import sys
+
+sys.path.append(".")
 
 import external_server as _external_server
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
+import paho.mqtt.client as client  # type: ignore
 from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
 
 
@@ -24,7 +29,13 @@ class MQTTBrokerTest:
     _DEFAULT_HOST = "127.0.0.1"
     _DEFAULT_PORT = 1883
 
-    def __init__(self, start: bool = False, port: int = _DEFAULT_PORT, kill_others: bool = True):
+    def __init__(
+        self,
+        *client_topics: str,
+        start: bool = False,
+        port: int = _DEFAULT_PORT,
+        kill_others: bool = True,
+    ):
         if kill_others:  # pragma: no cover
             MQTTBrokerTest.kill_all_test_brokers()
         self._process: None | subprocess.Popen = None
@@ -33,8 +44,30 @@ class MQTTBrokerTest:
         self._script_path = os.path.join(
             _EXTERNAL_SERVER_PATH, "tests/utils/mqtt-testing/interoperability/startbroker.py"
         )
+        self._client = client.Client(client.CallbackAPIVersion.VERSION2)
+        self._messages: dict[str, list[bytes]] = dict()
+        self._client.on_connect = self._on_connect
+        self._client.on_message = self._on_message
+        self._topics = client_topics
+        self._new_message = threading.Event()
+
         if start:
             self.start()
+
+    @property
+    def client_test(self) -> client.Client:
+        """Return the client object for testing."""
+        return self._client
+
+    def messages(self, topic: str) -> list[bytes]:
+        return self._messages.get(topic, [])
+
+    def clear_messages(self, topic: str) -> None:
+        if topic in self._messages:
+            del self._messages[topic]
+
+    def all_messages(self) -> dict[str, list[bytes]]:
+        return self._messages.copy()
 
     @classmethod
     def running_processes(cls) -> list[subprocess.Popen]:
@@ -54,19 +87,52 @@ class MQTTBrokerTest:
     def is_running(self) -> bool:
         return self._process is not None
 
-    def get_messages(self, topic: str, n: int = 1) -> list[_MQTTMessage]:
-        """Return messages from the broker on the given topic.
+    def _on_connect(self, client: client.Client, data, flags, rc, properties) -> None:
+        assert self._client.is_connected()
+        assert self._client._thread is not None
 
-        `n` is the number of messages to wait for and return.
+    def _on_message(self, client: client.Client, data, message: client.MQTTMessage) -> None:
+        """Callback function for handling incoming messages.
+
+        The message is added to the received messages queue, if the topic matches the subscribe topic,
+        and an event is added to the event queue.
+
+        Args:
+        - `client` The MQTT client instance.
+        - `data` The user data associated with the client.
+        - `message` (mqtt.MQTTMessage): The received MQTT message.
+        """
+        logger.info(f"Received message on topic '{message.topic}'.")
+        print(f"Received message on topic '{message.topic}'.")
+        if not self._messages.get(message.topic):
+            self._messages[message.topic] = list()
+        self._messages[message.topic].append(message.payload)
+        self._new_message.set()
+
+    def wait_for_messages(self, topic: str, n: int = 1, timeout: float = 5.0) -> None | list[bytes]:
+        """Wait for `n` messages on the given topic.
+
+        Args:
+        - `topic` (str): The topic to wait for messages on.
+        - `n` (int): The number of messages to wait for.
+        - `timeout` (float): The maximum time to wait for the messages in seconds.
+
+        Returns:
+        - `bool`: True if the expected number of messages were received, False otherwise.
         """
         logger.info(f"Test broker: Waiting for {n} messages on topic {topic}")
-        result = subscribe.simple([topic], hostname=self._host, port=self._port, msg_count=n)
-        if n == 0:  # pragma: no cover
-            return []
-        if n == 1:
-            return [result]
-        else:
-            return result
+        while True:
+            new_msg = self._new_message.wait(timeout=timeout)
+            self._new_message.clear()
+            if not new_msg:  # timeout
+                print(f"Timeout. Received only {len(self.messages(topic))} messages.")
+                return None
+            else:
+                messages = self.messages(topic)
+                if len(messages) > n:
+                    return messages[:n]
+                elif len(messages) == n:
+                    return messages
 
     def publish(self, topic: str, *payload: str | bytes) -> None:
         if not payload:  # pragma: no cover
@@ -80,20 +146,36 @@ class MQTTBrokerTest:
         if len(payload_list) == 1:
             publish.single(topic, payload_list[0], hostname=self._host, port=self._port)
         else:
-            try:
-                payload_list = [(topic, p) for p in payload_list]
-                publish.multiple(payload_list, hostname=self._host, port=self._port)
-                logger.info(f"Test broker: Published messages to topic {topic}.")
-            except Exception as e:  # pragma: no cover
-                raise e
+            payload_list = [(topic, p) for p in payload_list]
+            publish.multiple(payload_list, hostname=self._host, port=self._port)
+            logger.info(f"Test broker: Published messages to topic {topic}.")
 
-    def start(self, sleep: float = 1):
+    def start(self, interval: float = 0.01, timeout: float = 1.0) -> None:
         broker_script = self._script_path
         self._process = subprocess.Popen(["python3", broker_script, f"--port={self._port}"])
         print(f"Started test broker on host {self._host} and port {self._port}")
-        assert isinstance(self._process, subprocess.Popen)
         self._running_broker_processes.append(self._process)
-        time.sleep(sleep)
+
+        t = time.time()
+        while time.time() - t < timeout:
+            try:
+                self._client.connect(self._host, self._port)
+                self._client.loop_start()
+                for topic in self._topics:
+                    self._client.subscribe(topic)
+                break
+            except ConnectionRefusedError:
+                time.sleep(interval)
+            except Exception as e:
+                print("Cannot start test broker due to unexpected error")
+                raise e
+
+        t = time.time()
+        while time.time() - t < timeout:
+            if self._client.is_connected():
+                break
+            else:
+                time.sleep(interval)
 
     def stop(self):
         """Stop the broker process to stop all communication and free up the port."""
@@ -105,4 +187,8 @@ class MQTTBrokerTest:
                 self._running_broker_processes.remove(self._process)
             self._process = None
             MQTTBrokerTest.kill_all_test_brokers()
-            time.sleep(0.1)
+
+        self._client.loop_stop()
+        self._client.disconnect()
+
+        time.sleep(0.1)

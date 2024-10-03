@@ -75,7 +75,6 @@ class Test_Pop_Command(unittest.TestCase):
         self.assertEqual(self.checker.pop(cmd_response("id", 3).commandResponse), [])
 
 
-
 class Test_Popping_Commands(unittest.TestCase):
 
     def setUp(self):
@@ -90,7 +89,9 @@ class Test_Popping_Commands(unittest.TestCase):
         self.assertEqual(self.checker.n_of_commands, 0)
         self.assertEqual(self.checker.command_counters, [])
 
-    def test_with_matching_counter_with_only_single_command_waiting_for_response_yields_single_command(self):
+    def test_with_matching_counter_with_only_single_command_waiting_for_response_yields_single_command(
+        self,
+    ):
         command = HandledCommand(b"", device=self.device)
         self.checker.add(command)
         self.assertEqual(self.checker.n_of_commands, 1)
@@ -98,7 +99,9 @@ class Test_Popping_Commands(unittest.TestCase):
         self.assertEqual(self.checker.n_of_commands, 0)
         self.assertEqual(self.checker.command_counters, [])
 
-    def test_with_counter_not_corresponding_to_any_command_yields_empty_list_and_does_not_store_the_counter(self):
+    def test_with_counter_not_corresponding_to_any_command_yields_empty_list_and_does_not_store_the_counter(
+        self,
+    ):
         command = HandledCommand(b"", device=self.device)
         self.checker.add(command)
         self.checker.add(command.copy())
@@ -112,7 +115,9 @@ class Test_Popping_Commands(unittest.TestCase):
         self.assertNotIn(7, self.checker._received_response_counters)
         self.assertEqual(self.checker.command_counters, [5, 6])
 
-    def test_with_counter_not_corresponding_to_other_than_oldest_command_yields_empty_list_and_stores_the_counter(self):
+    def test_with_counter_not_corresponding_to_other_than_oldest_command_yields_empty_list_and_stores_the_counter(
+        self,
+    ):
         command_1 = HandledCommand(b"", device=self.device)
         command_2 = HandledCommand(b"", device=self.device)
         # add two commands with counter 5 and 6
@@ -122,7 +127,9 @@ class Test_Popping_Commands(unittest.TestCase):
         self.assertEqual(self.checker.n_of_commands, 2)
         self.assertEqual(self.checker.command_counters, [5, 6])
 
-    def test_with_counter_corresponding_to_oldest_command_yields_single_command_and_removes_the_counter(self):
+    def test_with_counter_corresponding_to_oldest_command_yields_single_command_and_removes_the_counter(
+        self,
+    ):
         command_1 = HandledCommand(b"", device=self.device)
         command_2 = HandledCommand(b"", device=self.device)
         # add two commands with counter 5 and 6
@@ -139,23 +146,27 @@ class Test_Popping_Commands(unittest.TestCase):
         self.checker.add(command_1)
         self.checker.add(command_2)
         self.assertEqual(self.checker.pop(cmd_response("id", 6).commandResponse), [])
-        self.assertEqual(self.checker.pop(cmd_response("id", 5).commandResponse), [command_1, command_2])
+        self.assertEqual(
+            self.checker.pop(cmd_response("id", 5).commandResponse), [command_1, command_2]
+        )
         self.assertEqual(self.checker.n_of_commands, 0)
         self.assertEqual(self.checker.command_counters, [])
 
-    def test_with_counter_finally_matching_oldest_counter_yields_list_of_commands_sorted_by_counter(self):
+    def test_with_counter_finally_matching_oldest_counter_yields_list_of_commands_sorted_by_counter(
+        self,
+    ):
         command_1 = HandledCommand(b"", device=self.device)
         # add three commands with counter 5, 6 and 7
-        self.checker.add(command_1) # counter 5
-        command_2 = self.checker.add(command_1.copy()) # counter 6
-        command_3 = self.checker.add(command_1.copy()) # counter 7
-        command_4 = self.checker.add(command_1.copy()) # counter 8
+        self.checker.add(command_1)  # counter 5
+        command_2 = self.checker.add(command_1.copy())  # counter 6
+        command_3 = self.checker.add(command_1.copy())  # counter 7
+        command_4 = self.checker.add(command_1.copy())  # counter 8
         self.assertEqual(self.checker.pop(cmd_response("id", 6).commandResponse), [])
         self.assertEqual(self.checker.pop(cmd_response("id", 8).commandResponse), [])
         self.assertEqual(self.checker.pop(cmd_response("id", 7).commandResponse), [])
         self.assertEqual(
             self.checker.pop(cmd_response("id", 5).commandResponse),
-            [command_1, command_2, command_3, command_4]
+            [command_1, command_2, command_3, command_4],
         )
         self.assertEqual(self.checker.n_of_commands, 0)
         self.assertEqual(self.checker.command_counters, [])

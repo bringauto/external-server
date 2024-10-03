@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -34,11 +35,13 @@ class Test_API_Client_Device_Connection(unittest.TestCase):
 
     def setUp(self):
         self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
-        self.client = APIClientAdapter(
-            config=self.module_config, company="BringAuto", car="Car1"
-        )
+        self.client = APIClientAdapter(config=self.module_config, company="BringAuto", car="Car1")
         self.device = Device(
-        module=Device.EXAMPLE_MODULE, deviceType=2, deviceRole="testing", deviceName="TestDevice", priority=1
+            module=Device.EXAMPLE_MODULE,
+            deviceType=2,
+            deviceRole="testing",
+            deviceName="TestDevice",
+            priority=1,
         )
 
     def test_device_connected_with_valid_device_object_and_get_successful_result(self):

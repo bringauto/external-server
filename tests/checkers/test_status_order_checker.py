@@ -134,7 +134,7 @@ class Test_Skipped_Values(unittest.TestCase):
         self.assertEqual(self.checker.skipped_counters, [])
 
     def test_for_each_skipped_value_timer_is_started(self):
-        self.checker._store_skipped_counter_values(3) # two skipped values
+        self.checker._store_skipped_counter_values(3)  # two skipped values
         self.assertTrue(self.checker._skipped.queue[0][1].is_alive())
         self.assertTrue(self.checker._skipped.queue[1][1].is_alive())
 
@@ -153,15 +153,15 @@ class Test_Checking_Statuses(unittest.TestCase):
 
     def test_status_is_stored_as_received_when_counter_is_greater_than_expected(self):
         expected = self.checker.counter
-        self.checker.check(Status(messageCounter=expected+1))
-        self.checker.check(Status(messageCounter=expected+25))
+        self.checker.check(Status(messageCounter=expected + 1))
+        self.checker.check(Status(messageCounter=expected + 25))
         self.assertEqual(self.checker._received.qsize(), 2)
-        self.assertEqual(self.checker._received.get()[0], expected+1)
-        self.assertEqual(self.checker._received.get()[0], expected+25)
+        self.assertEqual(self.checker._received.get()[0], expected + 1)
+        self.assertEqual(self.checker._received.get()[0], expected + 25)
 
     def test_status_is_ignored_when_counter_is_less_than_expected(self):
         expected = self.checker.counter
-        self.checker.check(Status(messageCounter=expected-1))
+        self.checker.check(Status(messageCounter=expected - 1))
         self.assertEqual(self.checker._received.qsize(), 0)
 
     def test_status_stored_as_checked_if_counter_matches_expected(self):
@@ -173,10 +173,12 @@ class Test_Checking_Statuses(unittest.TestCase):
 
     def test_status_is_stored_as_received_if_counter_is_greater_than_expected(self):
         expected = self.checker.counter
-        self.checker.check(Status(messageCounter=expected+1))
+        self.checker.check(Status(messageCounter=expected + 1))
         self.assertEqual(self.checker._received.qsize(), 1)
 
-    def test_all_skipped_values_are_stored_if_status_with_counter_greater_than_expected_was_received(self):
+    def test_all_skipped_values_are_stored_if_status_with_counter_greater_than_expected_was_received(
+        self,
+    ):
         self.checker.check(Status(messageCounter=4))
         self.assertEqual(self.checker.skipped_counters, [1, 2, 3])
 
@@ -216,7 +218,9 @@ class Test_Checking_Statuses(unittest.TestCase):
         self.assertEqual(self.checker._received.qsize(), 0)
         self.assertEqual(self.checker._checked.qsize(), 3)
 
-    def test_single_received_status_with_counter_less_or_equal_to_expected_is_moved_to_checked(self):
+    def test_single_received_status_with_counter_less_or_equal_to_expected_is_moved_to_checked(
+        self,
+    ):
         self.checker.check(Status(messageCounter=3))
         self.assertEqual(self.checker._received.qsize(), 1)
         self.assertEqual(self.checker._checked.qsize(), 0)
@@ -227,7 +231,9 @@ class Test_Checking_Statuses(unittest.TestCase):
         self.assertEqual(self.checker._received.qsize(), 0)
         self.assertEqual(self.checker._checked.qsize(), 3)
 
-    def test_multiple_received_statuses_with_counter_less_or_equal_to_expected_are_moved_to_checked(self):
+    def test_multiple_received_statuses_with_counter_less_or_equal_to_expected_are_moved_to_checked(
+        self,
+    ):
         self.checker.check(Status(messageCounter=4))
 
         self.assertEqual(self.checker._received.qsize(), 1)

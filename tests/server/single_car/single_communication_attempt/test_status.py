@@ -167,7 +167,9 @@ class Test_Forwarding_Status(unittest.TestCase):
 
     def test_status_from_unsupported_device_is_not_forwarded(self, mock: Mock):
         mock.side_effect = self.forward_status
-        unsup_device = Device(module=1000, deviceType=11111, deviceName="TestDevice", deviceRole="test")
+        unsup_device = Device(
+            module=1000, deviceType=11111, deviceName="TestDevice", deviceRole="test"
+        )
         self.es._handle_checked_status(
             status("session_id", Status.RUNNING, 1, DeviceStatus(device=unsup_device)).status
         )

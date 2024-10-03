@@ -13,7 +13,7 @@ The External Server handles multiple cars registered under a single company.
 
 ### Python packages
 
-Install the required Python packages in virtual environment by running the following
+Install the required Python packages in virtual environment by running the following:
 
 ```bash
 python3 -m venv .venv && \
@@ -69,7 +69,7 @@ The structure of the `specific_modules` is the same as the `common_modules` stru
 
 See the `config/config.json` for an example of car configuration.
 
-Configuring a module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
+Configuring a module with the same ID both in `common_modules` and `specific_modules` is invalid. The server will not start.
 
 Note that for each car, at least one module has to be defined, either in `common_modules` or `specific_modules`.
 
@@ -154,12 +154,12 @@ The `-h` flag makes the script display tests' coverage in an HTML format, for ex
 
 The External Server is ready to use with Docker. You can build a Docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
 
-- module 1 - Mission module
-- module 2 - IO module
+- module 1 - Mission module,
+- module 2 - IO module.
 
 These compiled modules are inserted into the image and are ready to use with the External Server in a Docker container.
 
-The External Server can be also used with Docker Compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
+The External Server can also be used with Docker Compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
 
 # Development
 

@@ -28,7 +28,9 @@ class Test_Creating_Server_Module(unittest.TestCase):
         config = ModuleConfig(lib_path="test_file.so", config={})
         os.remove("test_file.so")
         with self.assertRaises(RuntimeError):
-            ServerModule(1000, "company", "car", config, lambda: True, event_queue=EventQueue())  # pragma: no cover
+            ServerModule(
+                1000, "company", "car", config, lambda: True, event_queue=EventQueue()
+            )  # pragma: no cover
 
 
 if __name__ == "__main__":  # pragma: no cover

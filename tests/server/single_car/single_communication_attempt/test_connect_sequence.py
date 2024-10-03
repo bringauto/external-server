@@ -8,7 +8,7 @@ sys.path.append(".")
 
 from external_server.server import ServerState
 from InternalProtocol_pb2 import Device  # type: ignore
-from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
+from ExternalProtocol_pb2 import ExternalServer as ExternalServerMsg, Status, CommandResponse  # type: ignore
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server.models.devices import DevicePy, device_status as _device_status
 from tests.utils.mqtt_broker import MQTTBrokerTest
@@ -234,7 +234,6 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
     def tearDown(self) -> None:
         self.es.mqtt.stop()
         self.broker.stop()
-        time.sleep(0.1)
 
 
 class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.TestCase):
@@ -274,7 +273,10 @@ class Test_First_Command(unittest.TestCase):
 
     def setUp(self):
         self.es = get_test_car_server()
-        self.broker = MQTTBrokerTest(start=True)
+        self.broker = MQTTBrokerTest(
+            self.es.mqtt.publish_topic,
+            start=True
+        )
         self.device_1 = Device(module=1000, deviceType=0, deviceName="Test", deviceRole="test")
         self.es.mqtt.connect()
 
@@ -285,11 +287,10 @@ class Test_First_Command(unittest.TestCase):
     def test_first_command_is_sent_to_a_single_connected_device(self):
         self.es._known_devices.connected(DevicePy.from_device(self.device_1))
         with futures.ThreadPoolExecutor() as ex:
-            f = ex.submit(self.broker.get_messages, self.es.mqtt.publish_topic, n=1)
-            time.sleep(0.1)
+            self.broker.clear_messages(self.es.mqtt.publish_topic)
             ex.submit(self.es._get_and_send_first_commands)
-            sent_commands = f.result()
-            self.assertEqual(len(sent_commands), 1)
+            sent_commands = self.broker.wait_for_messages(self.es.mqtt.publish_topic, 1)
+            self.assertEqual(ExternalServerMsg.FromString(sent_commands[0]).command.messageCounter, 0)
 
     def tearDown(self) -> None:
         self.es.mqtt.stop()

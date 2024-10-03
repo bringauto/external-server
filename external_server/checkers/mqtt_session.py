@@ -1,8 +1,13 @@
 from threading import Event as _Event, Timer as _Timer
+import logging
 
 from external_server.checkers.checker import Checker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
+from external_server.logs import LOGGER_NAME
+
+
+_logger = logging.getLogger(LOGGER_NAME)
 
 
 class MQTTSession:
@@ -54,8 +59,9 @@ class MQTTSession:
     def stop(self) -> None:
         """Stops the checker's timer."""
         if self._timer_running and self._timer is not None:
+            _logger.info(f"Stopping timer for MQTT session {self._id}")
             if self._timer.is_alive():
                 self._timer.cancel()
-                self._timer.join()
+                # self._timer.join()
             self._checker._timeout_event.clear()
             self._timer_running = False

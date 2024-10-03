@@ -150,7 +150,7 @@ class ServerConfig(BaseModel):
 
 class ModuleConfig(BaseModel):
     lib_path: FilePath
-    config: dict[str, str]
+    config: dict[str, str | int]
 
 
 def load_config(config_path: str) -> ServerConfig:

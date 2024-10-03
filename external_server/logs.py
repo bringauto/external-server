@@ -22,6 +22,7 @@ class _Logger(abc.ABC):
 
     def __init__(self, logger_name: Optional[str] = None) -> None:
         self._logger = logging.getLogger(logger_name)
+        self._logger.setLevel(logging.INFO)
 
     @abc.abstractmethod
     def debug(self, msg: str, car_name: str) -> None:

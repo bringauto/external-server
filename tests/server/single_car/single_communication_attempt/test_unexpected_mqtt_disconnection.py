@@ -9,16 +9,12 @@ from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
     CommandResponse,
     ExternalServer as ExternalServerMsg,
-    Status
+    Status,
 )
 from external_server.server import ServerState
 from external_server.models.exceptions import UnexpectedMQTTDisconnect
 from external_server.models.events import Event, EventType
-from external_server.models.messages import (
-    cmd_response,
-    connect_msg,
-    status
-)
+from external_server.models.messages import cmd_response, connect_msg, status
 from tests.utils import get_test_car_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
