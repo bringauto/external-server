@@ -56,7 +56,7 @@ WORKDIR /home/bringauto/external_server
 
 # Install python dependencies
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-RUN python3 -m pip install -r /home/bringauto/external_server/requirements.txt
+RUN python3 -m pip install -r /home/bringauto/external_server/requirements.txt --break-system-packages
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server/
