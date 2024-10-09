@@ -89,18 +89,18 @@ class ServerConfig(BaseModel):
     @classmethod
     def modules_validator(cls, fields: T) -> T:
         modules = fields.get("common_modules")
-        cars: dict[str, CarModulesConfig] = fields.get("cars", {})
+        cars: dict[str, dict] = fields.get("cars", {})
         if not cars:
             raise InvalidConfiguration("Cars must contain at least 1 car.")
         elif not modules and not all(
-            car.specific_modules for car in cars.values()
+            car.get("specific_modules", {}) for car in cars.values()
         ):
             raise InvalidConfiguration(
                 "Modules must contain at least 1 module for each car."
             )
         elif modules:
             car_specific_modules = set.union(
-                *[set(car.specific_modules.keys()) for car in cars.values()]
+                *[set(car.get("specific_modules", {}).keys()) for car in cars.values()]
             )
             global_modules = set(modules.keys())
             duplicates = [
