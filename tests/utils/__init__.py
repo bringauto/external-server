@@ -4,9 +4,9 @@ from pydantic import FilePath
 
 from external_server import CarServer, ExternalServer
 from external_server.config import (
-    CarConfig as CarConfig,
-    ModuleConfig,
-    ServerConfig as ServerConfig,
+    CarConfig as _CarConfig,
+    ModuleConfig as _ModuleConfig,
+    ServerConfig as _ServerConfig,
 )
 
 
@@ -35,9 +35,9 @@ ES_CONFIG_WITHOUT_MODULES = {"company_name": "ba", **COMMON_CONFIG}
 def get_test_server(
     company: str, *car_names: str, mqtt_timeout: float = -1, timeout: float = -1
 ) -> ExternalServer:
-    module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+    module_config = _ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
     cars: dict[str, dict] = {car_name: {} for car_name in car_names}
-    config = ServerConfig(common_modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES, cars=cars)  # type: ignore
+    config = _ServerConfig(common_modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES, cars=cars)  # type: ignore
     config.company_name = company
     if mqtt_timeout > 0:
         config.mqtt_timeout = mqtt_timeout
@@ -50,8 +50,8 @@ def get_test_server(
 
 
 def get_test_car_server(mqtt_timeout: float = -1, timeout: float = -1) -> CarServer:
-    module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
-    config = CarConfig(modules={"1000": module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
+    module_config = _ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
+    config = _CarConfig(modules={"1000": module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
     if mqtt_timeout > 0:
         config.mqtt_timeout = mqtt_timeout
     if timeout > 0:
