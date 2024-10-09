@@ -276,7 +276,7 @@ class CarServer:
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to MQTT client"
-        self._mqtt.tls_set(ca_certs, certfile, keyfile)
+        self._mqtt.set_tls(ca_certs, certfile, keyfile)
 
     def _add_connected_devices(self, *device: _Device) -> None:
         """Store the device as connected for further handling of received messages and messages to be sent to it."""

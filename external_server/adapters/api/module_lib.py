@@ -8,13 +8,10 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.models.structures import (
     Config,
+    KeyValue,
     Buffer,
     DeviceIdentification,
     DisconnectTypes,
-)
-from external_server.models.structures import (
-    Config,
-    KeyValue,
 )
 
 
@@ -29,6 +26,15 @@ def empty_device_identification() -> DeviceIdentification:
 
 
 class ModuleLibrary:
+    """A wrapper around module .so library.
+
+    It retains context created by init and uses it with other functions. It takes
+    care of API-specific structures like Buffer and device_identification.
+
+    This class also implements
+    - lock on every API function (except wait_for_command) according to Fleet protocol.
+    - helper functions.
+    """
 
     def __init__(self, lib_path: str, config: dict[str, Any]):
         self._config = config

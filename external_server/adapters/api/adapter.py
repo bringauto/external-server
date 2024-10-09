@@ -30,17 +30,8 @@ _logger = _CarLogger(__name__)
 
 
 class APIClientAdapter:
-    """A wrapper around External server API functions (further API).
-
-    It retains context, created by init and uses it with other functions. It also take
-    care about API's specific structures like Buffer and device_identification
-    (memory management, converting from Protobuf messages or bytes). So methods,
-    which represents every'API function, is called with Protobuf messages. Then
-    these structures are properly converted and function from API is called. This
-    class also implements lock on every API function (except wait_for_command)
-    according to Fleet protocol.
-    Class also implements some helper functions like deallocate, get_module_number
-    and is_device_type_supported.
+    """The class provides access to the module's API by providing connection with module's .so libraries
+    using the ModuleLibrary class.
     """
 
     def __init__(self, config: ModuleConfig, company: str, car: str) -> None:

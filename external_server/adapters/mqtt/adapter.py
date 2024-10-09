@@ -266,7 +266,7 @@ class MQTTClientAdapter:
                 "Trying to stop MQTT client's event loop, but it is already stopped.", self._car
             )
 
-    def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
+    def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
 
         `ca_certs` - path to the CA certificates file.

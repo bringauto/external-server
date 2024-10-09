@@ -41,18 +41,18 @@ class Test_Setting_Up_TLS_In_MQTT_Client(unittest.TestCase):
     ):
         mock_load_cert_chain.side_effect = lambda certfile, keyfile, keyfile_password: None
         mock_load_verify_locations.side_effect = lambda ca_certs: None
-        self.adapter.tls_set("ca.pem", "certfile.pem", "keyfile.pem")
+        self.adapter.set_tls("ca.pem", "certfile.pem", "keyfile.pem")
         self.assertIsNotNone(self.adapter._mqtt_client._ssl_context)
         # the server hostname verification in the certificate is required, thus
         self.assertFalse(self.adapter._mqtt_client._tls_insecure)
 
     def test_using_nonexistent_file_for_tls_setup_raises_exception(self):
         with self.assertRaises(FileNotFoundError):
-            self.adapter.tls_set("nonexistent.pem", "certfile.pem", "keyfile.pem")
+            self.adapter.set_tls("nonexistent.pem", "certfile.pem", "keyfile.pem")
         with self.assertRaises(FileNotFoundError):
-            self.adapter.tls_set("ca.pem", "nonexistent.pem", "keyfile.pem")
+            self.adapter.set_tls("ca.pem", "nonexistent.pem", "keyfile.pem")
         with self.assertRaises(FileNotFoundError):
-            self.adapter.tls_set("ca.pem", "certfile.pem", "nonexistent.pem")
+            self.adapter.set_tls("ca.pem", "certfile.pem", "nonexistent.pem")
 
     def tearDown(self) -> None:  # pragma: no cover
         if os.path.isfile("ca.pem"):
