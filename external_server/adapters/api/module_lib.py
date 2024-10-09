@@ -50,7 +50,7 @@ class ModuleLibrary:
     @property
     def library(self) -> ct.CDLL:
         if not self._library:
-            raise RuntimeError("API Client not initialized")
+            raise RuntimeError("API Client not initialized.")
         return self._library
 
     def device_disconnected(
