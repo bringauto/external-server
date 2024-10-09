@@ -6,8 +6,8 @@ from external_server.models.events import (
     EventQueue as _EventQueue,
 )
 
-class Checker:
-    """A class that provides a mechanism to check for a timeout in a threaded operation."""
+class TimeoutChecker:
+    """A class that provides a mechanism to check for a timeouts in a single or multiple threaded operations."""
 
     DEFAULT_COUNTER_VALUE = 0
 
@@ -24,7 +24,7 @@ class Checker:
         self._timeout_type = timeout_type
         self._timeout = timeout
         self._event_queue = event_queue
-        self._counter = Checker.DEFAULT_COUNTER_VALUE
+        self._counter = TimeoutChecker.DEFAULT_COUNTER_VALUE
 
     @property
     def counter(self) -> int:

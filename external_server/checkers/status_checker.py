@@ -6,7 +6,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import Status as _Status  # type: ignore
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
-from external_server.checkers.checker import Checker as _Checker
+from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
 

@@ -1,7 +1,7 @@
 from threading import Event as _Event, Timer as _Timer
 import logging
 
-from external_server.checkers.checker import Checker as _Checker
+from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
 from external_server.logs import LOGGER_NAME
