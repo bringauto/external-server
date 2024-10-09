@@ -4,7 +4,7 @@ import argparse
 import os
 import json
 
-from external_server.server import ExternalServer, eslogger as eslogger
+from external_server.server import ExternalServer, eslogger
 from external_server.config import load_config, InvalidConfiguration
 from external_server.logs import configure_logging
 
