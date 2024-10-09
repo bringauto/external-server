@@ -19,6 +19,7 @@ _log_level_by_verbosity = {False: logging.WARNING, True: logging.DEBUG}
 
 
 class _Logger(abc.ABC):
+    """Abstract class for wrapping a logger from the Python logging module."""
 
     def __init__(self, logger_name: Optional[str] = None) -> None:
         self._logger = logging.getLogger(logger_name)
@@ -46,6 +47,10 @@ class _Logger(abc.ABC):
 
 
 class CarLogger(_Logger):
+    """Logger class for logging messages, forcing including the car name in the log message.
+
+    The car name is necessary to identify the source of the log message.
+    """
 
     def debug(self, msg: str, car_name: str) -> None:
         self._logger.debug(self._car_msg(car_name, msg))
@@ -73,6 +78,7 @@ class CarLogger(_Logger):
 
 
 class ESLogger(_Logger):
+    """Logger class for logging messages at the level of the whole external server, outside of any car's context."""
 
     def debug(self, msg: str, *args) -> None:
         self._logger.debug(self._msg(msg))
