@@ -1,6 +1,4 @@
 from __future__ import annotations
-import json
-
 from typing import Annotated, TypeVar, Mapping
 
 from pydantic import (
@@ -91,18 +89,18 @@ class ServerConfig(BaseModel):
     @classmethod
     def modules_validator(cls, fields: T) -> T:
         modules = fields.get("common_modules")
-        cars = fields.get("cars")
+        cars: dict[str, CarModulesConfig] = fields.get("cars", {})
         if not cars:
             raise InvalidConfiguration("Cars must contain at least 1 car.")
         elif not modules and not all(
-            car.get("specific_modules") for car in cars.values()
+            car.specific_modules for car in cars.values()
         ):
             raise InvalidConfiguration(
                 "Modules must contain at least 1 module for each car."
             )
         elif modules:
             car_specific_modules = set.union(
-                *[set(car.get("specific_modules", {}).keys()) for car in cars.values()]
+                *[set(car.specific_modules.keys()) for car in cars.values()]
             )
             global_modules = set(modules.keys())
             duplicates = [
@@ -116,41 +114,10 @@ class ServerConfig(BaseModel):
 
         return fields
 
-    def get_config_dump_string(self) -> str:
-        """Returns a string representation of the config. Values need to be added explicitly."""
-        config_json: dict = {}
-        config_json["company_name"] = self.company_name
-        config_json["mqtt_address"] = self.mqtt_address
-        config_json["mqtt_port"] = self.mqtt_port
-        config_json["mqtt_timeout"] = self.mqtt_timeout
-        config_json["timeout"] = self.timeout
-        config_json["send_invalid_command"] = self.send_invalid_command
-        config_json["sleep_duration_after_connection_refused"] = (
-            self.sleep_duration_after_connection_refused
-        )
-        module_json = {}
-        for key, value in self.common_modules.items():
-            module_json[key] = {"lib_path": str(value.lib_path), "config": "HIDDEN"}
-        config_json["common_modules"] = module_json
-
-        car_json = {}
-        for car_name in self.cars:
-            module_json = {}
-            for key, value in self.common_modules.items():
-                if not key in config_json["common_modules"]:
-                    module_json[key] = {
-                        "lib_path": str(value.lib_path),
-                        "config": "HIDDEN",
-                    }
-            car_json[car_name] = {"specific_modules": module_json}
-        config_json["cars"] = car_json
-
-        return json.dumps(config_json, indent=4)
-
 
 class ModuleConfig(BaseModel):
     lib_path: FilePath
-    config: dict[str, str | int]
+    config: dict[str, str | int] = Field(exclude=True)
 
 
 def load_config(config_path: str) -> ServerConfig:
@@ -158,7 +125,7 @@ def load_config(config_path: str) -> ServerConfig:
         with open(config_path) as config_file:
             data = config_file.read()
     except OSError as e:
-        raise InvalidConfiguration(f"Config could not be loaded: {e}") from None
+        raise InvalidConfiguration(f"Config could not be loaded. {e}") from None
 
     try:
         config = ServerConfig.model_validate_json(data)
@@ -166,4 +133,5 @@ def load_config(config_path: str) -> ServerConfig:
         raise InvalidConfiguration(e) from None
 
     return config
+
 
