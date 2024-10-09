@@ -6,7 +6,7 @@ sys.path.append(".")
 import pydantic
 from pydantic import FilePath
 
-from external_server.config import CarConfig as CarConfig, ModuleConfig
+from external_server.config import CarConfig, ModuleConfig
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 
 

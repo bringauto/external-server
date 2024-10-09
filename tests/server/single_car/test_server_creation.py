@@ -8,12 +8,8 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
 
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.config import (
-    CarConfig as CarConfig,
-    ServerConfig as ServerConfig,
-    ModuleConfig as _ModuleConfig,
-)
+from InternalProtocol_pb2 import Device  # type: ignore
+from external_server.config import CarConfig, ModuleConfig
 from external_server.server import CarServer, ServerState
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest
@@ -37,7 +33,7 @@ ES_CONFIG_WITHOUT_MODULES = {
 class Test_Creating_External_Server_Instance(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.example_module_config = _ModuleConfig(
+        self.example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
 
@@ -60,7 +56,7 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
 class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = _ModuleConfig(
+        example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
@@ -86,7 +82,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 class Test_Server_State(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = _ModuleConfig(
+        example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
@@ -100,13 +96,13 @@ class Test_Server_State(unittest.TestCase):
 class Test_External_Server_Start(unittest.TestCase):
 
     def setUp(self) -> None:
-        example_module_config = _ModuleConfig(
+        example_module_config = ModuleConfig(
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
         self.es = CarServer(config=self.config)
-        self.device = _Device(
-            module=_Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"
+        self.device = Device(
+            module=Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"
         )
         self.mqttbroker = MQTTBrokerTest(start=True)
         time.sleep(0.2)
