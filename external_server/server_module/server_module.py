@@ -1,17 +1,20 @@
 from typing import Callable
 
 
-from external_server.adapters.api.adapter import APIClientAdapter as _ApiAdapter
+from external_server.adapters.api.adapter import APIClientAdapter as _APIAdapter
 from external_server.server_module.command_waiting_thread import (
     CommandWaitingThread as _CommandWaitingThread,
 )
 from external_server.config import ModuleConfig as _ModuleConfig
 from external_server.models.events import EventQueue as _EventQueue
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
+from external_server.logs import (
+    CarLogger as _CarLogger,
+    LOGGER_NAME as _LOGGER_NAME
+)
 
 
-logger = _CarLogger(LOGGER_NAME)
+logger = _CarLogger(_LOGGER_NAME)
 
 
 class ServerModule:
@@ -39,7 +42,7 @@ class ServerModule:
         """
 
         self._id = module_id
-        self._api_adapter = _ApiAdapter(config=config, company=company, car=car)
+        self._api_adapter = _APIAdapter(config=config, company=company, car=car)
         try:
             self._api_adapter.init()
 
@@ -63,7 +66,7 @@ class ServerModule:
         )
 
     @property
-    def api(self) -> _ApiAdapter:
+    def api(self) -> _APIAdapter:
         """Returns the API client adapter used by the ServerModule."""
         return self._api_adapter
 
