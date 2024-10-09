@@ -18,7 +18,7 @@ def parsed_script_args() -> argparse.Namespace:
         default="./config/config.json",
         help="path to the configuration file",
     )
-    parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="tls authentication")
+    parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="use tls authentication")
     tls = parser.add_argument_group("tls", description="if tls is used, set following arguments")
     tls.add_argument("--ca", type=str, help="path to Certificate Authority certificate files")
     tls.add_argument("--cert", type=str, help="path to PEM encoded client certificate file")
@@ -31,16 +31,15 @@ def parsed_script_args() -> argparse.Namespace:
     if args.tls:
         missing_fields = []
         if not args.ca:
-            missing_fields.append("ca certificate")
+            missing_fields.append("ca certificate (--ca)")
         if not args.cert:
-            missing_fields.append("PEM encoded client certificate")
+            missing_fields.append("PEM encoded client certificate (--cert)")
         if not args.key:
-            missing_fields.append("private key to PEM encoded client certificate")
+            missing_fields.append("private key to PEM encoded client certificate (--key)")
         if missing_fields:
-            e = argparse.ArgumentError(
-                None, f"TLS requires additional parameters. The following is missing: {', '.join(missing_fields)}"
+            raise argparse.ArgumentError(
+                None, f"TLS requires additional parameters: {', '.join(missing_fields)}"
             )
-            raise e
     return args
 
 
@@ -63,10 +62,10 @@ def main() -> None:
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
-    eslogger.info(f"Loaded config:\n{config.get_config_dump_string()}")
+    eslogger.info(f"Loaded config:\n{config.model_dump_json()}")
     server = ExternalServer(config)
     if args.tls:
-        server.tls_set(args.ca, args.cert, args.key)
+        server.set_tls(args.ca, args.cert, args.key)
 
     try:
         server.start()
