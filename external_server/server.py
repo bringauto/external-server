@@ -10,9 +10,9 @@ sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import (  # type: ignore
-    CommandResponse as _CommandResponse,
+    CommandResponse as CommandResponse,
     Connect as _Connect,
-    ConnectResponse as _ConnectResponse,
+    ConnectResponse as ConnectResponse,
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
@@ -33,13 +33,11 @@ from external_server.models.messages import (
     status_response as _status_response,
 )
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
-from external_server.config import (
-    CarConfig as _CarConfig,
-    ServerConfig as _ServerConfig
-)
+from external_server.config import CarConfig as _CarConfig, ServerConfig as _ServerConfig
 from external_server.models.structures import (
     GeneralErrorCode,
     DisconnectTypes,
+    HandledCommand as _HandledCommand,
     TimeoutType,
 )
 from external_server.models.devices import DevicePy, KnownDevices, device_repr
@@ -49,7 +47,6 @@ from external_server.models.events import (
     EventQueue as _EventQueue,
 )
 from external_server.server_module.server_module import ServerModule as _ServerModule
-from external_server.models.structures import HandledCommand as _HandledCommand
 
 
 eslogger = _ESLogger(LOGGER_NAME)
@@ -102,7 +99,7 @@ StateTransitionTable: dict[ServerState, set[ServerState]] = {
 }
 
 
-ExternalClientMessage = _Connect | _Status | _CommandResponse
+ExternalClientMessage = _Connect | _Status | CommandResponse
 
 
 class ExternalServer:
@@ -220,7 +217,7 @@ class CarServer:
         devices = list(msg.devices)
         for device in devices:
             self._connect_device_if_supported(device)
-        self._publish_connect_response(_ConnectResponse.OK)
+        self._publish_connect_response(ConnectResponse.OK)
 
     def _get_all_first_statuses_and_respond(self) -> None:
         """Wait for first status from each of all known devices and send status response.
@@ -502,7 +499,7 @@ class CarServer:
             commands.append((cmd_bytes, device))
         return commands
 
-    def _get_next_valid_command_response(self) -> _CommandResponse:
+    def _get_next_valid_command_response(self) -> CommandResponse:
         """Get the next command response from the MQTT broker. Throw away all other messages.
 
         Raise an exception there is not command response.
@@ -531,7 +528,7 @@ class CarServer:
             carlogger.error(
                 "Received connect message with ID of already existing session.", self._car_name
             )
-            self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
+            self._publish_connect_response(ConnectResponse.ALREADY_LOGGED)
         else:
             carlogger.error(
                 "Received connect message with session ID not matching current session ID.",
@@ -597,13 +594,13 @@ class CarServer:
         """Pop the next command from the module's command waiting thread."""
         return self._modules[module_id].thread.pop_command()
 
-    def _handle_command_response(self, cmd_response: _CommandResponse) -> None:
+    def _handle_command_response(self, cmd_response: CommandResponse) -> None:
         """Handle the command response received during normal communication, i.e., after init sequence."""
         carlogger.info(
             f"Received command response (counter = {cmd_response.messageCounter}).", self._car_name
         )
 
-        if cmd_response.type == _CommandResponse.DEVICE_NOT_CONNECTED:
+        if cmd_response.type == CommandResponse.DEVICE_NOT_CONNECTED:
             self._handle_command_response_with_disconnected_type(cmd_response)
 
         commands = self._command_checker.pop(cmd_response)
@@ -612,7 +609,7 @@ class CarServer:
             module.api.command_ack(command.data, command.device)
 
     def _handle_command_response_with_disconnected_type(
-        self, cmd_response: _CommandResponse
+        self, cmd_response: CommandResponse
     ) -> None:
         device = self._command_checker.command_device(cmd_response.messageCounter)
         if device:
