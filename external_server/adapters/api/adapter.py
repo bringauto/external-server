@@ -35,18 +35,11 @@ class APIClientAdapter:
     """
 
     def __init__(self, config: ModuleConfig, company: str, car: str) -> None:
-        """Initializes API Wrapper for Module
+        """Initializes API Wrapper for Module.
 
-        Parameters
-        ----------
-        module_config : dict
-            Json config for specific module
-
-        company_name : str
-            company name from Json config, which will be forwarded as first key-value to API
-
-        car_name : str
-            car name from Json config, which will be forwarded as second key-value to API
+        - `config` - JSON config for specific module
+        - `company` - company name, which will be forwarded as first key-value to API
+        - `car` - car name, which will be forwarded as second key-value to API
         """
         self._lib_path = config.lib_path.absolute().as_posix()
         self._config = {"company_name": company, "car_name": car}
@@ -94,8 +87,7 @@ class APIClientAdapter:
 
         Parameters
         ----------
-        device: Device
-            The device object.
+        `device` - The device object.
 
         Returns
         -------
@@ -300,7 +292,7 @@ class APIClientAdapter:
         return command_bytes, device, rc
 
     def command_ack(self, command_data: bytes, device: _Device) -> ReturnCode:
-        """Calls command_ack function from API"""
+        """Calls command_ack function from API."""
         device_id = self._create_device_identification(device)
         with self._lock:
             command_buffer = Buffer(command_data, len(command_data))
@@ -322,26 +314,26 @@ class APIClientAdapter:
     def _check_forward_status_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in forward_status function, code: {code}", car
+                f"Module {module_id}: Error in forward_status function, code: {code}.", car
             )
 
     @staticmethod
     def _check_forward_error_message_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in forward_error_message function, code: {code}", car
+                f"Module {module_id}: Error in forward_error_message function, code: {code}.", car
             )
 
     @staticmethod
     def _check_device_disconnected_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in device_disconnected function, code: {code}", car
+                f"Module {module_id}: Error in device_disconnected function, code: {code}.", car
             )
 
     @staticmethod
     def _check_command_ack_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in command_ack function, code: {code}", car
+                f"Module {module_id}: Error in command_ack function, code: {code}.", car
             )
