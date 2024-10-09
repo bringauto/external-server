@@ -24,10 +24,13 @@ from paho.mqtt.enums import CallbackAPIVersion
 from ExternalProtocol_pb2 import (  # type: ignore
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
-    ExternalServer as _ExternalServerMsg,
+    ExternalServer as ExternalServerMsg,
     Status as _Status,
 )
-from external_server.models.events import EventType, EventQueue
+from external_server.models.events import (
+    EventType as _EventType,
+    EventQueue as _EventQueue
+)
 
 
 # maximum number of messages in outgoing queue
@@ -86,7 +89,7 @@ class MQTTClientAdapter:
         timeout: float,
         broker_host: str,
         port: int,
-        event_queue: EventQueue,
+        event_queue: _EventQueue,
         mqtt_timeout: float = 0.5,
     ) -> None:
         self._publish_topic = f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
@@ -238,7 +241,7 @@ class MQTTClientAdapter:
             return "command response"
         return "unknown"
 
-    def publish(self, msg: _ExternalServerMsg, log_msg: str = "") -> None:
+    def publish(self, msg: ExternalServerMsg, log_msg: str = "") -> None:
         """Publish a message to the MQTT broker."""
         payload = msg.SerializeToString()
         code = self._mqtt_client.publish(self._publish_topic, payload, qos=_QOS).rc
@@ -350,7 +353,7 @@ class MQTTClientAdapter:
         - `properties` The properties associated with the disconnection event.
         """
         try:
-            self._event_queue.add(event_type=EventType.MQTT_BROKER_DISCONNECTED)
+            self._event_queue.add(event_type=_EventType.MQTT_BROKER_DISCONNECTED)
         except Exception as e:  # pragma: no cover
             _logger.error(
                 f"MQTT on disconnect callback: Failed to disconnect from the broker. {e}", self._car
@@ -371,7 +374,7 @@ class MQTTClientAdapter:
             if message.topic == self._subscribe_topic:
                 msg = _ExternalClientMsg().FromString(message.payload)
                 self._received_msgs.put(msg)
-                self._event_queue.add(event_type=EventType.CAR_MESSAGE_AVAILABLE)
+                self._event_queue.add(event_type=_EventType.CAR_MESSAGE_AVAILABLE)
         except Exception as e:  # pragma: no cover
             _logger.error(
                 f"MQTT on message callback: Failed to parse the received message. {e}", self._car

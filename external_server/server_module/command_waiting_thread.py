@@ -8,11 +8,14 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api.adapter import APIClientAdapter  # type: ignore
-from external_server.models.events import EventType, EventQueue as _EventQueue
-from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
+from external_server.models.events import (
+    EventType as _EventType,
+    EventQueue as _EventQueue
+)
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 
 
-logger = _CarLogger(LOGGER_NAME)
+logger = _CarLogger(_LOGGER_NAME)
 
 
 class _CommandQueue:
@@ -117,7 +120,7 @@ class CommandWaitingThread:
         elif rc == EsErrorCode.TIMEOUT:
             logger.debug("No command available from API.", self._car)
         else:
-            logger.error(f"Error occured in wait_for_command function in API, rc: {rc}", self._car)
+            logger.error(f"Error occured in wait_for_command function in API, return code: {rc}.", self._car)
 
     def _pass_available_commands_to_queue(self) -> None:
         """Save the available commands in the queue."""
@@ -125,7 +128,7 @@ class CommandWaitingThread:
         while remain_cmds > 0:
             command, device, remain_cmds = self._api_adapter.pop_command()
             if remain_cmds < 0:
-                logger.error(f"Error in pop_command in API. Code: {remain_cmds}", self._car)
+                logger.error(f"Error in pop_command in API. Code: {remain_cmds}.", self._car)
             else:
                 with self._commands_lock, self._connection_established_lock:
                     if not self._module_connected():
@@ -135,7 +138,7 @@ class CommandWaitingThread:
                     if self._module_connected():
                         module_id = self._api_adapter.get_module_number()
                         self._event_queue.add(
-                            event_type=EventType.COMMAND_AVAILABLE, data=module_id
+                            event_type=_EventType.COMMAND_AVAILABLE, data=module_id
                         )
 
     def _main_thread(self) -> None:

@@ -8,7 +8,11 @@ sys.path.append(".")
 
 from external_server.server import ServerState
 from InternalProtocol_pb2 import Device  # type: ignore
-from ExternalProtocol_pb2 import ExternalServer as ExternalServerMsg, Status, CommandResponse  # type: ignore
+from ExternalProtocol_pb2 import (  # type: ignore
+    ExternalServer as ExternalServerMsg,
+    Status,
+    CommandResponse
+)
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server.models.devices import DevicePy, device_status as _device_status
 from tests.utils.mqtt_broker import MQTTBrokerTest
