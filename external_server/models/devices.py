@@ -63,7 +63,11 @@ class DevicePy:
 @dataclasses.dataclass
 class KnownDevices:
     """This class manages two parallel lists of DevicePy instances representing
-    devices communicating with the external server.
+    devices communicating with the External Server.
+
+    -   Device is *connected* if it was included in connect message or a status message
+        with device status CONNECTING and has not yet become *not connected*.
+    -   Device is *not connected* if it sent a status message with device status DISCONNECTED.
     """
 
     _connected: list[DevicePy] = dataclasses.field(default_factory=list)
@@ -134,7 +138,7 @@ class KnownDevices:
         return self.is_connected(device) or self.is_not_connected(device)
 
     def is_unknown(self, device: DevicePy) -> bool:
-        """True if device is not in connected or not connected devices list."""
+        """True if device is neither in connected and not connected devices list."""
         return not (self.is_connected(device) or self.is_not_connected(device))
 
     def remove(self, device: DevicePy) -> None:
