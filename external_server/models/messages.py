@@ -6,7 +6,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import (  # type: ignore
     Device as _Device,
     DeviceCommand as _DeviceCommand,
-    DeviceStatus as _DeviceStatus,
+    DeviceStatus as DeviceStatus,
 )
 from ExternalProtocol_pb2 import (  # type: ignore
     Command as _Command,
@@ -14,7 +14,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     CommandResponse as _CommandResponse,
     ConnectResponse as _ConnectResponse,
     ExternalClient as _ExternalClientMsg,
-    ExternalServer as _ExternalServerMsg,
+    ExternalServer as ExternalServerMsg,
     Status as _Status,
     StatusResponse as _StatusResponse,
 )
@@ -22,24 +22,24 @@ from ExternalProtocol_pb2 import (  # type: ignore
 
 def connect_response(
     session_id: str, response_type: _ConnectResponse.Type
-) -> _ExternalServerMsg:
+) -> ExternalServerMsg:
     """Creates a connect response message with the given session ID and response type.
 
     Args:
         session_id (str): The session ID for the connect response.
-        connect_response_type (ConnectResponse.Type): The response type for the connect response.
+        connect_response_type (_ConnectResponse.Type): The response type for the connect response.
 
     Returns an instance of ExternalServer containing the connect response message.
     """
     connect_response = _ConnectResponse()
     connect_response.sessionId = session_id
     connect_response.type = response_type
-    sent_msg = _ExternalServerMsg()
+    sent_msg = ExternalServerMsg()
     sent_msg.connectResponse.CopyFrom(connect_response)
     return sent_msg
 
 
-def status_response(session_id: str, message_counter: int) -> _ExternalServerMsg:
+def status_response(session_id: str, message_counter: int) -> ExternalServerMsg:
     """
     Creates a status response message with the given session ID and message counter.
 
@@ -54,14 +54,14 @@ def status_response(session_id: str, message_counter: int) -> _ExternalServerMsg
     status_response.sessionId = session_id
     status_response.type = _StatusResponse.OK
     status_response.messageCounter = message_counter
-    sent_msg = _ExternalServerMsg()
+    sent_msg = ExternalServerMsg()
     sent_msg.statusResponse.CopyFrom(status_response)
     return sent_msg
 
 
 def command(
     session_id: str, counter: int, device: _Device, data: bytes = bytes()
-) -> _ExternalServerMsg:
+) -> ExternalServerMsg:
     """Creates an external command with the session ID, counter, device status and data.
 
     Args:
@@ -77,7 +77,7 @@ def command(
     command.sessionId = session_id
     command.messageCounter = counter
     command.deviceCommand.CopyFrom(_DeviceCommand(device=device, commandData=data))
-    sent_msg = _ExternalServerMsg()
+    sent_msg = ExternalServerMsg()
     sent_msg.command.CopyFrom(command)
     return sent_msg
 
@@ -104,7 +104,7 @@ def status(
     session_id: str,
     state: _Status.DeviceState,
     counter: int,
-    status: _DeviceStatus,
+    status: DeviceStatus,
     error_message: Optional[bytes] = None,
 ) -> _ExternalClientMsg:
 
