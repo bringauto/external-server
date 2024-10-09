@@ -1,7 +1,8 @@
 # External Server
 
-This directory contains a external server that communicates with an external client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
-The External Server handles multiple cars registered under a single company.
+The External Server is a component of the [Fleet Protocol](https://github.com/bringauto/fleet-protocol). It communicates with an External Client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
+
+It handles communication between a cloud instance and multiple cars registered under a single company.
 
 # Requirements
 
@@ -13,7 +14,7 @@ The External Server handles multiple cars registered under a single company.
 
 ### Python packages
 
-Install the required Python packages in virtual environment by running the following
+Install the required Python packages in a virtual environment by running the following:
 
 ```bash
 python3 -m venv .venv && \
