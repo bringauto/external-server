@@ -56,7 +56,7 @@ WORKDIR /home/bringauto/external_server
 
 # Install python dependencies
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-RUN python3 -m pip install -r /home/bringauto/external_server/requirements.txt
+RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install -r /home/bringauto/external_server/requirements.txt
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server/
@@ -67,3 +67,9 @@ COPY external_server_main.py /home/bringauto/external_server/
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
+
+# Set the entrypoint
+# "bash" and "-c" have to be used to be able to use environment variables
+# $0 and $@ are needed to pass arguments to the script
+ENTRYPOINT [ "bash", "-c", "$PYTHON_ENVIRONMENT_PYTHON3 /home/bringauto/external_server/external_server_main.py $0 $@" ]
+CMD [ "-c", "/home/bringauto/config/for_docker.json" ]
