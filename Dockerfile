@@ -46,7 +46,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREF
 
 FROM bringauto/cpp-build-environment:latest AS transparent_module_builder
 
-ARG TRANSPARENT_MODULE_VERSION=v1.0.0
+ARG TRANSPARENT_MODULE_VERSION=v1.0.1
 
 WORKDIR /home/bringauto/
 ADD --chown=bringauto:bringauto https://github.com/bringauto/transparent-module.git#$TRANSPARENT_MODULE_VERSION transparent-module
