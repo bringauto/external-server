@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM bringauto/cpp-build-environment:latest AS mission_module_builder
 
 ARG MISSION_MODULE_VERSION=v1.2.11
@@ -17,9 +19,10 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 WORKDIR /home/bringauto
 ADD --chown=bringauto:bringauto https://github.com/bringauto/mission-module.git#$MISSION_MODULE_VERSION mission-module
 WORKDIR /home/bringauto/mission-module/_build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/mission_module/ -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/mission_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
     make install
-
 
 
 FROM bringauto/cpp-build-environment:latest AS io_module_builder
@@ -41,7 +44,9 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
 WORKDIR /home/bringauto
 ADD --chown=bringauto:bringauto https://github.com/bringauto/io-module.git#$IO_MODULE_VERSION io-module
 WORKDIR /home/bringauto/io-module/_build
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/io_module/ -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/io_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
     make install
 
 FROM bringauto/cpp-build-environment:latest AS transparent_module_builder
@@ -61,10 +66,12 @@ FROM bringauto/python-environment:latest
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
+# ensure PYTHONPATH is defined and append to it
+ENV PYTHONPATH=${PYTHONPATH:-}:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
-WORKDIR /home/bringauto/external_server
+WORKDIR /home/bringauto
 
-# Install python dependencies
+# Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
 RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install -r /home/bringauto/external_server/requirements.txt
 
