@@ -830,7 +830,6 @@ class CarServer:
 
         No action is taken if the transition is not allowed.
         """
-        print(f"Setting state from {self._state} to {state}")
         if ServerState.is_valid_transition(current_state=self.state, new_state=state):
             carlogger.debug(f"Changing server's state from {self._state} to {state}.", self._car_name)
             self._state = state

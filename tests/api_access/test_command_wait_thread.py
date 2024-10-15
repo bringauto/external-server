@@ -28,15 +28,16 @@ class APIClientAdapterTest(APIClientAdapter):
         self.api_initialized = True
 
     def define_commands(self, api_commands: list[tuple[bytes, Device, ReturnCode]]) -> None:
+        """Fill the mocked command queue with commands."""
         self._commands_list = api_commands.copy()
 
     def pop_command(self) -> tuple[bytes, Device, ReturnCode]:  # pragma: no cover
         if self._commands_list:
             cmd = self._commands_list.pop(0)
-            cmd = (cmd[0], cmd[1], len(self._commands_list))
+            cmd = (cmd[0], cmd[1], GeneralErrorCode.OK)
             return cmd
         else:
-            return (b"", Device(), -1)
+            return (b"", Device(), GeneralErrorCode.NOT_OK)
 
     def wait_for_command(self, timeout: int) -> ReturnCode:
         if not self.api_initialized:
@@ -111,16 +112,13 @@ class Test_Disconnected_Module(unittest.TestCase):
             client, lambda: module_connected, event_queue=EventQueue(), timeout_ms=100
         )
         client.define_commands(
-            [
-                (b"command1", Device(), 0),
-                (b"command2", Device(), 0),
-                (b"command3", Device(), 0),
-            ]
+            [(b"command1", Device(), 2), (b"command2", Device(), 1), (b"command3", Device(), 0)]
         )
         thread.poll_commands()
         time.sleep(thread.timeout_ms / 1000.0)
         self.assertEqual(thread._commands.qsize(), 1)
-        self.assertEqual(thread.pop_command(), (b"command3", Device()))
+        expected_command = (b"command3", Device())
+        self.assertEqual(thread.pop_command(), expected_command)
 
 
 class Test_Polling_Commands(unittest.TestCase):
@@ -143,7 +141,7 @@ class Test_Polling_Commands(unittest.TestCase):
 
     def test_no_error_is_logged_if_no_command_occurs_on_api_before_timeout(self):
         self.client.init()
-        with self.assertNoLogs(logger=logger._logger, level=logging.ERROR) as cm:
+        with self.assertNoLogs(logger=logger._logger, level=logging.ERROR):
             self.thread.poll_commands()
             time.sleep(self.thread.timeout_ms / 1000.0)
 

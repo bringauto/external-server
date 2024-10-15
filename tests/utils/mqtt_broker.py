@@ -5,11 +5,11 @@ import logging.config
 import time
 import threading
 import sys
+import contextlib
+from typing import Any
 
 sys.path.append(".")
 
-from paho.mqtt.client import MQTTMessage as _MQTTMessage
-import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
 import paho.mqtt.client as client  # type: ignore
 
@@ -77,22 +77,18 @@ class MQTTBrokerTest:
     @classmethod
     def kill_all_test_brokers(cls):  # pragma: no cover
         for process in cls._running_broker_processes:
-            print(f"Killing test broker process '{process.pid}'.")
             process.kill()
-            try:
+            with contextlib.suppress(ValueError):
                 cls._running_broker_processes.remove(process)
-            except ValueError:
-                pass
 
     @property
     def is_running(self) -> bool:
         return self._process is not None
 
-    def _on_connect(self, client: client.Client, data, flags, rc, properties) -> None:
+    def _on_connect(self, client: client.Client, data: Any, flags, rc, properties) -> None:
         assert self._client.is_connected()
-        assert self._client._thread is not None
 
-    def _on_message(self, client: client.Client, data, message: client.MQTTMessage) -> None:
+    def _on_message(self, client: client.Client, data: Any, message: client.MQTTMessage) -> None:
         """Callback function for handling incoming messages.
 
         The message is added to the received messages queue, if the topic matches the subscribe topic,
@@ -119,7 +115,8 @@ class MQTTBrokerTest:
         - `timeout` (float): The maximum time to wait for the messages in seconds.
 
         Returns:
-        - `bool`: True if the expected number of messages were received, False otherwise.
+        - `None`: If the timeout occurred before receiving the expected messages.
+        - `list[bytes]`: The list of received messages if the expected number was received.
         """
         logger.info(f"Test broker: Waiting for {n} messages on topic {topic}")
         while True:
@@ -153,7 +150,7 @@ class MQTTBrokerTest:
 
     def start(self, interval: float = 0.01, timeout: float = 1.0) -> None:
         broker_script = self._script_path
-        self._process = subprocess.Popen(["python3", broker_script, f"--port={self._port}"])
+        self._process = subprocess.Popen([sys.executable, broker_script, f"--port={self._port}"])
         print(f"Started test broker on host {self._host} and port {self._port}")
         self._running_broker_processes.append(self._process)
 

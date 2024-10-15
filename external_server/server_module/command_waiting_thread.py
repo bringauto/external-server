@@ -2,6 +2,7 @@ from typing import Callable
 import threading
 from queue import Queue, Empty
 import sys
+import time
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -125,15 +126,16 @@ class CommandWaitingThread:
     def _pass_available_commands_to_queue(self) -> None:
         """Save the available commands in the queue."""
         remain_cmds = 1
-        while remain_cmds > 0:
+        while remain_cmds >= 0:
             command, device, remain_cmds = self._api_adapter.pop_command()
             if remain_cmds < 0:
                 logger.error(f"Error in pop_command in API. Code: {remain_cmds}.", self._car)
             else:
                 with self._commands_lock, self._connection_established_lock:
                     if not self._module_connected():
+                        # forget about commands if the module is not connected
                         self._commands.clear()
-                    logger.debug("Command received from API is stored in queue.", self._car)
+                    logger.debug("Command received from the API is stored in queue.", self._car)
                     self._commands.put(command, device)
                     if self._module_connected():
                         module_id = self._api_adapter.get_module_number()
@@ -144,3 +146,4 @@ class CommandWaitingThread:
     def _main_thread(self) -> None:
         while self._continue_thread:
             self.poll_commands()
+            time.sleep(0.1)

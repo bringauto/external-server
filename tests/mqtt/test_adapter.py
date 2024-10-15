@@ -7,7 +7,7 @@ import logging
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, Client
 
 from queue import Empty
 from external_server.adapters.mqtt.adapter import (  # type: ignore
@@ -21,7 +21,6 @@ from external_server.adapters.mqtt.adapter import (  # type: ignore
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
     DeviceCommand,
-    DeviceConnect,
     DeviceStatus,
 )
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -50,20 +49,25 @@ class Test_Client_Error_From_Code(unittest.TestCase):
 class Test_Creating_MQTT_Client(unittest.TestCase):
     """Tests for creating an MQTT client - NOT THE ADAPTER."""
 
+    def wait_for_connection(self, client: Client, timeout_s: int = 2):
+        start_time = time.monotonic()
+        while not client.is_connected():
+            if time.monotonic() - start_time > timeout_s:
+                raise self.fail("Timeout while waiting for MQTT client connection in setUp.")
+            time.sleep(0.01)
+
     def test_creating_mqtt_client_adapter(self):
         broker = MQTTBrokerTest(start=True)
         self.x = 0
-
         def on_message(client, userdata, message):
             self.x += 1
-
         client = create_mqtt_client("car")
         client.on_message = on_message
         client.connect(broker._host, broker._port)
         client.subscribe("some_topic", qos=_QOS)
         client.loop_start()
-        time.sleep(0.1)
-        self.assertTrue(client.is_connected())
+        self.wait_for_connection(client, timeout_s=1)
+
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.submit(broker.publish("some_topic", "some_message"))
             time.sleep(0.1)
