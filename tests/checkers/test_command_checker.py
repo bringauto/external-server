@@ -181,39 +181,39 @@ class Test_Exceeding_Timeout_For_Commands(unittest.TestCase):
         self.checker.add(command)
 
     def test_exceeding_timeout_sets_checkers_timeout_is_set_flag_to_true(self):
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
         time.sleep(CHECKER_TIMEOUT + 0.01)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
 
     def test_timeout_event_is_unset_after_restarting_checker(self):
         time.sleep(CHECKER_TIMEOUT + 0.01)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
         self.checker.reset()
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
     def test_timeout_is_not_set_when_command_is_acknowledged(self):
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop(cmd_response("id", 0).commandResponse)
         time.sleep(CHECKER_TIMEOUT / 2)
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
     def test_timeout_is_not_set_when_all_commands_are_acknowledged(self):
         self.checker.add(HandledCommand(b"", device=self.device))
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop(cmd_response("id", 0).commandResponse)
         self.checker.pop(cmd_response("id", 1).commandResponse)
         time.sleep(CHECKER_TIMEOUT / 2 + 0.1)
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
     def test_timeout_is_set_when_any_command_is_not_acknowledged(self):
         self.checker.add(HandledCommand(b"", device=self.device))
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
         time.sleep(CHECKER_TIMEOUT / 2)
         self.checker.pop(cmd_response("id", 0).commandResponse)
         time.sleep(CHECKER_TIMEOUT / 2 + 0.1)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
 
 
 class Test_Command_Queuing_When_External_Connection_Is_Not_Available(unittest.TestCase):

@@ -91,11 +91,11 @@ class ServerConfig(BaseModel):
         modules = fields.get("common_modules")
         cars: dict[str, dict] = fields.get("cars", {})
         if not cars:
-            raise InvalidConfiguration("Cars must contain at least 1 car.")
+            raise ValueError("Cars must contain at least 1 car.")
         elif not modules and not all(
             car.get("specific_modules", {}) for car in cars.values()
         ):
-            raise InvalidConfiguration(
+            raise ValueError(
                 "Modules must contain at least 1 module for each car."
             )
         elif modules:
@@ -107,7 +107,7 @@ class ServerConfig(BaseModel):
                 int(i) for i in car_specific_modules.intersection(global_modules)
             ]
             if duplicates:
-                raise InvalidConfiguration(
+                raise ValueError(
                     "Each module can be configured either globally or per car, but not both. \n"
                     f"IDs of modules defined both globally and per car: {duplicates}."
                 )

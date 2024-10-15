@@ -78,7 +78,7 @@ class Test_Receiving_Status(unittest.TestCase):
         self.checker.check(status)
         self.checker.check(status)
         self.assertEqual(self.checker.counter, expected + 1)
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
         self.assertEqual(self.checker.get(), status)
         self.assertIsNone(self.checker.get())
 
@@ -267,14 +267,14 @@ class Test_Timeout(unittest.TestCase):
     def test_single_message_with_correct_counter_value_does_not_cause_timeout(self):
         self.checker.check(Status(messageCounter=1))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
     def test_single_message_with_greater_counter_value_than_checkers_counter_does_cause_timeout(
         self,
     ):
         self.checker.check(Status(messageCounter=2))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
 
     def test_multiple_messages_with_any_counter_values_skipped_lead_to_timeout_if_missing_val_not_delivered(
         self,
@@ -283,7 +283,7 @@ class Test_Timeout(unittest.TestCase):
         self.checker.check(Status(messageCounter=2))
         self.checker.check(Status(messageCounter=4))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
 
     def test_multiple_messages_with_incorrect_order_but_no_value_skipped_do_not_yield_timeout(self):
         self.checker.check(Status(messageCounter=2))
@@ -291,7 +291,7 @@ class Test_Timeout(unittest.TestCase):
         self.checker.check(Status(messageCounter=4))
         self.checker.check(Status(messageCounter=3))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
 
 class Test_Resetting_Checker(unittest.TestCase):
@@ -317,9 +317,9 @@ class Test_Resetting_Checker(unittest.TestCase):
     def test_resetting_checker_clears_timeout(self):
         self.checker.check(Status(messageCounter=6))
         time.sleep(ORDER_CHECKER_TIMEOUT + 0.01)
-        self.assertTrue(self.checker.timeout_occured())
+        self.assertTrue(self.checker.timeout_occurred())
         self.checker.reset()
-        self.assertFalse(self.checker.timeout_occured())
+        self.assertFalse(self.checker.timeout_occurred())
 
 
 if __name__ == "__main__":  # pragma: no cover

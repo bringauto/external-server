@@ -6,7 +6,7 @@ import os
 from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
     StatusTimeout,
-    NoPublishedMessage,
+    NoMessage,
     CommandResponseTimeout,
     SessionTimeout,
     UnexpectedMQTTDisconnect,
@@ -102,7 +102,7 @@ class ESLogger(_Logger):
 
 LOG_LEVELS: dict[Type[Exception], int] = {
     ConnectSequenceFailure: logging.WARNING,
-    NoPublishedMessage: logging.WARNING,
+    NoMessage: logging.WARNING,
     CommandResponseTimeout: logging.WARNING,
     SessionTimeout: logging.WARNING,
     StatusTimeout: logging.WARNING,

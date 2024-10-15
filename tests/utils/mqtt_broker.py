@@ -8,11 +8,12 @@ import sys
 
 sys.path.append(".")
 
-import external_server as _external_server
 from paho.mqtt.client import MQTTMessage as _MQTTMessage
 import paho.mqtt.subscribe as subscribe  # type: ignore
 import paho.mqtt.publish as publish  # type: ignore
 import paho.mqtt.client as client  # type: ignore
+
+import external_server as _external_server
 from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
 
 
@@ -164,7 +165,7 @@ class MQTTBrokerTest:
                 for topic in self._topics:
                     self._client.subscribe(topic)
                 break
-            except ConnectionRefusedError:
+            except ConnectionError:
                 time.sleep(interval)
             except Exception as e:
                 print("Cannot start test broker due to unexpected error")

@@ -99,12 +99,11 @@ class ModuleLibrary:
         return int(self.library.is_device_type_supported(ct.c_uint(device_type)))
 
     def pop_command(self, cmd_buffer: Buffer, device: DeviceIdentification) -> int:
-        with self._lock:
-            return int(
-                self.library.pop_command(
-                    ct.byref(cmd_buffer), ct.byref(device), self._context
-                )
+        return int(
+            self.library.pop_command(
+                ct.byref(cmd_buffer), ct.byref(device), self._context
             )
+        )
 
     def wait_for_command(self, timeout: int) -> int:
         return int(self.library.wait_for_command(timeout, self._context))

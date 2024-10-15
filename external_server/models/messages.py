@@ -67,8 +67,8 @@ def command(
     Args:
         session_id (str): The session ID for the external command.
         counter (int): The counter for the external command.
-        status (DeviceStatus): The device status for the external command.
-        command_data (Buffer): The command data for the external command.
+        device (_Device): The target device for the external command.
+        data (bytes): The command data for the external command.
 
     Returns:
         ExternalServer: An instance of the external command message.
@@ -108,12 +108,11 @@ def status(
     error_message: Optional[bytes] = None,
 ) -> _ExternalClientMsg:
 
-    assert isinstance(error_message, bytes) or error_message is None
-    status = _Status(
+    status_msg = _Status(
         sessionId=session_id,
         deviceState=state,
         messageCounter=counter,
         deviceStatus=status,
         errorMessage=error_message,
     )
-    return _ExternalClientMsg(status=status)
+    return _ExternalClientMsg(status=status_msg)

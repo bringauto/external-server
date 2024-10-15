@@ -28,7 +28,6 @@ COMMON_CONFIG = {
 }
 
 CAR_CONFIG_WITHOUT_MODULES = {"company_name": "ba", "car_name": "car1", **COMMON_CONFIG}
-
 ES_CONFIG_WITHOUT_MODULES = {"company_name": "ba", **COMMON_CONFIG}
 
 

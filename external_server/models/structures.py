@@ -107,9 +107,9 @@ class HandledCommand:
             )
             return _ExternalServerMsg(command=command)
         except ValueError as e:
-            raise ValueError("Incorrect command data. Counter value is not set.")
+            raise ValueError("Incorrect command data. Counter value is not set.") from e
         except Exception as e:
-            raise ValueError(f"Incorrect command data. {e.args[0]}")
+            raise ValueError(f"Incorrect command data. {e.args[0]}") from e
 
     def update_counter_value(self, counter: Counter) -> None:
         """Set the counter value of the command."""

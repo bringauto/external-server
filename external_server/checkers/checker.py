@@ -36,7 +36,11 @@ class TimeoutChecker:
         """Time period in seconds after which timeout is considered to occur."""
         return self._timeout
 
-    def timeout_occured(self) -> bool:
+    @property
+    def timeout_event(self) -> threading.Event:
+        return self._timeout_event
+
+    def timeout_occurred(self) -> bool:
         """Returns True if timeout occured, False otherwise."""
         return self._timeout_event.is_set()
 

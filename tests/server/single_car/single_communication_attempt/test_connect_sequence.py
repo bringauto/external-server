@@ -3,6 +3,7 @@ import sys
 import time
 import concurrent.futures as futures
 from unittest.mock import Mock, patch
+import logging
 
 sys.path.append(".")
 
@@ -18,6 +19,10 @@ from external_server.models.devices import DevicePy, device_status as _device_st
 from tests.utils.mqtt_broker import MQTTBrokerTest
 from tests.utils import get_test_car_server
 from external_server.models.messages import connect_msg, status, cmd_response
+from external_server.logs import LOGGER_NAME
+
+
+logging.getLogger(LOGGER_NAME).setLevel(logging.DEBUG)
 
 
 class Test_Initial_State(unittest.TestCase):

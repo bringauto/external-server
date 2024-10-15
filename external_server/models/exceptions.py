@@ -13,7 +13,7 @@ class UnexpectedMQTTDisconnect(Exception):
     pass
 
 
-class NoPublishedMessage(Exception):
+class NoMessage(Exception):
     pass
 
 

@@ -5,7 +5,6 @@ import concurrent.futures
 from unittest.mock import patch, Mock
 import logging
 
-sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS
@@ -58,7 +57,7 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
         def on_message(client, userdata, message):
             self.x += 1
 
-        client = create_mqtt_client()
+        client = create_mqtt_client("car")
         client.on_message = on_message
         client.connect(broker._host, broker._port)
         client.subscribe("some_topic", qos=_QOS)
@@ -271,11 +270,10 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
         self.assertFalse(self.adapter.is_running)
 
     @patch("paho.mqtt.client.Client.connect")
-    def test_error_is_logged_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
+    def test_error_raised_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
         mock.return_value = MQTT_ERR_SUCCESS + 1
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR) as cm:
+        with self.assertRaises(ConnectionRefusedError):
             self.adapter.connect()
-            self.assertIn(mqtt_error_from_code(MQTT_ERR_SUCCESS + 1), cm.output[-1])
 
     def tearDown(self) -> None:
         self.test_broker.stop()
@@ -746,6 +744,10 @@ class Test_Logging_Connection_Result(unittest.TestCase):
         self.adapter.connect()
         with self.assertLogs(logger=_logger._logger, level=logging.INFO):
             self.adapter.connect()
+
+    def tearDown(self) -> None:
+        self.adapter.stop()
+        MQTTBrokerTest.kill_all_test_brokers()
 
 
 if __name__ == "__main__":  # pragma: no cover

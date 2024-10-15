@@ -27,7 +27,7 @@ from external_server.models.messages import (
 )
 from external_server.models.events import EventType
 from external_server.models.structures import HandledCommand
-from external_server.models.exceptions import NoPublishedMessage, SessionTimeout
+from external_server.models.exceptions import NoMessage, SessionTimeout
 
 
 _eslogger = _logger._logger
@@ -140,6 +140,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
+            time.sleep(0.1)
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
             _wait_for_server_initialization(self.es, self)
             self.broker.wait_for_messages(self.es.mqtt.publish_topic, n=3)
@@ -392,6 +393,7 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device_1]))
             self.broker.publish(topic, status("id", Status.CONNECTING, 0, device_status))
+            time.sleep(0.1)
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.OK))
             _wait_for_server_initialization(self.es, self)
 
@@ -479,7 +481,7 @@ class Test_Command_Response(unittest.TestCase):
             time.sleep(0.1)
             self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1, device=self.device))
             time.sleep(self.es._config.mqtt_timeout + 0.1)
-            self.assertTrue(self.es._command_checker.timeout_occured())
+            self.assertTrue(self.es._command_checker.timeout_occurred())
 
     def tearDown(self) -> None:
         self.es.stop()
@@ -570,7 +572,7 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
 
     def test_no_message_in_queue_raises_error(self):
         self.assertTrue(self.es.mqtt._received_msgs.empty)
-        with self.assertRaises(NoPublishedMessage):
+        with self.assertRaises(NoMessage):
             self.es._handle_car_message()
 
     @patch("external_server.adapters.mqtt.adapter.MQTTClientAdapter.publish")

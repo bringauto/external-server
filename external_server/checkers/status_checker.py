@@ -1,4 +1,4 @@
-from threading import Timer as _Timer
+from threading import Lock as _Lock, Timer as _Timer
 from queue import PriorityQueue as _PriorityQueue, Queue as _Queue
 import sys
 
@@ -34,6 +34,7 @@ class StatusChecker(_Checker):
         self._checked: _Queue[_Status] = _Queue()
         self._allow_counter_reset = True
         self._car = car
+        self._lock = _Lock()
 
     @property
     def checked(self) -> _Queue[_Status]:
@@ -67,9 +68,10 @@ class StatusChecker(_Checker):
                 self._car,
             )
         else:
-            if self._allow_counter_reset:
-                self._counter = status.messageCounter
-                self._allow_counter_reset = False
+            with self._lock:
+                if self._allow_counter_reset:
+                    self._counter = status.messageCounter
+                    self._allow_counter_reset = False
 
             self._received.put((status.messageCounter, status))
             if status.messageCounter == self._counter:
@@ -92,9 +94,10 @@ class StatusChecker(_Checker):
 
     def set_counter(self, counter: CounterValue) -> None:
         """Set the counter to the given value and disallow the counter reset."""
-        if self._received.empty() and self._checked.empty():
-            self._counter = counter
-            self._allow_counter_reset = False
+        with self._lock:
+            if self._received.empty() and self._checked.empty() and self._skipped.empty():
+                self._counter = counter
+                self._allow_counter_reset = False
 
     def reset(self) -> None:
         """Clear all data stored in the checker and reset the counter to the initial value.
@@ -128,16 +131,21 @@ class StatusChecker(_Checker):
     def _store_skipped_counter_values(self, status_counter: CounterValue) -> None:
         """Store all missing status counter values and start timers for them."""
         if not self._skipped.empty() and status_counter <= self._skipped.queue[-1][0]:
+            # the skipped already contains all counters between the last properly handled status and the oldest status received since then
+            # because of that, it is ensured no skipped status counter can be missing from skipped counters queue
             return
         missed_counter_vals = range(self._counter, status_counter)
         for c in missed_counter_vals:
             new_skipped_counter = self._skipped.empty() or c > self._skipped.queue[-1][0]
-            if new_skipped_counter:
+            if c not in self._skipped.queue and new_skipped_counter:
                 self._store_skipped_counter_and_start_timer(c)
 
     def _store_skipped_counter_and_start_timer(self, counter: CounterValue) -> None:
         """Store the missing status counter value and start a timer for it."""
         timer = _Timer(self._timeout, self.set_timeout)
-        timer.start()
-        self._skipped.put((counter, timer))
-        logger.warning(f"Status with counter {counter} is missing.", self._car)
+        try:
+            timer.start()
+            self._skipped.put((counter, timer))
+            logger.warning(f"Status with counter {counter} is missing.", self._car)
+        except Exception as e:
+            logger.error(f"Failed to start timer for counter {counter}: {e}", self._car)

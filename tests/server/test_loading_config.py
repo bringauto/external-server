@@ -5,7 +5,7 @@ import sys
 
 sys.path.append(".")
 
-from external_server.config import ServerConfig, InvalidConfiguration
+from external_server.config import ServerConfig
 
 
 class Test_Cars(unittest.TestCase):
@@ -21,7 +21,7 @@ class Test_Cars(unittest.TestCase):
 
     def test_config_with_no_cars_raises_error(self):
         self.config_dict["cars"].clear()
-        with self.assertRaises(InvalidConfiguration):
+        with self.assertRaises(ValueError):
             ServerConfig(**self.config_dict)
 
     def test_config_single_cars_is_accepted(self):
@@ -51,7 +51,7 @@ class Test_Modules(unittest.TestCase):
 
     def test_config_with_no_modules_raises_error(self):
         self.config_dict["common_modules"].clear()
-        with self.assertRaises(InvalidConfiguration):
+        with self.assertRaises(ValueError):
             ServerConfig(**self.config_dict)
 
     def test_single_module_is_accepted(self):
@@ -72,7 +72,7 @@ class Test_Modules(unittest.TestCase):
             "1": {"lib_path": "./test_lib", "config": {}}
         }
         # the second car has no module assigned
-        with self.assertRaises(InvalidConfiguration):
+        with self.assertRaises(ValueError):
             ServerConfig(**self.config_dict)
 
     def test_modules_defined_for_each_of_multiple_cars_is_accepted(self):
@@ -103,7 +103,7 @@ class Test_Modules(unittest.TestCase):
         self.config_dict["cars"]["car_1"]["specific_modules"] = {
             "1": {"lib_path": "./test_lib", "config": {}}
         }
-        with self.assertRaises(InvalidConfiguration):
+        with self.assertRaises(ValueError):
             ServerConfig(**self.config_dict)
 
     def tearDown(self) -> None:  # pragma: no cover

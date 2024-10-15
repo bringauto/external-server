@@ -36,17 +36,24 @@ class MQTTSession:
     @property
     def timeout_event(self) -> _Event:
         """Return the event object that is set when the session times out."""
-        return self._checker._timeout_event
+        return self._checker.timeout_event
 
     def set_id(self, session_id: str) -> None:
         """Update the session ID."""
+        if not session_id:
+            raise ValueError("Session ID cannot be empty")
+        _logger.info(f"Updating session ID from {self._id} to {session_id}")
         self._id = session_id
 
     def start(self) -> None:
-        """Starts the checker's timer."""
-        self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
-        self._timer.start()
-        self._timer_running = True
+        """Starts the checker's timer if not already running."""
+        if not self._timer_running:
+            self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
+            self._timer.start()
+            self._timer_running = True
+            _logger.debug(f"Started timer for MQTT session {self._id}")
+        else:
+            _logger.warning(f"Timer already running for MQTT session {self._id}")
 
     def reset_timer(self) -> None:
         """Resets the checker's timer.
@@ -62,6 +69,9 @@ class MQTTSession:
             _logger.info(f"Stopping timer for MQTT session {self._id}")
             if self._timer.is_alive():
                 self._timer.cancel()
-                # self._timer.join()
+                self._timer.join()
             self._checker._timeout_event.clear()
             self._timer_running = False
+            self._timer = None
+        else:
+            _logger.debug(f"No timer running for MQTT session {self._id}")

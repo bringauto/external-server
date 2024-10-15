@@ -17,7 +17,7 @@ class DevicePy:
     """
 
     module_id: int
-    type: int
+    device_type: int
     role: str
     name: str
     priority: int
@@ -26,13 +26,13 @@ class DevicePy:
         if isinstance(other, DevicePy):
             return (
                 self.module_id == other.module_id
-                and self.type == other.type
+                and self.device_type == other.device_type
                 and self.role == other.role
             )
         elif isinstance(other, _Device):
             return (
                 self.module_id == other.module
-                and self.type == other.deviceType
+                and self.device_type == other.deviceType
                 and self.role == other.deviceRole
             )
         else:
@@ -42,7 +42,7 @@ class DevicePy:
         """Converts the DevicePy instance to the protobuf Device message."""
         return _Device(
             module=self.module_id,
-            deviceType=self.type,
+            deviceType=self.device_type,
             deviceRole=self.role,
             deviceName=self.name,
             priority=self.priority,
@@ -53,7 +53,7 @@ class DevicePy:
         """Creates a DevicePy instance from the protobuf Device message."""
         return DevicePy(
             module_id=device.module,
-            type=device.deviceType,
+            device_type=device.deviceType,
             role=device.deviceRole,
             name=device.deviceName,
             priority=device.priority,
@@ -101,7 +101,8 @@ class KnownDevices:
         """
         if device in self._not_connected:
             self._not_connected.remove(device)
-        self._connected.append(device)
+        if device not in self._connected:
+            self._connected.append(device)
 
     def list_connected(self) -> list[DevicePy]:
         """Return a copy of the connected devices list."""
@@ -119,7 +120,8 @@ class KnownDevices:
         """
         if device in self._connected:
             self._connected.remove(device)
-        self._not_connected.append(device)
+        if device not in self._not_connected:
+            self._not_connected.append(device)
 
     def is_connected(self, device: DevicePy) -> bool:
         """`True` if device is in connected devices list, `False` otherwise."""
@@ -154,6 +156,6 @@ class KnownDevices:
 
 def device_repr(device: _Device | DevicePy) -> str:
     if isinstance(device, DevicePy):
-        return f"{device.module_id}/{device.type}/{device.role}/{device.name}"
+        return f"{device.module_id}/{device.device_type}/{device.role}/{device.name}"
     else:
         return f"{device.module}/{device.deviceType}/{device.deviceRole}/{device.deviceName}"

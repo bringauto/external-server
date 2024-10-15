@@ -6,7 +6,6 @@ from typing import Any
 import time
 import threading
 
-sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from ExternalProtocol_pb2 import (  # type: ignore
@@ -23,7 +22,7 @@ from external_server.models.exceptions import (  # type: ignore
     ConnectSequenceFailure,
     CommunicationException,
     StatusTimeout,
-    NoPublishedMessage,
+    NoMessage,
     CommandResponseTimeout,
     SessionTimeout,
     UnexpectedMQTTDisconnect,
@@ -37,7 +36,7 @@ from external_server.config import CarConfig as _CarConfig, ServerConfig as _Ser
 from external_server.models.structures import (
     GeneralErrorCode,
     DisconnectTypes,
-    HandledCommand as _HandledCommand,
+    HandledCommand,
     TimeoutType,
 )
 from external_server.models.devices import DevicePy, KnownDevices, device_repr
@@ -53,6 +52,13 @@ eslogger = _ESLogger(LOGGER_NAME)
 carlogger = _CarLogger(LOGGER_NAME)
 
 
+class DeviceStatusName(enum.Enum):
+    CONNECTING = _Status.CONNECTING
+    RUNNING = _Status.RUNNING
+    DISCONNECT = _Status.DISCONNECT
+    ERROR = _Status.ERROR
+
+
 class ServerState(enum.Enum):
     UNINITIALIZED = enum.auto()
     CONNECTED = enum.auto()
@@ -61,42 +67,17 @@ class ServerState(enum.Enum):
     STOPPED = enum.auto()
     ERROR = enum.auto()
 
-
-DeviceStatusName = {
-    _Status.CONNECTING: "CONNECTING",
-    _Status.RUNNING: "RUNNING",
-    _Status.DISCONNECT: "DISCONNECT",
-    _Status.ERROR: "ERROR",
-}
-
-
-StateTransitionTable: dict[ServerState, set[ServerState]] = {
-    ServerState.UNINITIALIZED: {
-        ServerState.ERROR,
-        ServerState.STOPPED,
-        ServerState.CONNECTED,
-    },
-    ServerState.CONNECTED: {
-        ServerState.ERROR,
-        ServerState.STOPPED,
-        ServerState.INITIALIZED,
-    },
-    ServerState.INITIALIZED: {
-        ServerState.ERROR,
-        ServerState.STOPPED,
-        ServerState.RUNNING,
-    },
-    ServerState.RUNNING: {
-        ServerState.ERROR,
-        ServerState.STOPPED,
-    },
-    ServerState.STOPPED: {
-        ServerState.UNINITIALIZED,
-    },
-    ServerState.ERROR: {
-        ServerState.UNINITIALIZED,
-    },
-}
+    @classmethod
+    def is_valid_transition(cls, current_state: ServerState, new_state: ServerState) -> bool:
+        transition_table = {
+            cls.UNINITIALIZED: {cls.ERROR, cls.STOPPED, cls.CONNECTED, cls.UNINITIALIZED},
+            cls.CONNECTED: {cls.ERROR, cls.STOPPED, cls.INITIALIZED, cls.CONNECTED},
+            cls.INITIALIZED: {cls.ERROR, cls.STOPPED, cls.RUNNING, cls.INITIALIZED},
+            cls.RUNNING: {cls.ERROR, cls.STOPPED, cls.RUNNING},
+            cls.STOPPED: {cls.UNINITIALIZED, cls.STOPPED},
+            cls.ERROR: {cls.UNINITIALIZED, cls.ERROR},
+        }
+        return new_state in transition_table.get(current_state, set())
 
 
 ExternalClientMessage = _Connect | _Status | CommandResponse
@@ -114,11 +95,6 @@ class ExternalServer:
         for car_name in config.cars:
             self._car_servers[car_name] = CarServer(_CarConfig.from_server_config(car_name, config))
         self._company = config.company_name
-
-    @property
-    def company(self) -> str:
-        """Return the name of the company set in the external server configuration."""
-        return self._company
 
     def car_servers(self) -> dict[str, CarServer]:
         """Return parts of the external server responsible for each car defined in configuration."""
@@ -314,7 +290,7 @@ class CarServer:
         """
         message = self._mqtt._get_message()
         if message is None:
-            raise NoPublishedMessage("Expected message from car, but did not received any.")
+            raise NoMessage("Expected message from car, but did not received any.")
         return message
 
     def _check_and_handle_available_commands(self, module_id: Any) -> None:
@@ -370,9 +346,9 @@ class CarServer:
                 )
         self._modules.clear()
 
-    def _collect_first_commands_for_init_sequence(self) -> list[_HandledCommand]:
+    def _collect_first_commands_for_init_sequence(self) -> list[HandledCommand]:
         """Collect all first commands for the init sequence."""
-        commands: list[_HandledCommand] = list()
+        commands: list[HandledCommand] = list()
         devices_expecting_cmd: list[_Device] = [
             d.to_device() for d in self._known_devices.list_connected()
         ]
@@ -382,7 +358,7 @@ class CarServer:
                 data, device = cmd[0], cmd[1]
                 drepr = device_repr(device)
                 if device in devices_expecting_cmd:
-                    commands.append(_HandledCommand(data, device=device, from_api=True))
+                    commands.append(HandledCommand(data, device=device, from_api=True))
                     devices_expecting_cmd.remove(device)
                     devices_received_cmd.append(device)
                 elif device in devices_received_cmd:
@@ -395,13 +371,13 @@ class CarServer:
                         self._car_name,
                     )
         for device in devices_expecting_cmd:
-            commands.append(_HandledCommand(b"", device=device, from_api=False))
+            commands.append(HandledCommand(b"", device=device, from_api=False))
             carlogger.info(
                 f"No command received for device {device_repr(device)}. Creating empty command.",
                 self._car_name,
             )
         for device_py in self._known_devices.list_not_connected():
-            commands.append(_HandledCommand(b"", device=device_py.to_device(), from_api=False))
+            commands.append(HandledCommand(b"", device=device_py.to_device(), from_api=False))
             carlogger.info(
                 f"Device {device_repr(device_py)} is not connected. No command is being sent.",
                 self._car_name,
@@ -423,6 +399,23 @@ class CarServer:
             carlogger.error(f"Device {drepr} could not connect. Response code: {code}.", self._car_name)
         return False
 
+    def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> bool:
+        """Disconnect a connected device and return `True` if successful. In other cases, return `False`.
+
+        If the device has already not been connected, log an error.
+        """
+        drepr = device_repr(device)
+        carlogger.info(f"Disconnecting device {drepr}.", self._car_name)
+        if self._known_devices.is_not_connected(device):
+            carlogger.info(f"Device {drepr} is already disconnected.", self._car_name)
+        else:
+            self._known_devices.remove(DevicePy.from_device(device))
+            code = self._modules[device.module].api.device_disconnected(disconnect_types, device)
+            if code == GeneralErrorCode.OK:
+                carlogger.info(f"Device {drepr} has been disconnected.", self._car_name)
+                return True
+        return False
+
     def _connect_device_if_supported(self, device: _Device) -> None:
         """Connect the device if it is supported by a supported module."""
         module = self._modules.get(device.module, None)
@@ -437,23 +430,6 @@ class CarServer:
             carlogger.warning(
                 f"Ignoring device {device_repr(device)} from unsupported module.", self._car_name
             )
-
-    def _disconnect_device(self, disconnect_types: DisconnectTypes, device: _Device) -> bool:
-        """Disconnect a connected device and return `True` if successful. In other cases, return `False`.
-
-        If the device has already not been connected, log an error.
-        """
-        drepr = device_repr(device)
-        carlogger.info(f"Disconnecting device {drepr}.", self._car_name)
-        if not self._known_devices.is_connected(device):
-            carlogger.info(f"Device {drepr} is already disconnected.", self._car_name)
-        else:
-            carlogger.info(f"Device {drepr} has been disconnected.", self._car_name)
-            self._known_devices.remove(DevicePy.from_device(device))
-            code = self._modules[device.module].api.device_disconnected(disconnect_types, device)
-            if code == GeneralErrorCode.OK:
-                return True
-        return False
 
     def _ensure_connection_to_broker(self) -> None:
         """Connect the MQTT client to the MQTT broker.
@@ -504,15 +480,11 @@ class CarServer:
 
         Raise an exception there is not command response.
         """
-        while (response := self._mqtt._get_message()) is not None:
+        while (response := self._mqtt._get_message()):
             if isinstance(response, _ExternalClientMsg) and response.HasField("commandResponse"):
-                if response.commandResponse.sessionId == self._mqtt.session.id:
+                if self._is_valid_session_id(response.commandResponse.sessionId, "command response"):
                     carlogger.info("Received a command response.", self._car_name)
                     return response.commandResponse
-                else:
-                    carlogger.error(
-                        "Skipping command response with different session ID.", self._car_name
-                    )
             else:
                 # ignore other messages
                 carlogger.warning(
@@ -524,6 +496,7 @@ class CarServer:
 
     def _handle_connect(self, connect_msg: _Connect) -> None:
         """Handle connect message received during normal communication, i.e., after init sequence."""
+        # matching and not matching session ID are handled differently from the rest of the 'handle_*' methods
         if connect_msg.sessionId == self._mqtt.session.id:
             carlogger.error(
                 "Received connect message with ID of already existing session.", self._car_name
@@ -553,25 +526,32 @@ class CarServer:
             carlogger.info("Received status from unsupported device. Ignoring status.", self._car_name)
         else:
             module, device = module_and_dev
-            status_ok = True
-            carlogger.info(f"Received status from {device_repr(device)}", self._car_name)
-            match status.deviceState:
-                case _Status.CONNECTING:
-                    status_ok = self._connect_device(device)
-                case _Status.RUNNING:
-                    if not self._known_devices.is_connected(device):
-                        carlogger.warning("Device is not connected. Ignoring status.", self._car_name)
-                        status_ok = False
-                case _Status.DISCONNECT:
-                    status_ok = self._disconnect_device(DisconnectTypes.announced, device)
-                case _:  # unhandled state
-                    carlogger.warning(
-                        f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
-                    )
-            if status_ok:
+            handling_ok = self._handle_checked_status_by_device_state(status, device)
+            if handling_ok:
                 module.api.forward_status(status)
                 carlogger.info(f"Status from {device_repr(device)} has been forwarded.", self._car_name)
                 self._publish_status_response(status)
+
+    def _handle_checked_status_by_device_state(self, status: _Status, device: _Device) -> bool:
+        """Handle the status that has been checked by the status checker.
+
+        Return `True` if the status is handled successfully, otherwise return `False`.
+        """
+        status_ok = True
+        match status.deviceState:
+            case _Status.CONNECTING:
+                status_ok = self._connect_device(device)
+            case _Status.RUNNING:
+                if not self._known_devices.is_connected(device):
+                    carlogger.warning("Device is not connected. Ignoring status.", self._car_name)
+                    status_ok = False
+            case _Status.DISCONNECT:
+                status_ok = self._disconnect_device(DisconnectTypes.announced, device)
+            case _:
+                carlogger.warning(
+                    f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
+                )
+        return status_ok
 
     def _handle_command(self, module_id: int, data: bytes, device: _Device) -> None:
         """Handle the command received from API during normal communication (after init sequence)."""
@@ -579,7 +559,8 @@ class CarServer:
             self._publish_command(data, device)
         else:
             carlogger.warning(
-                f"Module ID {module_id} stored by API does not match module ID in Device ID {device_repr(device)} carried by the command.",
+                f"Module ID {module_id} stored by API does not match module ID in Device ID "
+                f"{device_repr(device)} in the command.",
                 self._car_name,
             )
             if self._config.send_invalid_command:
@@ -599,10 +580,8 @@ class CarServer:
         carlogger.info(
             f"Received command response (counter = {cmd_response.messageCounter}).", self._car_name
         )
-
         if cmd_response.type == CommandResponse.DEVICE_NOT_CONNECTED:
             self._handle_command_response_with_disconnected_type(cmd_response)
-
         commands = self._command_checker.pop(cmd_response)
         for command in commands:
             module = self._modules[command.device.module]
@@ -659,21 +638,25 @@ class CarServer:
             # This message is not expected outside of a init sequence
             self._handle_connect(message.connect)
         elif message.HasField("status"):
-            if self._mqtt.session.id == message.status.sessionId:
+            if self._is_valid_session_id(message.status.sessionId, "status"):
                 self._reset_session_checker()
                 self._handle_status(message.status)
-            else:
-                carlogger.warning("Ignoring status with different session ID.", self._car_name)
         elif message.HasField("commandResponse"):
-            if self._mqtt.session.id == message.commandResponse.sessionId:
+            if self._is_valid_session_id(message.commandResponse.sessionId, "command response"):
                 self._reset_session_checker()
                 self._handle_command_response(message.commandResponse)
-            else:
-                carlogger.warning(
-                    "Ignoring command response with session ID not matching"
-                    "the current session ID.",
-                    self._car_name,
-                )
+        else:
+            carlogger.warning("Received message of unknown type. Ignoring.", self._car_name)
+
+    def _is_valid_session_id(self, message_session_id: str, message_type: str = "message") -> bool:
+        """Check if the session ID of the message matches the current session ID of the server.
+
+        Return `True` if the session ID is valid, otherwise log a warning and return `False`.
+        """
+        if message_session_id != self._mqtt.session.id:
+            carlogger.warning(f"Ignoring {message_type.strip()} with different session ID ({message_session_id})", self._car_name)
+            return False
+        return True
 
     def _init_sequence(self) -> None:
         """Runs initial sequence before starting normal communication over MQTT.
@@ -685,28 +668,41 @@ class CarServer:
         - sending first command to every device listed in the connect message IN ORDER
         of the devices in the connect message and receiving responses to each one.
         """
-        if self.state == ServerState.STOPPED:
-            carlogger.info(
-                "Server has been stopped. Connect sequence will not be started.", self._car_name
-            )
+
+        if self._should_skip_init_sequence():
             return
         carlogger.info("Starting the connect sequence.", self._car_name)
         try:
-            if not self.state == ServerState.CONNECTED:
-                raise ConnectSequenceFailure(
-                    "Cannot start connect sequence without connection to MQTT broker."
-                )
-            self._get_and_handle_connect_message()
-            self._get_all_first_statuses_and_respond()
-            self._send_first_commands_and_get_responses()
-
-            self._set_state(ServerState.INITIALIZED)
-            if self._state == ServerState.INITIALIZED:
-                carlogger.info("Connect sequence has finished succesfully.", self._car_name)
-            self._event_queue.clear()
+            self._validate_initial_state()
+            self._perform_connect_sequence()
+            self._finalize_init_sequence()
         except Exception as e:
-            msg = f"Connection sequence has failed. {e}"
-            raise ConnectSequenceFailure(msg) from e
+            self._handle_init_sequence_failure(e)
+
+    def _should_skip_init_sequence(self) -> bool:
+        if self.state == ServerState.STOPPED:
+            carlogger.info("Server has been stopped. Connect sequence will not be started.", self._car_name)
+            return True
+        return False
+
+    def _validate_initial_state(self) -> None:
+        if self.state != ServerState.CONNECTED:
+            raise ConnectSequenceFailure("Cannot start connect sequence without connection to MQTT broker.")
+
+    def _perform_connect_sequence(self) -> None:
+        self._get_and_handle_connect_message()
+        self._get_all_first_statuses_and_respond()
+        self._send_first_commands_and_get_responses()
+
+    def _finalize_init_sequence(self) -> None:
+        self._set_state(ServerState.INITIALIZED)
+        if self._state == ServerState.INITIALIZED:
+            carlogger.info("Connect sequence has finished successfully.", self._car_name)
+        self._event_queue.clear()
+
+    def _handle_init_sequence_failure(self, e: Exception) -> None:
+        msg = f"Connection sequence has failed. {e}"
+        raise ConnectSequenceFailure(msg) from e
 
     def _initialize_modules(self, server_config: _CarConfig) -> dict[int, _ServerModule]:
         """Return dictionary of ServerModule instances created.
@@ -747,7 +743,7 @@ class CarServer:
         if not module:
             carlogger.warning(f"Unknown module (ID={device.module}).", self._car_name)
             return None
-        elif not module.api.is_device_type_supported(device.deviceType):
+        if not module.api.is_device_type_supported(device.deviceType):
             self.warn_device_not_supported_by_module(module, device, self._car_name)
             return None
         return module, device
@@ -764,7 +760,7 @@ class CarServer:
                 f"Data of command for device {device_repr(device)} is empty.", self._car_name
             )
 
-        handled_cmd = _HandledCommand(data=data, device=device, from_api=True)
+        handled_cmd = HandledCommand(data=data, device=device, from_api=True)
         self._command_checker.add(handled_cmd)
         # the following has to be called before publishing in order to assign counter to the command
         self._mqtt.publish(handled_cmd.external_command(self.session_id))
@@ -834,7 +830,8 @@ class CarServer:
 
         No action is taken if the transition is not allowed.
         """
-        if state in StateTransitionTable[self._state]:
+        print(f"Setting state from {self._state} to {state}")
+        if ServerState.is_valid_transition(current_state=self.state, new_state=state):
             carlogger.debug(f"Changing server's state from {self._state} to {state}.", self._car_name)
             self._state = state
         elif state != self.state:
@@ -868,8 +865,8 @@ class CarServer:
     def check_device_is_in_connecting_state(status: _Status, car: str = "") -> None:
         """Check if the device state contained in the status is connecting."""
         if status.deviceState != _Status.CONNECTING:
-            state = DeviceStatusName.get(status.deviceState, str(status.deviceState))
-            connecting_state = DeviceStatusName[_Status.CONNECTING]
+            state = DeviceStatusName._value2member_map_[status.deviceState]
+            connecting_state = DeviceStatusName._value2member_map_[_Status.CONNECTING]
             msg = (
                 f"First status from device {device_repr(status.deviceStatus.device)} "
                 f"must contain {connecting_state} state, received {state}."

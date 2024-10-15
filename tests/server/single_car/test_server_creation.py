@@ -70,7 +70,7 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
 
     def test_external_server_has_modules_created(self):
         self.assertEqual(len(self.es.modules), 1)
-        self.assertTrue(1000 in self.es.modules)
+        self.assertIn(1000, self.es.modules)
 
     def test_all_devices_are_initialized(self):
         self.assertTrue(self.es.modules[1000].api.device_initialized())
