@@ -74,6 +74,8 @@ COPY external_server_main.py /home/bringauto/external_server/
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 
+RUN mkdir /home/bringauto/log/
+
 # Set the entrypoint
 # "bash" and "-c" have to be used to be able to use environment variables
 # $0 and $@ are needed to pass arguments to the script

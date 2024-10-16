@@ -9,7 +9,7 @@
   "mqtt_timeout": 30,
   "timeout": 30,
   "send_invalid_command": false,
-  "sleep_duration_after_connection_refused": 0.5,
+  "sleep_duration_after_connection_refused": 1,
   "common_modules": {
     "1": {
       "lib_path": "/home/bringauto/modules/mission_module/lib/libmission-external-server-shared.so",

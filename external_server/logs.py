@@ -117,15 +117,25 @@ def configure_logging(component_name: str, config: dict) -> None:
 
     The logging configuration is read from a JSON file. If the file is not found, a default configuration is used.
     """
+
+    log_config = config["logging"]
+    logger = logging.getLogger(LOGGER_NAME)
     try:
-        log_config = config["logging"]
-        logger = logging.getLogger(LOGGER_NAME)
         verbose: bool = log_config["verbose"]
         logger.setLevel(_log_level_by_verbosity[verbose])
+    except KeyError as e:
+        logging.error(f"{component_name}: Missing logging configuration. {e}")
+    except Exception as e:
+        logging.error(f"{component_name}: Could not configure logging. {e}")
 
+    try:
         # create formatter
         formatter = logging.Formatter(_log_format(component_name), datefmt=_DATE_FORMAT)
-
+        # console handler
+        if verbose:
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
         # file handler
         file_path = os.path.join(log_config["log-path"], _log_file_name(component_name) + ".log")
         file_handler = logging.handlers.RotatingFileHandler(
@@ -133,13 +143,6 @@ def configure_logging(component_name: str, config: dict) -> None:
         )
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
-
-        # console handler
-        if verbose:
-            console_handler = logging.StreamHandler()
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-
     except KeyError as e:
         logging.error(f"{component_name}: Missing logging configuration. {e}")
     except Exception as e:
@@ -148,7 +151,7 @@ def configure_logging(component_name: str, config: dict) -> None:
 
 def _log_format(component_name: str) -> str:
     log_component_name = "-".join(component_name.lower().split())
-    return f"[%(asctime)s.%(msecs)03d] [{log_component_name}] [%(levelname)s]\t %(message)s"
+    return f"[%(asctime)s.%(msecs)03d]\t[{log_component_name}]\t[%(levelname)s]\t%(message)s"
 
 
 def _log_file_name(component_name: str) -> str:
