@@ -2,7 +2,7 @@
 
 FROM bringauto/cpp-build-environment:latest AS mission_module_builder
 
-ARG MISSION_MODULE_VERSION=v1.2.10
+ARG MISSION_MODULE_VERSION=v1.2.11
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -62,19 +62,20 @@ WORKDIR /home/bringauto
 
 # Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-RUN pip3 install -r /home/bringauto/external_server/requirements.txt --break-system-packages
+RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install -r /home/bringauto/external_server/requirements.txt
+
+# Copy project files into the docker image
+COPY external_server /home/bringauto/external_server/external_server/
+COPY config/for_docker.json /home/bringauto/config/for_docker.json
+COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
+COPY external_server_main.py /home/bringauto/external_server/
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 
-# Copy project files into the docker image
-COPY external_server /home/bringauto/external_server/external_server
-COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
-COPY external_server_main.py /home/bringauto/external_server/
-
-# Prepare the log directory
-RUN mkdir /home/bringauto/log
-
-# Copy configuration files
-COPY config /home/bringauto/config
+# Set the entrypoint
+# "bash" and "-c" have to be used to be able to use environment variables
+# $0 and $@ are needed to pass arguments to the script
+ENTRYPOINT [ "bash", "-c", "$PYTHON_ENVIRONMENT_PYTHON3 /home/bringauto/external_server/external_server_main.py $0 $@" ]
+CMD [ "-c", "/home/bringauto/config/for_docker.json" ]
