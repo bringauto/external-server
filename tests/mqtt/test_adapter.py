@@ -84,10 +84,6 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
         broker.stop()
         client.loop_stop()
 
-        client.disconnect()
-        broker.stop()
-        client.loop_stop()
-
 
 class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
 
@@ -745,7 +741,9 @@ class Test_Logging_Connection_Result(unittest.TestCase):
 
     def test_error_is_logged_when_connecting_to_broker_fails(self):
         # broker does not exist
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR), self.assertRaises(ConnectionRefusedError):
+        with self.assertLogs(logger=_logger._logger, level=logging.ERROR), self.assertRaises(
+            ConnectionRefusedError
+        ):
             self.adapter.connect()
 
     def test_info_is_logged_when_just_connected_to_broker(self):

@@ -1,14 +1,12 @@
 from __future__ import annotations
 import os
+import sys
 import subprocess
-import logging.config
+import logging
 import time
 import threading
-import sys
 import contextlib
 from typing import Any
-
-sys.path.append(".")
 
 import paho.mqtt.publish as publish  # type: ignore
 import paho.mqtt.client as client  # type: ignore
@@ -98,7 +96,6 @@ class MQTTBrokerTest:
         - `data` The user data associated with the client.
         - `message` (mqtt.MQTTMessage): The received MQTT message.
         """
-        logger.info(f"Received message on topic '{message.topic}'.")
         print(f"Received message on topic '{message.topic}'.")
         if not self._messages.get(message.topic):
             self._messages[message.topic] = list()

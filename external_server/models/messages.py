@@ -61,7 +61,7 @@ def status_response(session_id: str, message_counter: int) -> ExternalServerMsg:
 def command(
     session_id: str, counter: int, device: _Device, data: bytes = bytes()
 ) -> ExternalServerMsg:
-    """Creates an external command with the session ID, counter, device status and data.
+    """Creates an external command with the session ID, counter, device and data.
 
     Args:
         session_id (str): The session ID for the external command.

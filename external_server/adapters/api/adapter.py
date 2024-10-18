@@ -67,6 +67,8 @@ class APIClientAdapter:
         Error is raised if the library is not found or the context is not set.
         """
         self._library.init()
+        if self._library.context is None:
+            raise RuntimeError("Failed to initialize library: context not set")
 
     def destroy(self) -> int:
         """Destroys the library and cleans up."""
@@ -127,9 +129,14 @@ class APIClientAdapter:
         DeviceIdentification
             The created DeviceIdentification structure.
         """
-        device_role = device.deviceRole.encode("utf-8")
+        try:
+            device_role = device.deviceRole.encode("utf-8")
+            device_name = device.deviceName.encode("utf-8")
+        except UnicodeEncodeError as e:
+            _logger.error(f"Failed to encode device role or name: {e}", self._car)
+            device_role = b""
+            device_name = b""
         device_role_buffer = Buffer(data=device_role, size=len(device_role))
-        device_name = device.deviceName.encode("utf-8")
         device_name_buffer = Buffer(data=device_name, size=len(device_name))
 
         return DeviceIdentification(
@@ -145,17 +152,12 @@ class APIClientAdapter:
         device.module = device_id.module
         device.priority = device_id.priority
         device.deviceType = device_id.device_type
-        role_length = device_id.device_role.size
-        name_length = device_id.device_name.size
-        if not device_id.device_role.data or role_length == 0:
-            device.deviceRole = ""
-        else:
-            device.deviceRole = device_id.device_role.data[:role_length].decode("utf-8")
-
-        if not device_id.device_name.data or name_length == 0:
-            device.deviceName = ""
-        else:
-            device.deviceName = device_id.device_name.data[:name_length].decode("utf-8")
+        device.deviceRole = (
+            device_id.device_role.data.decode("utf-8") if device_id.device_role.data else ""
+        )
+        device.deviceName = (
+            device_id.device_name.data.decode("utf-8") if device_id.device_name.data else ""
+        )
         return device
 
     def forward_status(self, status: _Status) -> int:

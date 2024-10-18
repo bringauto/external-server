@@ -20,7 +20,7 @@ def empty_command_buffer() -> Buffer:
 
 
 def empty_device_identification() -> DeviceIdentification:
-    return DeviceIdentification(0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0)
+    return DeviceIdentification(0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p(), 0), 0)
 
 
 class ModuleLibrary:
@@ -86,7 +86,7 @@ class ModuleLibrary:
         with self._lock:
             return int(self.library.get_module_number())
 
-    def init(self) -> ct.c_void_p:
+    def init(self) -> None:
         if not os.path.isfile(self._lib_path):
             raise FileNotFoundError(self._lib_path)
         try:

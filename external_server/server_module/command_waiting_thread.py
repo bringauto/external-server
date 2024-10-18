@@ -70,6 +70,7 @@ class CommandWaitingThread:
         module_connection_check: Callable[[], bool],
         event_queue: _EventQueue,
         timeout_ms: int = 1000,
+        poll_interval: float = 0.2,
     ) -> None:
 
         self._api_adapter: APIClientAdapter = api_client
@@ -82,6 +83,7 @@ class CommandWaitingThread:
         self._continue_thread = True
         self._timeout_ms = timeout_ms
         self._car = api_client.car
+        self._poll_interval = poll_interval
 
     @property
     def timeout_ms(self) -> int:
@@ -156,4 +158,4 @@ class CommandWaitingThread:
     def _main_thread(self) -> None:
         while self._continue_thread:
             self.poll_commands()
-            time.sleep(0.2)
+            time.sleep(self._poll_interval)

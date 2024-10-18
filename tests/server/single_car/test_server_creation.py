@@ -3,12 +3,10 @@ import sys
 import concurrent.futures as futures
 import time
 
-sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
 
-from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.config import CarConfig, ModuleConfig
 from external_server.server import CarServer, ServerState
 from external_server.models.events import EventQueue
