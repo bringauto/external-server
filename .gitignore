@@ -1,5 +1,14 @@
 build/
+_build/
 __pycache__
 _tmp
 .vscode
 .idea
+.venv
+.pytest_cache
+external_server.egg-info
+*.
+/log/*.log
+.env
+*.coverage
+dummy.py

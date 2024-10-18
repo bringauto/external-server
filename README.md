@@ -1,102 +1,178 @@
 # External Server
 
-Directory contains fake external server the communicates with external client, which is part of the [module gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
+The External Server is a component of the [Fleet Protocol](https://github.com/bringauto/fleet-protocol). It communicates with an External Client, which is part of the [Module Gateway](https://gitlab.bringauto.com/bring-auto/fleet-protocol-v2/module-gateway).
 
-## Fleet protocol deviations
-- This implementation of External server can handle only one car. To handle multiple cars, more instances of this External server must be created. This is a deviation from Fleet protocol where one External server instance can handle multiple cars.
+It handles communication between a cloud instance and multiple cars registered under a single company.
 
-## Requirements
+# Requirements
 
 - Python (version >= 3.10)
-- Other python requirements can be installed by `pip3 install -r requirements.txt`
-- In directory `external_server/modules/car_accessory_module` run following commands:
-    - `mkdir build`
-    - `cd build`
-    - `cmake ..`
-    - `make`
 
-## Arguments
+# Usage
+
+## Install dependencies
+
+### Python packages
+
+Install the required Python packages in a virtual environment by running the following:
+
+```bash
+python3 -m venv .venv && \
+source .venv/bin/activate && \
+pip3 install -r requirements.txt
+```
+
+### Submodules
+
+Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule
+
+```bash
+git submodule update --init lib/fleet-protocol
+```
+
+## Configure the External Server
+
+Prepare your config file for the External Server. The config file can be found in `config/config.json`.
+
+As an example of a filled-up config file, see the `config/config.json`. Before running the server, update the `config/config.json` accordingly.
+
+### Server configuration
+
+Set up the logging, the MQTT connection parameters and company name and the External server behavior.
+
+- `logging` - contains the following keys:
+  - `log-path` - path to the directory where logs will be stored.
+  - `verbosity` - if `False`, logs level will be set to `INFO` and logs printed only to file. If `True`, log level is set to `DEBUG` and logs are printed both to a file and to console.
+- `company_name` - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
+- `mqtt_address` - IP address of the MQTT broker.
+- `mqtt_port` - port of the MQTT broker.
+  ation of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.- `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
+- `timeout` (in seconds) - Maximum time amount between Status or Command messages and receiving corresponding responses.
+- `send_invalid_command` - sends command to Module gateway even if External Server detects invalid command returned from external_server_api; affects only normal communication.
+- `sleep_duration_after_connection_refused` - if the connection to Module Gateway was refused, the External Server will sleep for a defined duration before the next connection attempt proceeds.
+
+### Common modules
+
+One of the last items in the config file is `common_modules`, represented by key-value pairs. The key is the module ID (a module number), the value contains following
+
+- `lib_path` (required) - path to module shared library (`*.so`).
+- `config` (optional) - module specific configuration, any key-value pairs will be forwarded to module implementation init function. When empty or not provided, empty configuration is forwarded to the init function of module.
+  > [!WARNING]
+  > A common module will be used for all cars. No such module can be defined in the car configuration.
+  > See the `config/config.json` for an example of modules configuration.
+
+### Cars
+
+The last item in the config file is `cars`, represented by key-value pairs. The key is the name of the car, the value is a dictionary containing car-specific modules keyed as `specific_modules`.
+
+The structure of the `specific_modules` is the same as the `common_modules` structure.
+
+See the `config/config.json` for an example of car configuration.
+
+> [!WARNING]
+> Configuring a module with the same ID both in `common_modules` and `specific_modules` is invalid and the server will not start.
+
+> [!IMPORTANT]
+> For each car, at least one module has to be defined, either in `common_modules` or `specific_modules`.
+
+## Start the External Server
+
+After configuration and installation of the dependencies, run External Server with this command:
+
+```bash
+python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
+```
 
 - `-c or --config <str>` = path to the config file, default = `./config/config.json`
 - `--tls` = tls mqtt authentication
 
-### TLS arguments
-
-following arguments are used if argument `tls` is set:
+Following arguments are used if argument `tls` is set:
 
 - `--ca <str>` = path to ca certification
 - `--cert <str>` = path to cert file
 - `--key <str>` = path to key file
 
-## Usage
+# Unit tests
 
-Prepare your shared library of module implementation (implementation of external_server_api.h). To use this library with External server, you need to fill the module number and path to this library into External server config file.
+## Necessary steps before testing
 
-### Options in config file
+### Requirements
 
- - company_name, car_name (required) - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed
- - mqtt_address (required) - IP address of the MQTT broker
- - mqtt_port (required) - port of the MQTT broker
- - mqtt_timeout (in seconds) - timeout for getting message from MqttClient
- - timeout (in seconds) - Maximum time amount between Status and Command messages
- - send_invalid_command - sends command to Module gateway even if External server detects invalid command returned from external_server_api; affects only normal communication
- - sleep_duration_after_connection_refused - if connection to Module gateway was refused, External server will sleep for defined duration before next connection attempt is proceed
- - log_files_directory (required) - path to a directory in which the logs will be stored. If left empty, the current working directory will be used
- - log_files_to_keep (required) - number of log files that will be kept (can be 0)
- - log_file_max_size_bytes (required) - max file size of a log in bytes (0 means unlimited)
- - modules (required) - supported modules specified by module number
-    - lib_path (required) - path to module shared library
-    - config (optional) - specification of config for module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function
+- [Requirements](#requirements)
+- CMLIB: https://github.com/cmakelib/cmakelib
 
- ### Example of config file
+### Install the external server package
 
- ```json
-{
-    "company_name": "bringauto",
-    "car_name": "virtual_vehicle",
-    "mqtt_address": "127.0.0.1",
-    "mqtt_port": 1883,
-    "mqtt_timeout": 30,
-    "timeout": 30,
-    "send_invalid_command": false,
-    "sleep_duration_after_connection_refused": 0.5,
-    "log_files_directory": "/path/to/logs/directory",
-    "log_files_to_keep": 5,
-    "log_file_max_size_bytes": 50000,
-    "modules": {
-        "2" : {
-            "lib_path": "/path/to/module/library/with/number/2",
-            "config": {
-                "ip": "172.0.1.1",
-                "port": "4242"
-            }
-        },
-        "3" : {
-            "lib_path": "/path/to/module/library/with/number/3",
-            "config": {}
-        }
-    }
-}
- ```
+Do the steps from the [Install dependencies](#install-dependencies) section.
 
-After filling the config, you can run External server with this command:
+Install the package in editable mode and install test requirements (assuming you already installed the requirements for the server):
 
 ```bash
-python3 external_server_main.py
+pip install -e .
+pip install -r tests/requirements.txt
 ```
 
-## Unit tests
-
-Unit tests are covering classes in external_server/checker direcory. Tests are using pytest. With installed pytest run this:
+Update submodules
 
 ```bash
-python -m pytest
+git submodule update --init --recursive
 ```
 
-## Docker
-The External server is ready to use with docker. You can build docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
- - module 3 - IO module
+### Install the shared library
 
-These compiled modules are inserted into image and are ready to use with External server in docker container.
+Compile a shared library for the [Example Module](https://github.com/bringauto/example-module/). This requires
 
-The External server can be also used with docker compose. In the docker-compose.yml is example of External server service, which can't be used alone and should be inserted into another docker-compose.yml with MQTT service and defined network. This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
+- the [example-module](https://github.com/bringauto/example-module/) cloned as a submodule in the `tests/utils` directory.
+
+Run the following
+
+```bash
+pushd tests/utils/example_module && \
+mkdir -p _build && \
+cd _build && \
+cmake .. -DCMLIB_DIR=<path-to-cmakelib-dir> && \
+make
+popd
+```
+
+cmakelib directory is absolute path to this repo root directory.
+
+## Running the tests
+
+In the root folder, run the following
+
+```bash
+python -m tests [-h] [PATH1] [PATH2] ...
+```
+
+Each PATH is specified relative to the `tests` folder. If no PATH is specified, all the tests will run. Otherwise
+
+- when PATH is a directory, the script will run all tests in this directory (and subdirectories),
+- when PATH is a Python file, the script will run all tests in the file.
+
+The `-h` flag makes the script display tests' coverage in an HTML format, for example in your web browser.
+
+# Docker
+
+The External Server is ready to use with Docker. You can build a Docker image with `docker build .` in this directory. The Dockerfile also describes compiling these Bringauto modules:
+
+- module 1 - Mission module,
+- module 2 - IO module.
+
+These compiled modules are inserted into the image and are ready to use with the External Server in a Docker container.
+
+The External Server can also be used with Docker Compose. In the `docker-compose.yml` is example of External Server service, which can't be used alone and should be inserted into another `docker-compose.yml` with MQTT service and defined network (the [etna](https://github.com/bringauto/etna) is an example). This specific example assumes that MQTT broker is service named `mosquitto` and defined network is `bring-emulator`.
+
+# Development
+
+## Type checking
+
+To allow for type checking of the classes from compiler protobuf of Fleet Protocol, run:
+
+```bash
+pushd lib/fleet-protocol/protobuf && \
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
+popd
+```
+
+Then add `<project-root-directory>/lib/fleet-protocol/protobuf/compiled/python`to the `PYTHONPATH` environment variable.

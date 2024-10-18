@@ -1,3 +1,7 @@
 [project]
 name = "external_server"
-version = "1.1.14"
+version = "2.0.0"
+
+
+[tool.setuptools.packages.find]
+include = ["external_server", "config", "docs"]
