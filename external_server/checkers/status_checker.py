@@ -137,7 +137,7 @@ class StatusChecker(_Checker):
         missed_counter_vals = range(self._counter, status_counter)
         for c in missed_counter_vals:
             new_skipped_counter = self._skipped.empty() or c > self._skipped.queue[-1][0]
-            if c not in self._skipped.queue and new_skipped_counter:
+            if c not in [counter for counter, _ in self._skipped.queue] and new_skipped_counter:
                 self._store_skipped_counter_and_start_timer(c)
 
     def _store_skipped_counter_and_start_timer(self, counter: CounterValue) -> None:

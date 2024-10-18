@@ -6,6 +6,7 @@ from external_server.models.events import (
     EventQueue as _EventQueue,
 )
 
+
 class TimeoutChecker:
     """A class that provides a mechanism to check for a timeouts in a single or multiple threaded operations."""
 
@@ -41,12 +42,10 @@ class TimeoutChecker:
         return self._timeout_event
 
     def timeout_occurred(self) -> bool:
-        """Returns True if timeout occured, False otherwise."""
+        """Returns True if timeout occurred, False otherwise."""
         return self._timeout_event.is_set()
 
     def set_timeout(self) -> None:
         """Puts event to event queue."""
         self._timeout_event.set()
-        self._event_queue.add(
-            event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type
-        )
+        self._event_queue.add(event_type=_EventType.TIMEOUT_OCCURRED, data=self._timeout_type)

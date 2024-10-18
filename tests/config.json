@@ -6,8 +6,8 @@
   "company_name": "bringauto",
   "mqtt_address": "mosquitto",
   "mqtt_port": 1883,
-  "mqtt_timeout": 30,
-  "timeout": 30,
+  "mqtt_timeout": 3,
+  "timeout": 3,
   "send_invalid_command": false,
   "sleep_duration_after_connection_refused": 0.5,
   "common_modules": {

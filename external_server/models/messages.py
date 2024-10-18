@@ -27,9 +27,10 @@ def connect_response(
 
     Args:
         session_id (str): The session ID for the connect response.
-        connect_response_type (_ConnectResponse.Type): The response type for the connect response.
+        response_type (_ConnectResponse.Type): The response type for the connect response.
 
-    Returns an instance of ExternalServer containing the connect response message.
+    Returns:
+        ExternalServerMsg: An instance of ExternalServerMsg containing the connect response message.
     """
     connect_response = _ConnectResponse()
     connect_response.sessionId = session_id
@@ -71,7 +72,7 @@ def command(
         data (bytes): The command data for the external command.
 
     Returns:
-        ExternalServer: An instance of the external command message.
+        ExternalServerMsg: An instance of the external command message.
     """
     command = _Command()
     command.sessionId = session_id

@@ -89,21 +89,24 @@ class HandledCommand:
     counter: Counter = -1
     from_api: ReturnedFromAPIFlag = False
 
+    def __post_init__(self):
+        if not isinstance(self.device, _Device):
+            raise ValueError("Incorrect device data. Device object is expected.")
+
     def copy(self) -> "HandledCommand":
         # do not set the counter to prevent unexpected match between two commands counters
-        return HandledCommand(
-            data=self.data, device=self.device, from_api=self.from_api
-        )
+        return HandledCommand(data=self.data, device=self.device, from_api=self.from_api)
 
     def external_command(self, session_id: str) -> _ExternalServerMsg:
         """Return the command as ExternalServer message."""
         try:
             if self.counter < 0:
                 raise ValueError
+            device_command = _DeviceCommand(device=self.device, commandData=self.data)
             command = _Command(
                 sessionId=session_id,
                 messageCounter=self.counter,
-                deviceCommand=_DeviceCommand(device=self.device, commandData=self.data),
+                deviceCommand=device_command,
             )
             return _ExternalServerMsg(command=command)
         except ValueError as e:

@@ -2,6 +2,7 @@ import unittest
 import sys
 import time
 import logging
+import threading
 
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
@@ -23,6 +24,7 @@ class APIClientAdapterTest(APIClientAdapter):
         self._commands_list: list[tuple[bytes, Device, ReturnCode]] = []
         self.api_initialized = False
         self._module_id = module_id
+        self._command_available = threading.Event()
 
     def init(self) -> None:
         self.api_initialized = True
@@ -30,11 +32,13 @@ class APIClientAdapterTest(APIClientAdapter):
     def define_commands(self, api_commands: list[tuple[bytes, Device, ReturnCode]]) -> None:
         """Fill the mocked command queue with commands."""
         self._commands_list = api_commands.copy()
+        if self._commands_list:
+            self._command_available.set()
 
     def pop_command(self) -> tuple[bytes, Device, ReturnCode]:  # pragma: no cover
         if self._commands_list:
             cmd = self._commands_list.pop(0)
-            cmd = (cmd[0], cmd[1], GeneralErrorCode.OK)
+            cmd = (cmd[0], cmd[1], len(self._commands_list))
             return cmd
         else:
             return (b"", Device(), GeneralErrorCode.NOT_OK)
@@ -43,30 +47,28 @@ class APIClientAdapterTest(APIClientAdapter):
         if not self.api_initialized:
             return GeneralErrorCode.NOT_OK
         else:
-            time_s = 0.0
             timeout_s = timeout / 1000.0
-            dt = 0.01
-            while time_s < timeout_s:
-                if self._commands_list:
-                    return GeneralErrorCode.OK
-                else:
-                    time_s += dt
-                    time.sleep(dt)
+            if self._command_available.wait(timeout=timeout_s):
+                self._command_available.clear()
+                return GeneralErrorCode.OK
             return EsErrorCode.TIMEOUT
 
 
 class Test_Creating_Command_Waiting_Thread(unittest.TestCase):
 
-    def setUp(self) -> None:
-        self.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
-        self.client = APIClientAdapterTest(
-            config=self.module_config, company="BringAuto", car="Car1", module_id=4
+    @classmethod
+    def setUpClass(cls):
+        cls.module_config = ModuleConfig(lib_path=EXAMPLE_MODULE_SO_LIB_PATH, config={})
+        cls.client = APIClientAdapterTest(
+            config=cls.module_config, company="BringAuto", car="Car1", module_id=4
         )
-        self.client.init()
+        cls.client.init()
+
+    def setUp(self):
         self.connected = False
         self.thread = CommandWaitingThread(
             self.client, lambda: self.connected, event_queue=EventQueue(), timeout_ms=100
-        )  # pragma: no cover
+        )
 
     def test_thread_is_initially_not_started(self):
         self.assertFalse(self.thread._waiting_thread.is_alive())

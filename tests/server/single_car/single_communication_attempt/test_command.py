@@ -89,6 +89,8 @@ class Test_Command_Response_With_Type_Device_Not_Connected(unittest.TestCase):
 
     def setUp(self) -> None:
         self.es = get_test_car_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.es.mqtt.connect()
         self.device_1 = Device(
             module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test1"
         )
@@ -132,6 +134,9 @@ class Test_Command_Response_With_Type_Device_Not_Connected(unittest.TestCase):
         # device remains connected - the response was not relevant to any command
         self.assertTrue(self.es._known_devices.is_connected(self.device_1))
         self.assertTrue(self.es._known_devices.is_connected(self.device_2))
+
+    def tearDown(self):
+        self.broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover

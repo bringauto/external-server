@@ -33,7 +33,7 @@ from external_server.models.exceptions import NoMessage, SessionTimeout
 _eslogger = _logger._logger
 
 
-def _wait_for_server_connection(
+def wait_for_server_connection(
     server: CarServer, test_case: unittest.TestCase, timeout: float = 2.0
 ):
     t = time.time()
@@ -62,16 +62,14 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
     def setUp(self):
         self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(
-            self.es.mqtt.subscribe_topic,
-            self.es.mqtt.publish_topic,
-            start=True
+            self.es.mqtt.subscribe_topic, self.es.mqtt.publish_topic, start=True
         )
         self.device_1 = Device(
             module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1"
         )
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device_1]))
@@ -135,7 +133,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
         with futures.ThreadPoolExecutor() as ex:
             self.es._set_running_flag(True)
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))
@@ -172,7 +170,8 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             ex.submit(self.es._run_normal_communication)
             self.broker.clear_messages(self.es.mqtt.publish_topic)
             self.broker.publish(
-                self.es.mqtt.subscribe_topic, status("id", Status.RUNNING, 1, DeviceStatus(device=self.device), b"error")
+                self.es.mqtt.subscribe_topic,
+                status("id", Status.RUNNING, 1, DeviceStatus(device=self.device), b"error"),
             )
             self.broker.wait_for_messages(self.es.mqtt.publish_topic, n=1)
             self.assertEqual(self.posted_error, b"error")
@@ -237,7 +236,7 @@ class Test_Session_Time_Out(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))
@@ -268,7 +267,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             )  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._mqtt.session.timeout_event.is_set())
 
-    def test_timeout_is_not_raised_if_connect_respose_from_module_gateway_is_received_in_time(self):
+    def test_timeout_is_not_raised_if_command_respose_from_module_gateway_is_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
             self.assertTrue(self.es._known_devices.is_connected(self.device))
             ex.submit(self.es._run_normal_communication)
@@ -277,7 +276,7 @@ class Test_Session_Time_Out(unittest.TestCase):
                 self.es.mqtt.subscribe_topic, cmd_response("id", 1, CommandResponse.OK)
             )
             time.sleep(
-                self.es._mqtt.session.timeout / 2 + 0.02
+                self.es._mqtt.session.timeout / 2 + 0.1
             )  # in total, the sleep time exceeds the timeout
             self.assertFalse(self.es._mqtt.session.timeout_event.is_set())
 
@@ -343,7 +342,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))
@@ -356,7 +355,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             with self.assertLogs(_eslogger, logging.ERROR) as cm:
                 self.broker.publish(sub_topic, connect_msg("id", "company", [self.device]))
                 time.sleep(0.1)
@@ -367,7 +366,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         with futures.ThreadPoolExecutor() as ex:
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             with self.assertNoLogs(_eslogger, logging.WARNING):
                 self.broker.publish(
                     sub_topic, connect_msg("other_session_id", "company", [self.device])
@@ -388,7 +387,7 @@ class Test_Connecting_Device_During_Normal_Communication(unittest.TestCase):
         )
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device_1)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device_1]))
@@ -420,7 +419,7 @@ class Test_Receiving_Command(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))
@@ -454,7 +453,7 @@ class Test_Command_Response(unittest.TestCase):
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_initial_sequence)
-            _wait_for_server_connection(self.es, self)
+            wait_for_server_connection(self.es, self)
             device_status = DeviceStatus(device=self.device)
             topic = self.es.mqtt.subscribe_topic
             self.broker.publish(topic, connect_msg("id", "company", [self.device]))

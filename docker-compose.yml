@@ -10,7 +10,19 @@ services:
       - "./log:/home/bringauto/log/"
     networks:
       - bring-emulator
+    depends_on:
+      initialize-log-folders:
+        condition: service_started
+
+  initialize-log-folders:
+    image: ubuntu:24.04
+    restart: "no"
+    volumes:
+      - ./log:/home/bringauto/log/
+    entrypoint:
+      ["/usr/bin/chown", "-R", "5000:5000", "/home/bringauto/log"]
 
 networks:
   bring-emulator:
     name: bring-emulator
+

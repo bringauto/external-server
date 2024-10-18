@@ -62,7 +62,7 @@ def main() -> None:
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
-    eslogger.info(f"Loaded config:\n{config.model_dump_json()}")
+    eslogger.info(f"Loaded config:\n{config.model_dump_json(indent=4)}")
     server = ExternalServer(config)
     if args.tls:
         server.set_tls(args.ca, args.cert, args.key)

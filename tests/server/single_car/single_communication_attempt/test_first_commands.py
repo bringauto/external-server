@@ -1,6 +1,7 @@
 import unittest
 import sys
 from unittest.mock import patch, Mock
+import json
 
 sys.path.append(".")
 
@@ -23,19 +24,19 @@ class Test_Commands_For_Single_Connected_Device(unittest.TestCase):
         self.es._add_connected_devices(self.device_1)
 
     def test_empty_command_is_returned_if_thread_commands_queue_is_empty(self):
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertEqual(cmds, [HandledCommand(b"", device=self.device_1, from_api=False)])
 
     def test_single_command_is_returned_if_thread_commands_contain_one_cmd(self):
         self.es.modules[1000].thread._commands.put(b"test", self.device_1)
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertEqual(cmds, [HandledCommand(b"test", device=self.device_1, from_api=True)])
 
     def test_only_the_first_command_is_returned_if_thread_commands_contain_multiple_cmds(self):
         self.es.modules[1000].thread._commands.put(b"one", self.device_1)
         self.es.modules[1000].thread._commands.put(b"two", self.device_1)
         self.es.modules[1000].thread._commands.put(b"three", self.device_1)
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertEqual(cmds, [HandledCommand(b"one", device=self.device_1, from_api=True)])
 
     def tearDown(self) -> None:
@@ -57,7 +58,7 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.es._add_connected_devices(self.device_3)
 
     def test_empty_commands_are_returned_if_thread_commands_queue_is_empty(self):
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertEqual(
             cmds,
             [
@@ -71,7 +72,7 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.es.modules[1000].thread._commands.put(b"one", self.device_1)
         self.es.modules[1000].thread._commands.put(b"two", self.device_2)
         self.es.modules[1000].thread._commands.put(b"three", self.device_3)
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertListEqual(
             cmds,
             [
@@ -88,7 +89,7 @@ class Test_Multiple_Connected_Devices(unittest.TestCase):
         self.es.modules[1000].thread._commands.put(b"four", self.device_2)
         self.es.modules[1000].thread._commands.put(b"five", self.device_3)
         self.es.modules[1000].thread._commands.put(b"six", self.device_3)
-        cmds = self.es._collect_first_commands_for_init_sequence()
+        cmds = self.es._first_commands_for_init_sequence()
         self.assertListEqual(
             cmds,
             [
@@ -116,17 +117,11 @@ class Test_Not_Connected_Devices(unittest.TestCase):
         self.es._add_not_connected_device(self.device_2)
         # device_3 is not known (not connected or not disconnected)
 
-    def test_commands_are_returned_for_all_known_devices(self):
+    def test_commands_are_returned_for_all_connected_devices(self):
         self.es.modules[1000].thread._commands.put(b"one", self.device_1)
         self.es.modules[1000].thread._commands.put(b"two", self.device_2)
-        cmds = self.es._collect_first_commands_for_init_sequence()
-        self.assertListEqual(
-            cmds,
-            [
-                HandledCommand(b"one", device=self.device_1, from_api=True),
-                HandledCommand(b"", device=self.device_2, from_api=False),
-            ],
-        )
+        cmds = self.es._first_commands_for_init_sequence()
+        self.assertListEqual(cmds, [HandledCommand(b"one", device=self.device_1, from_api=True)])
 
     def tearDown(self) -> None:
         self.es.mqtt.disconnect()

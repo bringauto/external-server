@@ -3,7 +3,6 @@ import sys
 import time
 import threading
 
-sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
@@ -26,6 +25,7 @@ from external_server.models.messages import (
 )
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest
+from tests.utils import get_test_car_server
 
 
 ES_CONFIG_WITHOUT_MODULES = {
@@ -56,7 +56,7 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(
             self.es.mqtt.publish_topic,
             self.es.mqtt.subscribe_topic,
@@ -134,8 +134,8 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
         self.assertEqual(expected_resp.SerializeToString(), response[0])
 
     def tearDown(self) -> None:
-        self.broker.stop()
         self.es.stop()
+        self.broker.stop()
 
 
 class Test_Receiving_First_Status(unittest.TestCase):
@@ -143,7 +143,7 @@ class Test_Receiving_First_Status(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(
             self.es.mqtt.publish_topic, self.es.mqtt.subscribe_topic, start=True
         )
@@ -205,7 +205,7 @@ class Test_Command_Response(unittest.TestCase):
     def setUp(self) -> None:
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        self.es = get_test_car_server()
         self.broker = MQTTBrokerTest(
             self.es.mqtt.publish_topic, self.es.mqtt.subscribe_topic, start=True
         )
@@ -240,66 +240,67 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
     def setUp(self):
         module_config = ModuleConfig(lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={})
         self.config = CarConfig(modules={"1000": module_config}, **ES_CONFIG_WITHOUT_MODULES)
-        self.es = CarServer(config=self.config)
+        self.es = get_test_car_server()
         self.timeout = self.es.mqtt.timeout
         self.broker = MQTTBrokerTest(
             self.es.mqtt.publish_topic, self.es.mqtt.subscribe_topic, start=True
         )
 
-    def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
-        device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", [device_1])
-        self.es._set_running_flag(True)
-        run_thread = threading.Thread(target=self.es._single_communication_run)
-        run_thread.start()
+    def wait_for_server_connection(self) -> None:
         while True:
             if not self.es.mqtt.is_connected:
                 time.sleep(0.01)
             else:
                 break
-        mock_publishing_from_ext_client(self.es, self.broker, connect_payload)
-        time.sleep(self.timeout + 0.2)
+
+    def test_if_first_status_is_not_delivered_before_timeout(self) -> None:
+        device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
+
+        connect_payload_1 = connect_msg("id1", "ba", [device_1])
+        connect_payload_2 = connect_msg("id2", "ba", [device_1])
+        delayed_status = status("id2", _Status.CONNECTING, 0, DeviceStatus(device=device_1))
+        command_response = cmd_response("id2", 0, CommandResponse.OK)
+
+        self.es._set_running_flag(True)
+
+        run_thread = threading.Thread(target=self.es._single_communication_run)
+        run_thread.start()
+        self.wait_for_server_connection()
+
+        mock_publishing_from_ext_client(self.es, self.broker, connect_payload_1)
+        time.sleep(self.timeout + 0.5)
+
         # connect sequence is repeated
         run_thread = threading.Thread(target=self.es._single_communication_run)
         run_thread.start()
-        while True:
-            if not self.es.mqtt.is_connected:
-                time.sleep(0.01)
-            else:
-                break
+        self.wait_for_server_connection()
 
-        delayed_status = status("id", _Status.CONNECTING, 0, DeviceStatus(device=device_1))
-        command_response = cmd_response("id", 0, CommandResponse.OK)
-
-        mock_publishing_from_ext_client(self.es, self.broker, connect_payload)
+        mock_publishing_from_ext_client(self.es, self.broker, connect_payload_2)
         mock_publishing_from_ext_client(self.es, self.broker, delayed_status)
         mock_publishing_from_ext_client(self.es, self.broker, command_response)
-        response = self.broker.wait_for_messages(self.es.mqtt.publish_topic, n=4)[1:]
 
+        response = self.broker.wait_for_messages(self.es.mqtt.publish_topic, n=4)[1:]
         msg_1, msg_2, msg_3 = ExternalServerMsg(), ExternalServerMsg(), ExternalServerMsg()
         msg_1.ParseFromString(response[0])
         msg_2.ParseFromString(response[1])
         msg_3.ParseFromString(response[2])
-        self.assertEqual(msg_1.connectResponse.sessionId, "id")
+        self.assertEqual(msg_1.connectResponse.sessionId, "id2")
         self.assertEqual(msg_2.connectResponse.type, ConnectResponse.OK)
-        self.assertEqual(msg_2.statusResponse.sessionId, "id")
+        self.assertEqual(msg_2.statusResponse.sessionId, "id2")
         self.assertEqual(msg_2.statusResponse.messageCounter, 0)
-        self.assertEqual(msg_3.command.sessionId, "id")
+        self.assertEqual(msg_3.command.sessionId, "id2")
         self.assertEqual(msg_3.command.messageCounter, 0)
 
     def test_if_command_response_is_not_delivered_before_timeout(self) -> None:
         device_1 = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test_1")
-        connect_payload = connect_msg("id", "ba", [device_1])
-        status_payload = status("id", _Status.CONNECTING, 0, DeviceStatus(device=device_1))
-        cmd_response_payload = cmd_response("id", 0, CommandResponse.OK)
+        connect_payload = connect_msg("idx", "ba", [device_1])
+        status_payload = status("idx", _Status.CONNECTING, 0, DeviceStatus(device=device_1))
+        cmd_response_payload = cmd_response("idx", 0, CommandResponse.OK)
 
         run_thread = threading.Thread(target=self.es._single_communication_run)
         run_thread.start()
-        while True:
-            if not self.es.mqtt.is_connected:
-                time.sleep(0.01)
-            else:
-                break
+
+        self.wait_for_server_connection()
 
         mock_publishing_from_ext_client(self.es, self.broker, connect_payload)
         mock_publishing_from_ext_client(self.es, self.broker, status_payload)
@@ -307,11 +308,9 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
 
         run_thread = threading.Thread(target=self.es._single_communication_run)
         run_thread.start()
-        while True:
-            if not self.es.mqtt.is_connected:
-                time.sleep(0.01)
-            else:
-                break
+
+        self.wait_for_server_connection()
+
         # connect sequence is repeated
         self.broker.clear_messages(self.es.mqtt.subscribe_topic)
         mock_publishing_from_ext_client(self.es, self.broker, connect_payload)
@@ -323,16 +322,16 @@ class Test_Connection_Sequence_Restarted(unittest.TestCase):
         msg_1.ParseFromString(response[0])
         msg_2.ParseFromString(response[1])
         msg_3.ParseFromString(response[2])
-        self.assertEqual(msg_1.connectResponse.sessionId, "id")
+        self.assertEqual(msg_1.connectResponse.sessionId, "idx")
         self.assertEqual(msg_2.connectResponse.type, ConnectResponse.OK)
-        self.assertEqual(msg_2.statusResponse.sessionId, "id")
+        self.assertEqual(msg_2.statusResponse.sessionId, "idx")
         self.assertEqual(msg_2.statusResponse.messageCounter, 0)
-        self.assertEqual(msg_3.command.sessionId, "id")
+        self.assertEqual(msg_3.command.sessionId, "idx")
         self.assertEqual(msg_3.command.messageCounter, 0)
 
     def tearDown(self) -> None:
+        self.es.stop()
         self.broker.stop()
-        MQTTBrokerTest.kill_all_test_brokers()
 
 
 if __name__ == "__main__":  # pragma: no cover

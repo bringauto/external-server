@@ -27,10 +27,8 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as ExternalServerMsg,
     Status as _Status,
 )
-from external_server.models.events import (
-    EventType as _EventType,
-    EventQueue as _EventQueue
-)
+from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue
+from external_server.models.exceptions import MQTTCommunicationError
 
 # maximum number of messages in outgoing queue
 # value reasoning: external server can handle approximatelly 20 devices
@@ -74,7 +72,7 @@ def mqtt_error_from_code(code: int) -> str:
     enum_val = _MQTTErrorCode._value2member_map_.get(code)
     if enum_val is None:
         return "Unknown error code"
-    return _error_string(enum_val)
+    return _error_string(enum_val).rstrip(".")
 
 
 class MQTTClientAdapter:
@@ -106,7 +104,7 @@ class MQTTClientAdapter:
         self._keepalive = _KEEPALIVE
         self._broker_host = broker_host
         self._broker_port = port
-        self._session = MQTTSession(mqtt_timeout, event_queue)
+        self._session = MQTTSession(mqtt_timeout, event_queue, car)
         self._set_up_callbacks()
         self._car = car
 
@@ -168,7 +166,6 @@ class MQTTClientAdapter:
                 self._handle_successful_connection_to_mqtt_broker()
             else:
                 error = mqtt_error_from_code(code)
-                print(error)
                 raise ConnectionRefusedError(error)
         except ConnectionRefusedError as e:
             self.stop()
@@ -251,7 +248,8 @@ class MQTTClientAdapter:
                 _logger.info(log_msg, self._car)
         else:
             msg = f"Failed to publish message. {mqtt_error_from_code(code)}."
-            _logger.error(msg, self._car)
+            _logger.warning(msg, self._car)
+            raise MQTTCommunicationError(msg)
 
     def stop(self) -> None:
         """Stop the MQTT client's event loop. If the client is already stopped, no action
@@ -317,12 +315,15 @@ class MQTTClientAdapter:
         self._set_up_callbacks()
         self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
         self._start_client_loop()
-        self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
-        _logger.debug(
-            f"\nListening on topic: {self._subscribe_topic}"
-            f"\nPublishing on topic: {self._publish_topic}",
-            self._car,
-        )
+        connection = self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
+        if connection:
+            _logger.debug(
+                f"\nListening on topic: {self._subscribe_topic}"
+                f"\nPublishing on topic: {self._publish_topic}",
+                self._car,
+            )
+        else:
+            raise ConnectionRefusedError(f"Failed to connect to broker: {self.broker_address}")
 
     def _log_connection_result(self, code: int) -> None:
         address = self.broker_address
@@ -333,7 +334,7 @@ class MQTTClientAdapter:
                 f"Cannot connect to broker ({address}). {mqtt_error_from_code(code)}", self._car
             )
 
-    def _on_connect(self, client: _Client, data, flags, rc, properties) -> None:
+    def _on_connect(self, client: _Client, data: Any, flags: Any, rc, properties: Any) -> None:
         """Callback function for handling connection events.
 
         Args:
@@ -345,7 +346,7 @@ class MQTTClientAdapter:
         """
         self._log_connection_result(rc)
 
-    def _on_disconnect(self, client: _Client, data: Any, flags: Any, rc, properties) -> None:
+    def _on_disconnect(self, client: _Client, data: Any, flags: Any, rc, properties: Any) -> None:
         """Callback function for handling disconnection events.
 
         Args:
@@ -361,7 +362,7 @@ class MQTTClientAdapter:
                 f"MQTT on disconnect callback: Failed to disconnect from the broker. {e}", self._car
             )
 
-    def _on_message(self, client: _Client, data, message: MQTTMessage) -> None:
+    def _on_message(self, client: _Client, data: Any, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
 
         The message is added to the received messages queue, if the topic matches the subscribe topic,
@@ -397,7 +398,7 @@ class MQTTClientAdapter:
     def _wait_for_connection(self, timeout: float) -> bool:  # pragma: no cover
         """Wait for the connection to be established."""
         start = time.monotonic()  # seconds
-        timeout_s = max(timeout, 0.0) # seconds
+        timeout_s = max(timeout, 0.0)  # seconds
         while time.monotonic() - start < timeout_s:
             if self.is_connected:
                 return True

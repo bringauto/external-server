@@ -9,10 +9,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from InternalProtocol_pb2 import Device as _Device  # type: ignore
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api.adapter import APIClientAdapter  # type: ignore
-from external_server.models.events import (
-    EventType as _EventType,
-    EventQueue as _EventQueue
-)
+from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 
 
@@ -41,7 +38,8 @@ class _CommandQueue:
             with self._commands_lock:
                 command = self._queue.get(block=False)
                 logger.debug(
-                    f"Retrieving command from command waiting thread queue. Number of remaning commands: {self.qsize()}.", self._car
+                    f"Retrieving command from command waiting thread queue. Number of remaning commands: {self.qsize()}.",
+                    self._car,
                 )
         except Empty:
             return None
@@ -54,7 +52,8 @@ class _CommandQueue:
     def put(self, command: bytes, device: _Device) -> None:
         self._queue.put((command, device))
         logger.debug(
-            f"Command added to command waiting thread queue. Number of commands in queue: {self.qsize()}.", self._car
+            f"Command added to command waiting thread queue. Number of commands in queue: {self.qsize()}.",
+            self._car,
         )
 
 
@@ -93,7 +92,7 @@ class CommandWaitingThread:
         self._waiting_thread.start()
 
     def stop(self) -> None:
-        """Stops the thread and waits for it to finish."""
+        """Stops the thread by setting the continue flag to False."""
         self._continue_thread = False
         self.wait_for_join()
 
@@ -121,29 +120,40 @@ class CommandWaitingThread:
         elif rc == EsErrorCode.TIMEOUT:
             logger.debug("No command available from API.", self._car)
         else:
-            logger.error(f"Error occured in wait_for_command function in API, return code: {rc}.", self._car)
+            logger.error(
+                f"Error occured in wait_for_command function in API, return code: {rc}.", self._car
+            )
 
     def _pass_available_commands_to_queue(self) -> None:
         """Save the available commands in the queue."""
         remain_cmds = 1
-        while remain_cmds >= 0:
+        popped_commands: list[tuple[bytes, _Device]] = list()
+        while remain_cmds > 0:
             command, device, remain_cmds = self._api_adapter.pop_command()
             if remain_cmds < 0:
                 logger.error(f"Error in pop_command in API. Code: {remain_cmds}.", self._car)
             else:
-                with self._commands_lock, self._connection_established_lock:
-                    if not self._module_connected():
-                        # forget about commands if the module is not connected
-                        self._commands.clear()
-                    logger.debug("Command received from the API is stored in queue.", self._car)
-                    self._commands.put(command, device)
-                    if self._module_connected():
-                        module_id = self._api_adapter.get_module_number()
-                        self._event_queue.add(
-                            event_type=_EventType.COMMAND_AVAILABLE, data=module_id
-                        )
+                popped_commands.append((command, device))
+        self._put_popped_commands_into_queue(popped_commands)
+
+    def _put_popped_commands_into_queue(self, commands: list[tuple[bytes, _Device]]) -> None:
+        if not commands:
+            return
+        if not self._module_connected():
+            commands = commands[-1:]
+        for command, device in commands:
+            self._put_single_popped_command_into_queue(command, device)
+
+    def _put_single_popped_command_into_queue(self, command: bytes, device: _Device) -> None:
+        """Put the command in the queue."""
+        with self._commands_lock, self._connection_established_lock:
+            logger.debug("Command received from the API is stored in queue.", self._car)
+            self._commands.put(command, device)
+            if self._module_connected():
+                module_id = self._api_adapter.get_module_number()
+                self._event_queue.add(event_type=_EventType.COMMAND_AVAILABLE, data=module_id)
 
     def _main_thread(self) -> None:
         while self._continue_thread:
             self.poll_commands()
-            time.sleep(0.1)
+            time.sleep(0.2)

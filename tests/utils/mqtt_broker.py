@@ -51,7 +51,6 @@ class MQTTBrokerTest:
         self._client.on_message = self._on_message
         self._topics = client_topics
         self._new_message = threading.Event()
-
         if start:
             self.start()
 
@@ -106,7 +105,9 @@ class MQTTBrokerTest:
         self._messages[message.topic].append(message.payload)
         self._new_message.set()
 
-    def wait_for_messages(self, topic: str, n: int = 1, timeout: float = 5.0) -> None | list[bytes]:
+    def wait_for_messages(
+        self, topic: str, n: int = 1, timeout: float = 5.0, newest: bool = False
+    ) -> None | list[bytes]:
         """Wait for `n` messages on the given topic.
 
         Args:
@@ -128,7 +129,10 @@ class MQTTBrokerTest:
             else:
                 messages = self.messages(topic)
                 if len(messages) > n:
-                    return messages[:n]
+                    if newest:
+                        return messages[-n:]
+                    else:
+                        return messages[:n]
                 elif len(messages) == n:
                     return messages
 
@@ -177,6 +181,11 @@ class MQTTBrokerTest:
 
     def stop(self):
         """Stop the broker process to stop all communication and free up the port."""
+        self._client.loop_stop()
+        self._client.disconnect()
+        while self._client.is_connected():
+            time.sleep(0.1)
+
         if self._process:
             self._process.terminate()
             self._process.wait()
@@ -185,8 +194,4 @@ class MQTTBrokerTest:
                 self._running_broker_processes.remove(self._process)
             self._process = None
             MQTTBrokerTest.kill_all_test_brokers()
-
-        self._client.loop_stop()
-        self._client.disconnect()
-
         time.sleep(0.1)

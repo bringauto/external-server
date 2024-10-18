@@ -4,6 +4,7 @@ import logging.handlers
 import os
 
 from external_server.models.exceptions import (  # type: ignore
+    CommunicationException,
     ConnectSequenceFailure,
     StatusTimeout,
     NoMessage,
@@ -101,6 +102,7 @@ class ESLogger(_Logger):
 
 
 LOG_LEVELS: dict[Type[Exception], int] = {
+    CommunicationException: logging.WARNING,
     ConnectSequenceFailure: logging.WARNING,
     NoMessage: logging.WARNING,
     CommandResponseTimeout: logging.WARNING,

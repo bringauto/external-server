@@ -74,6 +74,7 @@ COPY external_server_main.py /home/bringauto/external_server/
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 
+USER 5000:5000
 RUN mkdir /home/bringauto/log/
 
 # Set the entrypoint

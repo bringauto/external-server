@@ -4,6 +4,7 @@ import time
 import concurrent.futures
 from unittest.mock import patch, Mock
 import logging
+import threading
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
@@ -33,6 +34,8 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.models.events import EventType, EventQueue  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
+from external_server.models.exceptions import MQTTCommunicationError
+
 from tests.utils.mqtt_broker import MQTTBrokerTest  # type: ignore
 
 
@@ -58,9 +61,13 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
 
     def test_creating_mqtt_client_adapter(self):
         broker = MQTTBrokerTest(start=True)
+        message_received = threading.Event()
         self.x = 0
+
         def on_message(client, userdata, message):
             self.x += 1
+            message_received.set()
+
         client = create_mqtt_client("car")
         client.on_message = on_message
         client.connect(broker._host, broker._port)
@@ -69,9 +76,13 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
         self.wait_for_connection(client, timeout_s=1)
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(broker.publish("some_topic", "some_message"))
-            time.sleep(0.1)
+            executor.submit(broker.publish, "some_topic", "some_message")
+            self.assertTrue(message_received.wait(timeout=5.0))
             self.assertEqual(self.x, 1)
+
+        client.disconnect()
+        broker.stop()
+        client.loop_stop()
 
         client.disconnect()
         broker.stop()
@@ -202,7 +213,6 @@ class Test_Connecting_To_Broker(unittest.TestCase):
         self.broker.start()
         state_before = self.adapter.client._state
         self.adapter.disconnect()
-        time.sleep(0.1)
         self.assertEqual(self.adapter.client._state, state_before)
 
     def test_client_after_disconnecting_is_in_disconnected_state(self):
@@ -241,7 +251,6 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
 
     def test_client_loop_is_started_and_returns_connected_state_if_broker_does_exist(self):
         broker = MQTTBrokerTest(start=True, port=1883)
-        time.sleep(0.1)
         self.adapter.connect()
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTED)
         broker.stop()
@@ -556,9 +565,10 @@ class Test_Unsuccessful_Connection_To_Broker(unittest.TestCase):
             port=1884,
             event_queue=EventQueue(),
         )
-        with self.assertLogs(logger=_logger._logger, level="ERROR"):
-            with self.assertRaises(ConnectionRefusedError):
-                adapter.connect()
+        with self.assertLogs(logger=_logger._logger, level="ERROR"), self.assertRaises(
+            ConnectionRefusedError
+        ):
+            adapter.connect()
 
 
 class Test_MQTT_Client_Disconnected(unittest.TestCase):
@@ -592,10 +602,11 @@ class Test_MQTT_Client_Disconnected(unittest.TestCase):
         with self.assertLogs(logger=_logger._logger, level=logging.ERROR):
             self.adapter.disconnect()
 
-    def test_publishing_message_from_disconnected_client_logs_error(self):
+    def test_publishing_message_from_disconnected_client_logs_warning_and_raises_error(self):
         msg = command("session_id", 0, Device(), b"some_command")
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR):
-            self.adapter.publish(msg)
+        with self.assertLogs(logger=_logger._logger, level=logging.WARNING):
+            with self.assertRaises(MQTTCommunicationError):
+                self.adapter.publish(msg)
 
     def tearDown(self) -> None:
         self.broker.stop()

@@ -11,6 +11,8 @@ from external_server.server import CarServer
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, CAR_CONFIG_WITHOUT_MODULES
 from external_server.models.events import EventQueue
+from external_server.checkers.command_checker import PublishedCommandChecker
+from external_server.checkers.status_checker import StatusChecker
 
 
 def _create_test_files():
@@ -70,7 +72,29 @@ class Test_TLS(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **CAR_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        event_queue = EventQueue(self.config.car_name)
+        mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
+        )
+        status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        self.es = CarServer(
+            config=self.config,
+            mqtt_adapter=mqtt_adapter,
+            event_queue=event_queue,
+            status_checker=status_checker,
+            command_checker=command_checker,
+        )
         _create_test_files()
 
     @patch("ssl.SSLContext.load_verify_locations")

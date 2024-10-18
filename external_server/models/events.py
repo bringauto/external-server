@@ -15,6 +15,7 @@ class EventType(Enum):
     CAR_MESSAGE_AVAILABLE = auto()
     MQTT_BROKER_DISCONNECTED = auto()
     TIMEOUT_OCCURRED = auto()
+    SERVER_STOPPED = auto()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)

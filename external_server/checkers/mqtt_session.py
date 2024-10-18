@@ -1,19 +1,18 @@
 from threading import Event as _Event, Timer as _Timer
-import logging
 
 from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType
 from external_server.models.events import EventQueue as _EventQueue
-from external_server.logs import LOGGER_NAME
+from external_server.logs import LOGGER_NAME as _LOGGER_NAME, CarLogger as _CarLogger
 
 
-_logger = logging.getLogger(LOGGER_NAME)
+_logger = _CarLogger(_LOGGER_NAME)
 
 
 class MQTTSession:
     """A class managing MQTT session context and activity."""
 
-    def __init__(self, timeout: float, event_queue: _EventQueue) -> None:
+    def __init__(self, timeout: float, event_queue: _EventQueue, car_name: str) -> None:
         self._checker = _Checker(
             timeout_type=_TimeoutType.SESSION_TIMEOUT,
             timeout=timeout,
@@ -22,6 +21,7 @@ class MQTTSession:
         self._timer: _Timer | None = None
         self._timer_running = False
         self._id: str = ""
+        self._car_name = car_name
 
     @property
     def id(self) -> str:
@@ -42,7 +42,7 @@ class MQTTSession:
         """Update the session ID."""
         if not session_id:
             raise ValueError("Session ID cannot be empty")
-        _logger.info(f"Updating session ID from {self._id} to {session_id}")
+        _logger.info(f"Updating session ID from '{self._id}' to '{session_id}'.", self._car_name)
         self._id = session_id
 
     def start(self) -> None:
@@ -51,9 +51,11 @@ class MQTTSession:
             self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
             self._timer.start()
             self._timer_running = True
-            _logger.debug(f"Started timer for MQTT session {self._id}")
+            _logger.debug(f"Started timer for MQTT session (id='{self._id}')", self._car_name)
         else:
-            _logger.warning(f"Timer already running for MQTT session {self._id}")
+            _logger.warning(
+                f"Timer already running for MQTT session (id='{self._id}').", self._car_name
+            )
 
     def reset_timer(self) -> None:
         """Resets the checker's timer.
@@ -66,7 +68,7 @@ class MQTTSession:
     def stop(self) -> None:
         """Stops the checker's timer."""
         if self._timer_running and self._timer is not None:
-            _logger.info(f"Stopping timer for MQTT session {self._id}")
+            _logger.info(f"Stopping timer for MQTT session (id='{self._id}').", self._car_name)
             if self._timer.is_alive():
                 self._timer.cancel()
                 self._timer.join()
@@ -74,4 +76,4 @@ class MQTTSession:
             self._timer_running = False
             self._timer = None
         else:
-            _logger.debug(f"No timer running for MQTT session {self._id}")
+            _logger.debug(f"No timer running for MQTT session (id='{self._id}').", self._car_name)

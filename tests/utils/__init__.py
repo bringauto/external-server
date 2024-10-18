@@ -8,6 +8,10 @@ from external_server.config import (
     ModuleConfig as _ModuleConfig,
     ServerConfig as _ServerConfig,
 )
+from external_server.checkers.command_checker import PublishedCommandChecker
+from external_server.checkers.status_checker import StatusChecker
+from external_server.adapters.mqtt.adapter import MQTTClientAdapter
+from external_server.models.events import EventQueue
 
 
 EXAMPLE_MODULE_SO_LIB_PATH: FilePath = FilePath(
@@ -55,6 +59,30 @@ def get_test_car_server(mqtt_timeout: float = -1, timeout: float = -1) -> CarSer
         config.mqtt_timeout = mqtt_timeout
     if timeout > 0:
         config.timeout = timeout
-    es = CarServer(config=config)
+
+    event_queue = EventQueue(config.car_name)
+    status_checker = StatusChecker(
+        timeout=config.timeout, event_queue=event_queue, car=config.car_name
+    )
+    command_checker = PublishedCommandChecker(
+        timeout=config.timeout, event_queue=event_queue, car=config.car_name
+    )
+    mqtt_adapter = MQTTClientAdapter(
+        company=config.company_name,
+        car=config.car_name,
+        broker_host=config.mqtt_address,
+        port=config.mqtt_port,
+        timeout=config.mqtt_timeout,
+        event_queue=event_queue,
+        mqtt_timeout=config.timeout,
+    )
+
+    es = CarServer(
+        config=config,
+        event_queue=event_queue,
+        status_checker=status_checker,
+        command_checker=command_checker,
+        mqtt_adapter=mqtt_adapter,
+    )
     es.mqtt.client.disable_logger()
     return es

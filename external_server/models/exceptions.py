@@ -13,6 +13,10 @@ class UnexpectedMQTTDisconnect(Exception):
     pass
 
 
+class MQTTCommunicationError(Exception):
+    pass
+
+
 class NoMessage(Exception):
     pass
 

@@ -46,7 +46,7 @@ Set up the logging, the MQTT connection parameters and company name and the Exte
 - `company_name` - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` - IP address of the MQTT broker.
 - `mqtt_port` - port of the MQTT broker.
-ation of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.- `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
+  ation of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.- `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
 - `timeout` (in seconds) - Maximum time amount between Status or Command messages and receiving corresponding responses.
 - `send_invalid_command` - sends command to Module gateway even if External Server detects invalid command returned from external_server_api; affects only normal communication.
 - `sleep_duration_after_connection_refused` - if the connection to Module Gateway was refused, the External Server will sleep for a defined duration before the next connection attempt proceeds.
@@ -57,9 +57,9 @@ One of the last items in the config file is `common_modules`, represented by key
 
 - `lib_path` (required) - path to module shared library (`*.so`).
 - `config` (optional) - module specific configuration, any key-value pairs will be forwarded to module implementation init function. When empty or not provided, empty configuration is forwarded to the init function of module.
-> [!WARNING]
-> A common module will be used for all cars. No such module can be defined in the car configuration.
-See the `config/config.json` for an example of modules configuration.
+  > [!WARNING]
+  > A common module will be used for all cars. No such module can be defined in the car configuration.
+  > See the `config/config.json` for an example of modules configuration.
 
 ### Cars
 

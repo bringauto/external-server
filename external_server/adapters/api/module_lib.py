@@ -1,6 +1,6 @@
 import ctypes as ct
 import sys
-from typing import Any
+from typing import Any, Optional
 import os
 import threading
 
@@ -20,9 +20,7 @@ def empty_command_buffer() -> Buffer:
 
 
 def empty_device_identification() -> DeviceIdentification:
-    return DeviceIdentification(
-        0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0
-    )
+    return DeviceIdentification(0, 0, Buffer(ct.c_char_p(), 0), Buffer(ct.c_char_p()), 0)
 
 
 class ModuleLibrary:
@@ -44,7 +42,7 @@ class ModuleLibrary:
         self._lock = threading.Lock()
 
     @property
-    def context(self) -> ct.c_void_p | None:
+    def context(self) -> Optional[ct.c_void_p]:
         return self._context
 
     @property
@@ -56,16 +54,16 @@ class ModuleLibrary:
     def device_disconnected(
         self, disconnect_type: DisconnectTypes, device: DeviceIdentification
     ) -> int:
-        return int(
-            self.library.device_disconnected(disconnect_type, device, self._context)
-        )
+        with self._lock:
+            return int(self.library.device_disconnected(disconnect_type, device, self._context))
 
     def device_connected(self, device: DeviceIdentification) -> int:
         with self._lock:
             return int(self.library.device_connected(device, self._context))
 
     def command_ack(self, buffer: Buffer, device: DeviceIdentification) -> int:
-        return int(self.library.command_ack(buffer, device, self._context))
+        with self._lock:
+            return int(self.library.command_ack(buffer, device, self._context))
 
     def destroy(self) -> int:
         with self._lock:
@@ -73,37 +71,44 @@ class ModuleLibrary:
             return self._library.destroy(ct.pointer(con))  # type: ignore
 
     def deallocate(self, buffer: Buffer) -> None:
-        self.library.deallocate(buffer)
+        with self._lock:
+            self.library.deallocate(buffer)
 
-    def forward_error_message(
-        self, buffer: Buffer, device: DeviceIdentification
-    ) -> int:
-        return int(self.library.forward_error_message(buffer, device, self._context))
+    def forward_error_message(self, buffer: Buffer, device: DeviceIdentification) -> int:
+        with self._lock:
+            return int(self.library.forward_error_message(buffer, device, self._context))
 
     def forward_status(self, buffer: Buffer, device: DeviceIdentification) -> int:
-        return int(self.library.forward_status(buffer, device, self._context))
+        with self._lock:
+            return int(self.library.forward_status(buffer, device, self._context))
 
     def get_module_number(self) -> int:
-        return int(self.library.get_module_number())
+        with self._lock:
+            return int(self.library.get_module_number())
 
     def init(self) -> ct.c_void_p:
         if not os.path.isfile(self._lib_path):
             raise FileNotFoundError(self._lib_path)
-        self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
+        try:
+            self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
+        except OSError as e:
+            raise RuntimeError(f"Failed to load library '{self._lib_path}': {e}")
+        except Exception as e:
+            raise RuntimeError(f"Unexpected error when loading a library '{self._lib_path}': {e}")
         self._type_all_function()
         self._set_context()
         if not self._context:
             raise RuntimeError("API Client initialization failed.")
 
     def is_device_type_supported(self, device_type: int) -> int:
-        return int(self.library.is_device_type_supported(ct.c_uint(device_type)))
+        with self._lock:
+            return int(self.library.is_device_type_supported(ct.c_uint(device_type)))
 
     def pop_command(self, cmd_buffer: Buffer, device: DeviceIdentification) -> int:
-        return int(
-            self.library.pop_command(
-                ct.byref(cmd_buffer), ct.byref(device), self._context
+        with self._lock:
+            return int(
+                self.library.pop_command(ct.byref(cmd_buffer), ct.byref(device), self._context)
             )
-        )
 
     def wait_for_command(self, timeout: int) -> int:
         return int(self.library.wait_for_command(timeout, self._context))

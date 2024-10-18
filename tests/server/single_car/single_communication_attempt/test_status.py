@@ -11,6 +11,7 @@ from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # 
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from external_server.server import eslogger as _logger
 from tests.utils import get_test_car_server
+from tests.utils.mqtt_broker import MQTTBrokerTest
 from external_server.models.messages import status, status_response
 
 
@@ -152,6 +153,8 @@ class Test_Forwarding_Status(unittest.TestCase):
 
     def setUp(self):
         self.es = get_test_car_server()
+        self.broker = MQTTBrokerTest(start=True)
+        self.es.mqtt.connect()
         self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
         self.es._add_connected_devices(self.device)
         self.es._mqtt.session.set_id("session_id")
@@ -178,6 +181,7 @@ class Test_Forwarding_Status(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.es.stop()
+        self.broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover

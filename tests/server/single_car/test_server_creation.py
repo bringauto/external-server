@@ -11,6 +11,11 @@ from pydantic import FilePath
 from InternalProtocol_pb2 import Device  # type: ignore
 from external_server.config import CarConfig, ModuleConfig
 from external_server.server import CarServer, ServerState
+from external_server.models.events import EventQueue
+from external_server.adapters.mqtt.adapter import MQTTClientAdapter
+from external_server.checkers.command_checker import PublishedCommandChecker
+from external_server.checkers.status_checker import StatusChecker
+
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from tests.utils.mqtt_broker import MQTTBrokerTest
 
@@ -42,15 +47,59 @@ class Test_Creating_External_Server_Instance(unittest.TestCase):
         self.config = CarConfig(
             modules={correct_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
-        self.es = CarServer(config=self.config)
+        self.event_queue = EventQueue(self.config.car_name)
+        self.mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=self.event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
+        )
+        self.status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=self.event_queue, car=self.config.car_name
+        )
+        self.command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=self.event_queue, car=self.config.car_name
+        )
+        self.es = CarServer(
+            config=self.config,
+            mqtt_adapter=self.mqtt_adapter,
+            event_queue=self.event_queue,
+            status_checker=self.status_checker,
+            command_checker=self.command_checker,
+        )
 
     def test_module_dict_key_in_config_not_equal_to_the_module_id_raises_error(self):
         incorrect_id = "111111111"
         self.config = CarConfig(
             modules={incorrect_id: self.example_module_config}, **ES_CONFIG_WITHOUT_MODULES
         )
+        self.event_queue = EventQueue(self.config.car_name)
+        self.mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=self.event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
+        )
+        self.status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=self.event_queue, car=self.config.car_name
+        )
+        self.command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=self.event_queue, car=self.config.car_name
+        )
         with self.assertRaises(RuntimeError):
-            self.es = CarServer(config=self.config)
+            self.es = CarServer(
+                config=self.config,
+                mqtt_adapter=self.mqtt_adapter,
+                event_queue=self.event_queue,
+                status_checker=self.status_checker,
+                command_checker=self.command_checker,
+            )
 
 
 class Test_Initial_State_Of_External_Server(unittest.TestCase):
@@ -60,7 +109,29 @@ class Test_Initial_State_Of_External_Server(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        event_queue = EventQueue(self.config.car_name)
+        mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
+        )
+        status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        self.es = CarServer(
+            config=self.config,
+            mqtt_adapter=mqtt_adapter,
+            event_queue=event_queue,
+            status_checker=status_checker,
+            command_checker=command_checker,
+        )
 
     def test_external_server_initially_has_no_connected_devices(self):
         self.assertEqual(self.es._known_devices.n_connected, 0)
@@ -86,7 +157,29 @@ class Test_Server_State(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
+        event_queue = EventQueue(self.config.car_name)
+        mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
+        )
+        status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        self.es = CarServer(
+            config=self.config,
+            mqtt_adapter=mqtt_adapter,
+            event_queue=event_queue,
+            status_checker=status_checker,
+            command_checker=command_checker,
+        )
 
     def test_server_state_is_read_only(self):
         with self.assertRaises(AttributeError):
@@ -100,11 +193,30 @@ class Test_External_Server_Start(unittest.TestCase):
             lib_path=FilePath(EXAMPLE_MODULE_SO_LIB_PATH), config={}
         )
         self.config = CarConfig(modules={"1000": example_module_config}, **ES_CONFIG_WITHOUT_MODULES)  # type: ignore
-        self.es = CarServer(config=self.config)
-        self.device = Device(
-            module=Device.EXAMPLE_MODULE, deviceType=0, deviceName="TestDevice", deviceRole="test"
+        self.broker = MQTTBrokerTest(start=True)
+        event_queue = EventQueue(self.config.car_name)
+        mqtt_adapter = MQTTClientAdapter(
+            company=self.config.company_name,
+            car=self.config.car_name,
+            broker_host=self.config.mqtt_address,
+            port=self.config.mqtt_port,
+            event_queue=event_queue,
+            timeout=self.config.timeout,
+            mqtt_timeout=self.config.mqtt_timeout,
         )
-        self.mqttbroker = MQTTBrokerTest(start=True)
+        status_checker = StatusChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        command_checker = PublishedCommandChecker(
+            timeout=self.config.timeout, event_queue=event_queue, car=self.config.car_name
+        )
+        self.es = CarServer(
+            config=self.config,
+            mqtt_adapter=mqtt_adapter,
+            event_queue=event_queue,
+            status_checker=status_checker,
+            command_checker=command_checker,
+        )
         time.sleep(0.2)
 
     def test_starting_and_stopping_server_connects_and_disconnects_the_mqtt_client(self):
@@ -117,7 +229,7 @@ class Test_External_Server_Start(unittest.TestCase):
             self.assertFalse(self.es.mqtt.is_connected)
 
     def tearDown(self) -> None:
-        self.mqttbroker.stop()
+        self.broker.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover
