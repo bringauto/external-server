@@ -22,7 +22,7 @@ _log_level_by_verbosity = {False: logging.WARNING, True: logging.DEBUG}
 class _Logger(abc.ABC):
     """Abstract class for wrapping a logger from the Python logging module."""
 
-    def __init__(self, logger_name: Optional[str] = None) -> None:
+    def __init__(self, logger_name: str = LOGGER_NAME) -> None:
         self._logger = logging.getLogger(logger_name)
         self._logger.setLevel(logging.INFO)
 

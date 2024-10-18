@@ -7,7 +7,7 @@ from enum import Enum, auto
 from external_server.logs import CarLogger as _CarLogger
 
 
-logger = _CarLogger(__name__)
+logger = _CarLogger()
 
 
 class EventType(Enum):
@@ -37,6 +37,7 @@ class EventQueue:
     def __init__(self, car: str = "") -> None:
         self._queue: _Queue[Any] = _Queue()
         self._car = car
+        logger.debug(f"Event queue '{id(self)}' has been created.", self._car)
 
     def add(self, event_type: EventType, data: Any = None) -> None:
         """Add new item to the queue."""

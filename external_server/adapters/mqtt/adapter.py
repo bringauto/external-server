@@ -45,7 +45,7 @@ _ID_LENGTH = 20
 ClientConnectionState = _ConnectionState
 
 
-_logger = _CarLogger(__name__)
+_logger = _CarLogger()
 
 
 def create_mqtt_client(car: str) -> _Client:
@@ -306,7 +306,9 @@ class MQTTClientAdapter:
         """
         t = None if ignore_timeout else self._timeout
         try:
+            _logger.info(f"Waiting for message on topic: {self._subscribe_topic}.", self._car)
             message = self._received_msgs.get(block=True, timeout=t)
+            _logger.info(f"Received message: {message}.", self._car)
             return message
         except Empty:
             return None
@@ -375,7 +377,7 @@ class MQTTClientAdapter:
         """
         try:
             if message.topic == self._subscribe_topic:
-                msg = _ExternalClientMsg().FromString(message.payload)
+                msg = _ExternalClientMsg.FromString(message.payload)
                 self._received_msgs.put(msg)
                 self._event_queue.add(event_type=_EventType.CAR_MESSAGE_AVAILABLE)
         except Exception as e:  # pragma: no cover

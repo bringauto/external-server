@@ -106,21 +106,25 @@ class ExternalServer:
         self._car_threads: dict[str, threading.Thread] = dict()
         self._company = config.company_name
         for car_name in config.cars:
+            event_queue = _EventQueue(car_name)
+            status_checker = _StatusChecker(config.timeout, event_queue, car_name)
+            command_checker = _PublishedCommandChecker(config.timeout, event_queue, car_name)
+            mqtt_adapter = _MQTTClientAdapter(
+                broker_host=config.mqtt_address,
+                port=config.mqtt_port,
+                timeout=config.timeout,
+                mqtt_timeout=config.mqtt_timeout,
+                car=car_name,
+                company=self._company,
+                event_queue=event_queue,
+            )
+
             self._car_servers[car_name] = CarServer(
                 config=_CarConfig.from_server_config(car_name, config),
-                event_queue=_EventQueue(car_name),
-                status_checker=_StatusChecker(config.timeout, _EventQueue(car_name), car_name),
-                command_checker=_PublishedCommandChecker(
-                    config.timeout, _EventQueue(car_name), car_name
-                ),
-                mqtt_adapter=_MQTTClientAdapter(
-                    broker_host=config.mqtt_address,
-                    port=config.mqtt_port,
-                    timeout=config.mqtt_timeout,
-                    car=car_name,
-                    company=self._company,
-                    event_queue=_EventQueue(car_name),
-                ),
+                event_queue=event_queue,
+                status_checker=status_checker,
+                command_checker=command_checker,
+                mqtt_adapter=mqtt_adapter,
             )
 
     def car_servers(self) -> dict[str, CarServer]:
@@ -898,9 +902,9 @@ class CarServer:
             raise ConnectSequenceFailure("Cannot start communication after init sequence failed.")
         try:
             self._mqtt.session.start()
+            self._set_state(ServerState.RUNNING)
             if not self._running:
                 self._set_running_flag(True)
-            self._set_state(ServerState.RUNNING)
             while self._running and self.state != ServerState.STOPPED:
                 event = self._event_queue.get()
                 self._handle_communication_event(event)

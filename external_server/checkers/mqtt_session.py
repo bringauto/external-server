@@ -51,7 +51,10 @@ class MQTTSession:
             self._timer = _Timer(self._checker.timeout, self._checker.set_timeout)
             self._timer.start()
             self._timer_running = True
-            _logger.debug(f"Started timer for MQTT session (id='{self._id}')", self._car_name)
+            _logger.debug(
+                f"Started timer for MQTT session (id='{self._id}') with timeout set to {self._checker.timeout}.",
+                self._car_name,
+            )
         else:
             _logger.warning(
                 f"Timer already running for MQTT session (id='{self._id}').", self._car_name

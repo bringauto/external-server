@@ -22,10 +22,10 @@ from external_server.adapters.api.module_lib import (
     empty_device_identification as _empty_device_identification,
     ModuleLibrary as _ModuleLibrary,
 )
-from external_server.logs import CarLogger as _CarLogger
+from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 
 
-_logger = _CarLogger(__name__)
+_logger = _CarLogger()
 
 
 class APIClientAdapter:
@@ -182,6 +182,10 @@ class APIClientAdapter:
             size=len(status.deviceStatus.statusData),
         )
         code = self._library.forward_status(status_buffer, device_identification)
+        if code == _GeneralErrorCode.OK:
+            _logger.debug(
+                f"Status for {device_repr(status.deviceStatus.device)} forwarded to API", self._car
+            )
         self._check_forward_status_code(status.deviceStatus.device, code, self._car)
         if status.errorMessage:
             self._log_status_error(status)
