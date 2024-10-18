@@ -306,9 +306,7 @@ class MQTTClientAdapter:
         """
         t = None if ignore_timeout else self._timeout
         try:
-            _logger.info(f"Waiting for message on topic: {self._subscribe_topic}.", self._car)
             message = self._received_msgs.get(block=True, timeout=t)
-            _logger.info(f"Received message: {message}.", self._car)
             return message
         except Empty:
             return None
