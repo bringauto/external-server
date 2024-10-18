@@ -68,7 +68,7 @@ class ModuleLibrary:
     def destroy(self) -> int:
         with self._lock:
             con = ct.c_void_p(self._context)
-            return self._library.destroy(ct.pointer(con))  # type: ignore
+            return int(self._library.destroy(ct.pointer(con)))  # type: ignore
 
     def deallocate(self, buffer: Buffer) -> None:
         with self._lock:
@@ -92,9 +92,11 @@ class ModuleLibrary:
         try:
             self._library = ct.cdll.LoadLibrary(self._lib_path)  # type: ignore
         except OSError as e:
-            raise RuntimeError(f"Failed to load library '{self._lib_path}': {e}")
+            raise RuntimeError(f"Failed to load library '{self._lib_path}': {e}") from e
         except Exception as e:
-            raise RuntimeError(f"Unexpected error when loading a library '{self._lib_path}': {e}")
+            raise RuntimeError(
+                f"Unexpected error when loading a library '{self._lib_path}': {e}"
+            ) from e
         self._type_all_function()
         self._set_context()
         if not self._context:
@@ -118,7 +120,7 @@ class ModuleLibrary:
         key_value_array = (KeyValue * len(self._config))()
         for i, key in enumerate(self._config):
             key_bytes = key.encode("utf-8")
-            value_bytes = self._config[key].encode("utf-8")
+            value_bytes = str(self._config[key]).encode("utf-8")
             key_value_array[i] = KeyValue(
                 Buffer(data=ct.c_char_p(key_bytes), size=len(key_bytes)),
                 Buffer(data=ct.c_char_p(value_bytes), size=len(value_bytes)),

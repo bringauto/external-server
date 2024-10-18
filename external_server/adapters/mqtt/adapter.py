@@ -342,9 +342,9 @@ class MQTTClientAdapter:
         Args:
         - `client` The MQTT client instance.
         - `data` The user data associated with the client.
-        - `flags`
-        - `rc` The return code indicating the reason for disconnection.
-        - `properties` The properties associated with the disconnection event.
+        - `flags` Response flags sent by the broker.
+        - `rc` The connection result code indicating success or failure.
+        - `properties` The properties associated with the connection event.
         """
         self._log_connection_result(rc)
 

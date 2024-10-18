@@ -13,7 +13,6 @@ from external_server.models.structures import (
 )
 from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
-    ReturnCode,
 )
 from external_server.models.devices import device_repr
 from external_server.config import ModuleConfig
@@ -22,7 +21,7 @@ from external_server.adapters.api.module_lib import (
     empty_device_identification as _empty_device_identification,
     ModuleLibrary as _ModuleLibrary,
 )
-from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
+from external_server.logs import CarLogger as _CarLogger
 
 
 _logger = _CarLogger()
@@ -77,7 +76,7 @@ class APIClientAdapter:
         """Returns `True` if device is initialized, `False` otherwise."""
         return self._library.context is not None
 
-    def device_connected(self, device: _Device) -> ReturnCode:
+    def device_connected(self, device: _Device) -> int:
         """Handles device connection by creating the device identification and calling
         the library function.
 
@@ -94,7 +93,7 @@ class APIClientAdapter:
         device_identification = self._create_device_identification(device)
         return self._library.device_connected(device_identification)  # type: ignore
 
-    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> ReturnCode:
+    def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> int:
         """Handles device disconnection by creating the device identification and calling the library function.
 
         Parameters
@@ -159,7 +158,7 @@ class APIClientAdapter:
             device.deviceName = device_id.device_name.data[:name_length].decode("utf-8")
         return device
 
-    def forward_status(self, status: _Status) -> ReturnCode:
+    def forward_status(self, status: _Status) -> int:
         """
         Forwards a status update by creating the device identification and status buffer,
         and calling the library function.
@@ -198,7 +197,7 @@ class APIClientAdapter:
             drepr = device_repr(status.deviceStatus.device)
             _logger.info(f"Status for {drepr} contains error.", self._car)
 
-    def forward_error_message(self, device: _Device, error_bytes: bytes) -> ReturnCode:
+    def forward_error_message(self, device: _Device, error_bytes: bytes) -> int:
         """
         Forwards an error message by creating the device identification and status buffer,
         and calling the library function.
@@ -228,7 +227,7 @@ class APIClientAdapter:
             )
         return code
 
-    def wait_for_command(self, timeout: int) -> ReturnCode:
+    def wait_for_command(self, timeout: int) -> int:
         """
         Waits for a command from the library with the specified timeout.
 
@@ -247,7 +246,7 @@ class APIClientAdapter:
             _logger.debug("Command received", self._car)
         return code  # type: ignore
 
-    def pop_command(self) -> tuple[bytes, _Device, ReturnCode]:
+    def pop_command(self) -> tuple[bytes, _Device, int]:
         """
         Gets a command from the library by creating the device identification and calling the library function.
 
@@ -262,18 +261,21 @@ class APIClientAdapter:
         """
         command_buffer = _empty_command_buffer()
         device_identification = _empty_device_identification()
-        rc = self._library.pop_command(command_buffer, device_identification)
-        device = self._create_protobuf_device(device_identification)
-        self.deallocate(device_identification.device_role)
-        self.deallocate(device_identification.device_name)
-        if not command_buffer or not command_buffer.data or command_buffer.size == 0:
-            command_bytes = bytes()
-        else:
-            command_bytes = bytes(command_buffer.data)[: command_buffer.size]
-        self.deallocate(command_buffer)
-        return command_bytes, device, rc
+        try:
+            rc = self._library.pop_command(command_buffer, device_identification)
+            device = self._create_protobuf_device(device_identification)
+            command_bytes = (
+                bytes(command_buffer.data[: command_buffer.size])
+                if command_buffer and command_buffer.data
+                else b""
+            )
+            return command_bytes, device, rc
+        finally:
+            self.deallocate(device_identification.device_role)
+            self.deallocate(device_identification.device_name)
+            self.deallocate(command_buffer)
 
-    def command_ack(self, command_data: bytes, device: _Device) -> ReturnCode:
+    def command_ack(self, command_data: bytes, device: _Device) -> int:
         """Calls command_ack function from API."""
         device_id = self._create_device_identification(device)
         command_buffer = Buffer(command_data, len(command_data))

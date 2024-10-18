@@ -20,8 +20,8 @@ from tests.utils.mqtt_broker import MQTTBrokerTest
 def wait_for_server_connection(
     server: ExternalServer, test_case: unittest.TestCase, timeout: float = 2.0
 ):
-    t = time.time()
-    while time.time() - t < timeout:
+    t = time.monotonic()
+    while time.monotonic() - t < timeout:
         if all(server.mqtt.is_connected for server in server.car_servers().values()):
             return
         else:

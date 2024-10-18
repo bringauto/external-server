@@ -101,14 +101,16 @@ class ESLogger(_Logger):
         return f"(server)\t {msg}"
 
 
+DEFAULT_EXCEPTION_LOG_LEVEL = logging.WARNING
+
 LOG_LEVELS: dict[Type[Exception], int] = {
-    CommunicationException: logging.WARNING,
-    ConnectSequenceFailure: logging.WARNING,
-    NoMessage: logging.WARNING,
-    CommandResponseTimeout: logging.WARNING,
-    SessionTimeout: logging.WARNING,
-    StatusTimeout: logging.WARNING,
-    UnexpectedMQTTDisconnect: logging.WARNING,
+    CommunicationException: DEFAULT_EXCEPTION_LOG_LEVEL,
+    ConnectSequenceFailure: DEFAULT_EXCEPTION_LOG_LEVEL,
+    NoMessage: DEFAULT_EXCEPTION_LOG_LEVEL,
+    CommandResponseTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
+    SessionTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
+    StatusTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
+    UnexpectedMQTTDisconnect: DEFAULT_EXCEPTION_LOG_LEVEL,
 }
 
 
