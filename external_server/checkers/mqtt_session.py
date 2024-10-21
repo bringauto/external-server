@@ -23,7 +23,7 @@ class MQTTSession:
         self._id: str = ""
         self._car_name = car_name
 
-    @property
+    @property   
     def id(self) -> str:
         """Return the session ID."""
         return self._id
