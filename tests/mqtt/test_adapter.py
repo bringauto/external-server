@@ -6,6 +6,7 @@ from unittest.mock import patch, Mock
 import logging
 import threading
 
+sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, Client
@@ -17,7 +18,6 @@ from external_server.adapters.mqtt.adapter import (  # type: ignore
     MQTTClientAdapter,
     mqtt_error_from_code,
     _QOS,
-    _logger,
 )
 from InternalProtocol_pb2 import (  # type: ignore
     Device,
@@ -35,8 +35,14 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.models.events import EventType, EventQueue  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
 from external_server.models.exceptions import MQTTCommunicationError
+from external_server.logs import configure_logging, LOGGER_NAME
 
 from tests.utils.mqtt_broker import MQTTBrokerTest  # type: ignore
+
+
+_logger = logging.getLogger(LOGGER_NAME)
+_logger.setLevel(logging.DEBUG)
+_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 TEST_ADDRESS = "127.0.0.1"
@@ -306,6 +312,7 @@ class Test_Publishing_Message(unittest.TestCase):
             start=True,
         )
         self.adapter.connect()
+        assert self.adapter.is_connected
         self.device = Device(
             module=Device.MISSION_MODULE,
             deviceType=4,
@@ -487,14 +494,14 @@ class Test_On_Connect_Callback(unittest.TestCase):
 
     def test_on_connect_callback_logs_info_if_connected_to_broker(self):
         self.broker.start()
-        with self.assertLogs(logger=_logger._logger, level=logging.INFO) as cm:
+        with self.assertLogs(logger=_logger, level=logging.INFO) as cm:
             self.adapter._on_connect(
                 client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
             )
             self.assertIn("Connected", cm.output[-1])
 
     def test_on_connect_callback_logs_error_if_could_not_connect_to_broker(self):
-        with self.assertLogs(logger=_logger._logger, level=logging.INFO):
+        with self.assertLogs(logger=_logger, level=logging.INFO):
             self.adapter._on_connect(
                 client=self.adapter._mqtt_client, data=None, flags=None, rc=0, properties=None
             )
@@ -551,7 +558,7 @@ class Test_MQTT_Client_Start_And_Stop(unittest.TestCase):
 
 class Test_Unsuccessful_Connection_To_Broker(unittest.TestCase):
 
-    def test_error_logged_if_broker_does_not_exist(self):
+    def test_error_raised_if_broker_does_not_exist(self):
         adapter = MQTTClientAdapter(
             "some_company",
             "test_car",
@@ -560,9 +567,7 @@ class Test_Unsuccessful_Connection_To_Broker(unittest.TestCase):
             port=1884,
             event_queue=EventQueue(),
         )
-        with self.assertLogs(logger=_logger._logger, level="ERROR"), self.assertRaises(
-            ConnectionRefusedError
-        ):
+        with self.assertRaises(ConnectionRefusedError):
             adapter.connect()
 
 
@@ -594,12 +599,12 @@ class Test_MQTT_Client_Disconnected(unittest.TestCase):
     def test_error_is_logged_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
         mock.return_value = MQTT_ERR_SUCCESS + 1
         self.adapter.connect()
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR):
+        with self.assertLogs(logger=_logger, level=logging.ERROR):
             self.adapter.disconnect()
 
     def test_publishing_message_from_disconnected_client_logs_warning_and_raises_error(self):
         msg = command("session_id", 0, Device(), b"some_command")
-        with self.assertLogs(logger=_logger._logger, level=logging.WARNING), self.assertRaises(
+        with self.assertLogs(logger=_logger, level=logging.WARNING), self.assertRaises(
             MQTTCommunicationError
         ):
             self.adapter.publish(msg)
@@ -632,7 +637,7 @@ class Test_Stopping_MQTT_Client_Adapter(unittest.TestCase):
         some_non_ok_code = MQTT_ERR_SUCCESS + 2
         mock.return_value = some_non_ok_code
         self.adapter.connect()
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR) as cm:
+        with self.assertLogs(logger=_logger, level=logging.ERROR) as cm:
             self.adapter.stop()
             self.assertIn(mqtt_error_from_code(some_non_ok_code), cm.output[-1])
 
@@ -739,25 +744,51 @@ class Test_Logging_Connection_Result(unittest.TestCase):
             "some_company", "test_car", 0.5, TEST_ADDRESS, TEST_PORT, EventQueue()
         )
 
-    def test_error_is_logged_when_connecting_to_broker_fails(self):
+    def test_error_is_raised_when_connecting_to_nonexistent_broker(self):
         # broker does not exist
-        with self.assertLogs(logger=_logger._logger, level=logging.ERROR), self.assertRaises(
-            ConnectionRefusedError
-        ):
+        with self.assertRaises(ConnectionRefusedError):
             self.adapter.connect()
 
     def test_info_is_logged_when_just_connected_to_broker(self):
         MQTTBrokerTest(start=True)
-        with self.assertLogs(logger=_logger._logger, level=logging.INFO):
+        with self.assertLogs(logger=_logger, level=logging.INFO):
             self.adapter.connect()
 
     def test_info_is_logged_when_already_connected_to_broker(self):
         MQTTBrokerTest(start=True)
         self.adapter.connect()
-        with self.assertLogs(logger=_logger._logger, level=logging.INFO):
+        with self.assertLogs(logger=_logger, level=logging.INFO):
             self.adapter.connect()
 
     def tearDown(self) -> None:
+        self.adapter.stop()
+        MQTTBrokerTest.kill_all_test_brokers()
+
+
+class Test_Repeated_Reconnection_To_Running_Broker(unittest.TestCase):
+
+    def setUp(self):
+
+        self.broker = MQTTBrokerTest(start=True)
+        self.adapter = MQTTClientAdapter(
+            company="some_company",
+            car="test_car",
+            timeout=0.5,
+            broker_host=TEST_ADDRESS,
+            port=TEST_PORT,
+            event_queue=EventQueue(),
+            mqtt_timeout=1.0,
+        )
+
+    def test_repeated_call_to_connect_still_ensures_mqtt_connection_to_exist_but_warning_is_logged(
+        self,
+    ):
+        self.adapter.connect()
+        with self.assertLogs(_logger, level=logging.WARNING):
+            self.adapter.connect()
+        self.assertTrue(self.adapter.is_connected)
+
+    def tearDown(self):
         self.adapter.stop()
         MQTTBrokerTest.kill_all_test_brokers()
 
