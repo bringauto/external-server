@@ -18,7 +18,9 @@ def parsed_script_args() -> argparse.Namespace:
         default="./config/config.json",
         help="path to the configuration file",
     )
-    parser.add_argument("--tls", action=argparse.BooleanOptionalAction, help="use tls authentication")
+    parser.add_argument(
+        "--tls", action=argparse.BooleanOptionalAction, help="use tls authentication"
+    )
     tls = parser.add_argument_group("tls", description="if tls is used, set following arguments")
     tls.add_argument("--ca", type=str, help="path to Certificate Authority certificate files")
     tls.add_argument("--cert", type=str, help="path to PEM encoded client certificate file")
@@ -56,7 +58,7 @@ def main() -> None:
         with open(args.config) as f:
             config_dict = json.loads(f.read())
             config = load_config(args.config)
-            configure_logging("External Server", config_dict)
+            configure_logging("External Server", config_dict["logging"])
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")

@@ -114,7 +114,7 @@ LOG_LEVELS: dict[Type[Exception], int] = {
 }
 
 
-def configure_logging(component_name: str, config: dict) -> None:
+def configure_logging(component_name: str, log_config: dict) -> None:
     """Configure the logging for the application.
 
     The component name is written in the log messages to identify the source of the log message.
@@ -122,7 +122,6 @@ def configure_logging(component_name: str, config: dict) -> None:
     The logging configuration is read from a JSON file. If the file is not found, a default configuration is used.
     """
 
-    log_config = config["logging"]
     logger = logging.getLogger(LOGGER_NAME)
     try:
         verbose: bool = log_config["verbose"]
@@ -155,7 +154,7 @@ def configure_logging(component_name: str, config: dict) -> None:
 
 def _log_format(component_name: str) -> str:
     log_component_name = "-".join(component_name.lower().split())
-    return f"[%(asctime)s.%(msecs)03d]\t[{log_component_name}]\t[%(levelname)s]\t%(message)s"
+    return f"[%(asctime)s.%(msecs)03d] [{log_component_name}] [%(levelname)s]\t%(message)s"
 
 
 def _log_file_name(component_name: str) -> str:
