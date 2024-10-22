@@ -260,25 +260,19 @@ class MQTTClientAdapter:
         """Stop the MQTT client's event loop. If the client is already stopped, no action
         is taken.
         """
-        cli = self._mqtt_client
-        if cli._thread and cli._thread.is_alive():
-            code = self._mqtt_client.loop_stop()
-            if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.info(
-                    f"Stopped communication with MQTT broker on {self.broker_address}.", self._car
-                )
-            elif not self._mqtt_client.is_connected():
-                _logger.warning(
-                    f"Communication with MQTT broker is shut down, but error occured: {mqtt_error_from_code(code)}",
-                    self._car,
-                )
-            else:
-                _logger.error(
-                    f"Failed to stop MQTT client's loop: {mqtt_error_from_code(code)}", self._car
-                )
+        code = self._mqtt_client.loop_stop()
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.info(
+                f"Stopped communication with MQTT broker on {self.broker_address}.", self._car
+            )
+        elif not self._mqtt_client.is_connected():
+            _logger.warning(
+                f"Communication with MQTT broker is shut down, but error occured: {mqtt_error_from_code(code)}",
+                self._car,
+            )
         else:
-            _logger.debug(
-                "Trying to stop MQTT client's event loop, but it is already not running.", self._car
+            _logger.error(
+                f"Failed to stop MQTT client's loop: {mqtt_error_from_code(code)}", self._car
             )
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
