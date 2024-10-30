@@ -40,9 +40,9 @@ As an example of a filled-up config file, see the `config/config.json`. Before r
 
 Set up the logging, the MQTT connection parameters and company name and the External server behavior.
 
-- `logging` - contains the following keys:
-  - `log-path` - path to the directory where logs will be stored.
-  - `verbosity` - if `False`, logs level will be set to `INFO` and logs printed only to file. If `True`, log level is set to `DEBUG` and logs are printed both to a file and to console.
+- `logging` - contains the keys `console`and `file` for printing the logs into a console and a file, respectively. The `file` contains field `path` to set the (absolute or relative) path to the directory to store log files. Both contain the following keys:
+  - `level` - logging level as a string (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). Case-insensitive.
+  - `use` - set to `True` to allow to print the logs, otherwise set to `False`.
 - `company_name` - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` - IP address of the MQTT broker.
 - `mqtt_port` - port of the MQTT broker.
