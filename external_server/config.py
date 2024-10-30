@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Annotated, TypeVar, Mapping
+from typing import Annotated, TypeVar, Mapping, Literal
 
 from pydantic import (
     BaseModel,
@@ -19,6 +19,9 @@ _COMPANY_NAME_PATTERN = r"^[a-z0-9_]*$"
 _CAR_NAME_PATTERN = r"^[a-z0-9_]*$"
 _MQTT_ADDRESS_PATTERN = r"^((http|https)://)?([\w-]+\.)?+[\w-]+$"
 _MODULE_ID_PATTERN = r"^\d+$"
+
+
+LoggingLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
 class InvalidConfiguration(Exception):
@@ -84,6 +87,7 @@ class ServerConfig(BaseModel):
     sleep_duration_after_connection_refused: float = Field(ge=0)
     common_modules: dict[ModuleID, ModuleConfig]
     cars: dict[str, CarModulesConfig]
+    logging: Logging
 
     @model_validator(mode="before")
     @classmethod
@@ -92,20 +96,14 @@ class ServerConfig(BaseModel):
         cars: dict[str, dict] = fields.get("cars", {})
         if not cars:
             raise ValueError("Cars must contain at least 1 car.")
-        elif not modules and not all(
-            car.get("specific_modules", {}) for car in cars.values()
-        ):
-            raise ValueError(
-                "Modules must contain at least 1 module for each car."
-            )
+        elif not modules and not all(car.get("specific_modules", {}) for car in cars.values()):
+            raise ValueError("Modules must contain at least 1 module for each car.")
         elif modules:
             car_specific_modules = set.union(
                 *[set(car.get("specific_modules", {}).keys()) for car in cars.values()]
             )
             global_modules = set(modules.keys())
-            duplicates = [
-                int(i) for i in car_specific_modules.intersection(global_modules)
-            ]
+            duplicates = [int(i) for i in car_specific_modules.intersection(global_modules)]
             if duplicates:
                 raise ValueError(
                     "Each module can be configured either globally or per car, but not both. \n"
@@ -113,6 +111,21 @@ class ServerConfig(BaseModel):
                 )
 
         return fields
+
+
+class Logging(BaseModel):
+    console: HandlerConfig
+    file: HandlerConfig
+
+    class HandlerConfig(BaseModel):
+        level: LoggingLevel
+        use: bool
+        path: str = ""
+
+        @field_validator("level", mode="before")
+        @classmethod
+        def validate_command(cls, level: str) -> str:
+            return level.upper()
 
 
 class ModuleConfig(BaseModel):
@@ -133,5 +146,3 @@ def load_config(config_path: str) -> ServerConfig:
         raise InvalidConfiguration(e) from None
 
     return config
-
-
