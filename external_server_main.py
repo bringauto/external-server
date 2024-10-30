@@ -2,7 +2,6 @@
 import sys
 import argparse
 import os
-import json
 
 from external_server.server import ExternalServer, eslogger
 from external_server.config import load_config, InvalidConfiguration
@@ -55,10 +54,8 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        with open(args.config) as f:
-            config_dict = json.loads(f.read())
-            config = load_config(args.config)
-            configure_logging("External Server", config_dict["logging"])
+        config = load_config(args.config)
+        configure_logging("External Server", config)
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")

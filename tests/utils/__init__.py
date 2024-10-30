@@ -29,6 +29,10 @@ COMMON_CONFIG = {
     "log_files_directory": ".",
     "log_files_to_keep": 5,
     "log_file_max_size_bytes": 100000,
+    "logging": {
+        "console": {"level": "DEBUG", "use": True},
+        "file": {"level": "DEBUG", "use": True, "path": "./log"},
+    },
 }
 
 CAR_CONFIG_WITHOUT_MODULES = {"company_name": "ba", "car_name": "car1", **COMMON_CONFIG}

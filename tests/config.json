@@ -1,7 +1,14 @@
 {
-  "general-settings": {
-    "log-path": "log/",
-    "verbose": true
+  "logging": {
+    "console": {
+        "level": "debug",
+        "use": true
+    },
+    "file": {
+        "level": "debug",
+        "use": true,
+        "path": "./log/"
+    }
   },
   "company_name": "bringauto",
   "mqtt_address": "mosquitto",
