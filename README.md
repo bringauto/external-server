@@ -40,13 +40,13 @@ As an example of a filled-up config file, see the `config/config.json`. Before r
 
 Set up the logging, the MQTT connection parameters and company name and the External server behavior.
 
-- `logging` - contains the keys `console`and `file` for printing the logs into a console and a file, respectively. The `file` contains field `path` to set the (absolute or relative) path to the directory to store log files. Both contain the following keys:
+- `logging` - contains the keys `console`and `file` for printing the logs into a console and a file, respectively. The `file` contains field `path` to set the (absolute or relative) path to the directory to store the logs. Both contain the following keys:
   - `level` - logging level as a string (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). Case-insensitive.
   - `use` - set to `True` to allow to print the logs, otherwise set to `False`.
 - `company_name` - used for MQTT topics name, should be same as in module gateway; only lowercase characters, numbers and underscores are allowed.
 - `mqtt_address` - IP address of the MQTT broker.
 - `mqtt_port` - port of the MQTT broker.
-  ation of config for the module, any key-value pairs will be forwarded to module implementation init function; when empty or missing, empty config forwarded to init function.- `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
+- `mqtt_timeout` (in seconds) - timeout for getting a message from MQTT Client.
 - `timeout` (in seconds) - Maximum time amount between Status or Command messages and receiving corresponding responses.
 - `send_invalid_command` - sends command to Module gateway even if External Server detects invalid command returned from external_server_api; affects only normal communication.
 - `sleep_duration_after_connection_refused` - if the connection to Module Gateway was refused, the External Server will sleep for a defined duration before the next connection attempt proceeds.
