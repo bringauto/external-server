@@ -87,7 +87,7 @@ class ServerConfig(BaseModel):
     sleep_duration_after_connection_refused: float = Field(ge=0)
     common_modules: dict[ModuleID, ModuleConfig]
     cars: dict[str, CarModulesConfig]
-    logging: Logging
+    logging: LoggingConfig
 
     @model_validator(mode="before")
     @classmethod
@@ -113,7 +113,7 @@ class ServerConfig(BaseModel):
         return fields
 
 
-class Logging(BaseModel):
+class LoggingConfig(BaseModel):
     console: HandlerConfig
     file: HandlerConfig
 

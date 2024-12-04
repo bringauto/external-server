@@ -227,8 +227,10 @@ class Test_Connecting_To_Broker(unittest.TestCase):
     def test_repeated_disconnect_calls_have_no_effect_after_the_first_call(self):
         self.broker.start()
         self.adapter.connect()
-        self.adapter.disconnect()
-        self.adapter.disconnect()
+        code_1 = self.adapter.disconnect()
+        code_2 = self.adapter.disconnect()
+        self.assertEqual(code_1, MQTT_ERR_SUCCESS)
+        self.assertEqual(code_2, MQTT_ERR_SUCCESS)
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_DISCONNECTED)
 
     def tearDown(self) -> None:
