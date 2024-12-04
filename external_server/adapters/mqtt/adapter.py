@@ -158,21 +158,30 @@ class MQTTClientAdapter:
         """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
-    def connect(self) -> None:
-        """Connect to the MQTT broker."""
-        self._connect_to_broker()
+    def connect(self) -> int:
+        """Connect to the MQTT broker using host and port provided during initialization.
+
+        Raise an exception if the connection is refused.
+        """
+        self._set_up_connection_to_broker()
         code = self._start_communication()
         if code != mqtt.MQTT_ERR_SUCCESS:
             error = mqtt_error_from_code(code)
             if self._mqtt_client.is_connected():
                 _logger.warning(
-                    f"Communication with MQTT broker on {self.broker_address} is established with error message: {error}",
+                    "External server MQTT connection - communication between client and broker "
+                    f"'{self.broker_address}' is established with error message: {error}",
                     self._car,
                 )
             else:
                 raise ConnectionRefusedError(error)
+        return code
 
-    def _connect_to_broker(self) -> None:
+    def _set_up_connection_to_broker(self) -> None:
+        """Create a connection to the MQTT broker. This is required before starting communication loop of the MQTT client.
+
+        Raise an exception if the connection is refused.
+        """
         try:
             code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
             if code == mqtt.MQTT_ERR_SUCCESS:
@@ -183,8 +192,8 @@ class MQTTClientAdapter:
         except Exception as e:
             raise ConnectionRefusedError from e
 
-    def disconnect(self) -> None:
-        """Disconnect from the MQTT broker."""
+    def disconnect(self) -> int:
+        """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
         if self._mqtt_client.is_connected():
             code = self._mqtt_client.disconnect()
             self.stop()
@@ -196,11 +205,13 @@ class MQTTClientAdapter:
                     f"Error when disconnecting from MQTT broker. ({self.broker_address}): {error}",
                     self._car,
                 )
+            return code
         else:
             _logger.info(
                 "Trying to disconnect from MQTT broker, but not connected. No action is taken.",
                 self._car,
             )
+            return mqtt.MQTT_ERR_SUCCESS
 
     def get_connect_message(self) -> _Connect | None:
         """Get expected connect message from MQTT client.
@@ -257,13 +268,12 @@ class MQTTClientAdapter:
             raise MQTTCommunicationError(msg)
 
     def stop(self) -> None:
-        """Stop the MQTT client's event loop. If the client is already stopped, no action
-        is taken.
-        """
-        code = self._mqtt_client.loop_stop()
+        """Stop the MQTT client's event loop. If the client is already stopped, no action is taken."""
+        code = self._stop_client_loop()
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(
-                f"Stopped communication with MQTT broker on {self.broker_address}.", self._car
+                f"Communication between MQTT client and broker ('{self.broker_address}') is stopped.",
+                self._car,
             )
         elif not self._mqtt_client.is_connected():
             _logger.warning(
@@ -274,6 +284,18 @@ class MQTTClientAdapter:
             _logger.error(
                 f"Failed to stop MQTT client's loop: {mqtt_error_from_code(code)}", self._car
             )
+
+    def _stop_client_loop(self) -> int:
+        """Stop the MQTT client's traffic-processing loop. If the loop is not running, no action is taken."""
+        if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
+            code = self._mqtt_client.loop_stop()
+            return code
+        else:
+            _logger.warning(
+                "Attempted to stop MQTT client loop, but the loop is not running. No action is taken.",
+                self._car,
+            )
+            return mqtt.MQTT_ERR_SUCCESS
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -318,6 +340,7 @@ class MQTTClientAdapter:
             return None
 
     def _start_communication(self) -> int:
+        """Set up the MQTT client traffic processing (callbacks and subscriptions) and ensure the traffic processing loop is running."""
         self._set_up_callbacks()
         self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
         code = self._start_client_loop()
@@ -394,6 +417,16 @@ class MQTTClientAdapter:
         self._mqtt_client.on_message = self._on_message
 
     def _start_client_loop(self) -> int:
+        """Start the MQTT client traffic-processing loop. If the loop is already running it is
+        stopped first and then started again."""
+        if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
+            _logger.warning(
+                "Attempted to start MQTT client traffic-processing loop, but it is already running. "
+                "Stopping the current loop and starting a new one.",
+                self._car,
+            )
+            self._mqtt_client.loop_stop()
+            self._mqtt_client._thread = None
         return self._mqtt_client.loop_start()
 
     def _wait_for_connection(self, timeout: float) -> bool:  # pragma: no cover

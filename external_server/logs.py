@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Any
 import abc
 import logging.handlers
 import os
@@ -12,97 +12,13 @@ from external_server.models.exceptions import (  # type: ignore
     SessionTimeout,
     UnexpectedMQTTDisconnect,
 )
-from external_server.config import ServerConfig as _Config, Logging as _Logging
+from external_server.config import LoggingConfig as _Config
 
 
 LOGGER_NAME = "external_server"
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-
-class _Logger(abc.ABC):
-    """Abstract class for wrapping a logger from the Python logging module."""
-
-    def __init__(self, logger_name: str = LOGGER_NAME) -> None:
-        self._logger = logging.getLogger(logger_name)
-        self._logger.setLevel(logging.INFO)
-
-    @abc.abstractmethod
-    def debug(self, msg: str, car_name: str) -> None:
-        pass
-
-    @abc.abstractmethod
-    def info(self, msg: str, car_name: str) -> None:
-        pass
-
-    @abc.abstractmethod
-    def warning(self, msg: str, car_name: str) -> None:
-        pass
-
-    @abc.abstractmethod
-    def error(self, msg: str, car_name: str) -> None:
-        pass
-
-    @abc.abstractmethod
-    def log_on_exception(self, e: Exception, car_name: str) -> None:
-        pass
-
-
-class CarLogger(_Logger):
-    """Logger class for logging messages, forcing including the car name in the log message.
-
-    The car name is necessary to identify the source of the log message.
-    """
-
-    def debug(self, msg: str, car_name: str) -> None:
-        self._logger.debug(self._car_msg(car_name, msg))
-
-    def info(self, msg: str, car_name: str) -> None:
-        self._logger.info(self._car_msg(car_name, msg))
-
-    def warning(self, msg: str, car_name: str) -> None:
-        self._logger.warning(self._car_msg(car_name, msg))
-
-    def error(self, msg: str, car_name: str) -> None:
-        self._logger.error(self._car_msg(car_name, msg))
-
-    def log_on_exception(self, e: Exception, car_name: str) -> None:
-        log_level = LOG_LEVELS.get(type(e), logging.ERROR)
-        self._logger.log(log_level, self._car_msg(car_name, str(e)))
-
-    @staticmethod
-    def _car_msg(car_name: str, msg: str) -> str:
-        car_name = car_name.strip()
-        if car_name:
-            return f"({car_name})\t {msg}"
-        else:
-            return msg
-
-
-class ESLogger(_Logger):
-    """Logger class for logging messages at the level of the whole external server, outside of any car's context."""
-
-    def debug(self, msg: str, *args) -> None:
-        self._logger.debug(self._msg(msg))
-
-    def info(self, msg: str, *args) -> None:
-        self._logger.info(self._msg(msg))
-
-    def warning(self, msg: str, *args) -> None:
-        self._logger.warning(self._msg(msg))
-
-    def error(self, msg: str, *args) -> None:
-        self._logger.error(self._msg(msg))
-
-    def log_on_exception(self, e: Exception, *args) -> None:
-        log_level = LOG_LEVELS.get(type(e), logging.ERROR)
-        self._logger.log(log_level, self._msg(str(e)))
-
-    def _msg(self, msg: str) -> str:
-        return f"(server)\t {msg}"
-
-
 DEFAULT_EXCEPTION_LOG_LEVEL = logging.WARNING
-
 LOG_LEVELS: dict[Type[Exception], int] = {
     CommunicationException: DEFAULT_EXCEPTION_LOG_LEVEL,
     ConnectSequenceFailure: DEFAULT_EXCEPTION_LOG_LEVEL,
@@ -114,6 +30,98 @@ LOG_LEVELS: dict[Type[Exception], int] = {
 }
 
 
+class _Logger(abc.ABC):
+    """Abstract class for wrapping a logger from the Python logging module."""
+
+    def __init__(self, logger_name: str = LOGGER_NAME) -> None:
+        self._logger = logging.getLogger(logger_name)
+        self._logger.setLevel(logging.INFO)
+
+    @property
+    def logger(self) -> logging.Logger:
+        return self._logger
+
+    @abc.abstractmethod
+    def debug(self, msg: str, car_name: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def info(self, msg: str, car_name: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def warning(self, msg: str, car_name: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def error(self, msg: str, car_name: str) -> None:
+        pass
+
+    @abc.abstractmethod
+    def log_on_exception(self, e: Exception, car_name: str) -> None:
+        pass
+
+    def format_caller_info(self, caller_info: tuple[str, int, str, Any]) -> str:
+        module_path, line, _, _ = caller_info
+        module_path = os.path.relpath(module_path, PROJECT_ROOT)
+        return f"[{module_path}:{line}]"
+
+
+class CarLogger(_Logger):
+    """Logger class for logging messages, forcing including the car name in the log message.
+
+    The car name is necessary to identify the source of the log message.
+    """
+
+    def debug(self, msg: str, car_name: str) -> None:
+        self._logger.debug(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+
+    def info(self, msg: str, car_name: str) -> None:
+        self._logger.info(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+
+    def warning(self, msg: str, car_name: str) -> None:
+        self._logger.warning(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+
+    def error(self, msg: str, car_name: str) -> None:
+        self._logger.error(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+
+    def log_on_exception(self, e: Exception, car_name: str) -> None:
+        log_level = LOG_LEVELS.get(type(e), logging.ERROR)
+        self._logger.log(
+            log_level, self._msg(car_name, str(e), self._logger.findCaller(stacklevel=2))
+        )
+
+    def _msg(self, car_name: str, msg: str, caller_info: tuple[str, int, str, Any]) -> str:
+        car_name = car_name.strip()
+        if car_name:
+            return f"{self.format_caller_info(caller_info)}\t({car_name})\t{msg}"
+        else:
+            return f"{self.format_caller_info(caller_info)}\t(undefined car)\t{msg}"
+
+
+class ESLogger(_Logger):
+    """Logger class for logging messages at the level of the whole external server, outside of any car's context."""
+
+    def debug(self, msg: str, *args) -> None:
+        self._logger.debug(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+
+    def info(self, msg: str, *args) -> None:
+        self._logger.info(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+
+    def warning(self, msg: str, *args) -> None:
+        self._logger.warning(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+
+    def error(self, msg: str, *args) -> None:
+        self._logger.error(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+
+    def log_on_exception(self, e: Exception, *args) -> None:
+        log_level = LOG_LEVELS.get(type(e), logging.ERROR)
+        self._logger.log(log_level, self._msg(str(e), self._logger.findCaller(stacklevel=2)))
+
+    def _msg(self, msg: str, caller_info: tuple[str, int, str, Any]) -> str:
+        return f"{self.format_caller_info(caller_info)} (server)\t{msg}"
+
+
 def configure_logging(component_name: str, config: _Config) -> None:
     """Configure the logging for the application.
 
@@ -122,12 +130,10 @@ def configure_logging(component_name: str, config: _Config) -> None:
     The logging configuration is read from a JSON file. If the file is not found, a default configuration is used.
     """
     try:
-        log_config = config.logging
-
-        if log_config.console.use:
-            _configure_logging_to_console(log_config.console, component_name)
-        if log_config.file.use:
-            _configure_logging_to_file(log_config.file, component_name)
+        if config.console.use:
+            _configure_logging_to_console(config.console, component_name)
+        if config.file.use:
+            _configure_logging_to_file(config.file, component_name)
         logging.getLogger(LOGGER_NAME).setLevel(
             logging.DEBUG
         )  # This ensures the logging level will be fully determined by the handlers
@@ -139,7 +145,7 @@ def configure_logging(component_name: str, config: _Config) -> None:
         raise
 
 
-def _configure_logging_to_console(config: _Logging.HandlerConfig, component_name: str):
+def _configure_logging_to_console(config: _Config.HandlerConfig, component_name: str):
     """Configure the logging to the console.
 
     The console logging is configured to use the logging level and format specified in the configuration.
@@ -150,7 +156,7 @@ def _configure_logging_to_console(config: _Logging.HandlerConfig, component_name
     _use_handler(handler)
 
 
-def _configure_logging_to_file(config: _Logging.HandlerConfig, component_name: str) -> None:
+def _configure_logging_to_file(config: _Config.HandlerConfig, component_name: str) -> None:
     """Configure the logging to a file.
 
     The file logging is configured to use the logging level and format specified in the configuration.

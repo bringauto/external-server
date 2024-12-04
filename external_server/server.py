@@ -156,9 +156,8 @@ class ExternalServer:
                     car_thread.join()
             self._car_threads.clear()
         except Exception as e:
-            carlogger.error(
-                f"Error in stopping the external server (company='{self._company}'): {e}",
-                self._company,
+            eslogger.error(
+                f"Error in stopping the external server (company='{self._company}'): {e}"
             )
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:

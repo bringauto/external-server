@@ -306,7 +306,7 @@ class APIClientAdapter:
     def _check_forward_error_message_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in forward_error_message function, code: {code}.", car
+                f"Module {module_id}: Error in forward_error_message function, code: {code}.",  
             )
 
     @staticmethod
