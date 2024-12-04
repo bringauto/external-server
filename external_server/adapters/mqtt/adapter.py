@@ -169,7 +169,8 @@ class MQTTClientAdapter:
             error = mqtt_error_from_code(code)
             if self._mqtt_client.is_connected():
                 _logger.warning(
-                    f"Communication with MQTT broker on {self.broker_address} is established with error message: {error}",
+                    "External server MQTT connection - communication between client and broker "
+                    f"'{self.broker_address}' is established with error message: {error}",
                     self._car,
                 )
             else:
