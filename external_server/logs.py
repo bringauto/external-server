@@ -17,6 +17,7 @@ from external_server.config import ServerConfig as _Config, Logging as _Logging
 
 LOGGER_NAME = "external_server"
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+_LOCATION_FORMAT = "[%(filename)s:%(lineno)d]"
 
 
 class _Logger(abc.ABC):
@@ -177,7 +178,7 @@ def _use_handler(handler: logging.Handler) -> None:
 
 def _log_format(component_name: str) -> str:
     log_component_name = "-".join(component_name.lower().split())
-    return f"[%(asctime)s.%(msecs)03d] [{log_component_name}] [%(levelname)s]\t %(message)s"
+    return f"[%(asctime)s.%(msecs)03d] [{log_component_name}] {_LOCATION_FORMAT} [%(levelname)s]\t %(message)s"
 
 
 def _log_file_name(component_name: str) -> str:
