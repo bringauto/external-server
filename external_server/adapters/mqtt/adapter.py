@@ -159,7 +159,10 @@ class MQTTClientAdapter:
         return self._timeout
 
     def connect(self) -> None:
-        """Connect to the MQTT broker."""
+        """Connect to the MQTT broker using host and port provided during initialization.
+
+        Raise an exception if the connection is refused.
+        """
         self._connect_to_broker()
         code = self._start_communication()
         if code != mqtt.MQTT_ERR_SUCCESS:
