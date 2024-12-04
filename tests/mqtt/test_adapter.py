@@ -9,7 +9,7 @@ import threading
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, Client
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, MQTT_ERR_INVAL, Client
 
 from queue import Empty
 from external_server.adapters.mqtt.adapter import (  # type: ignore
@@ -206,8 +206,10 @@ class Test_Connecting_To_Broker(unittest.TestCase):
 
     def test_repeated_connect_calls_have_no_effect_after_the_first_call(self):
         self.broker.start()
-        self.adapter.connect()
-        self.adapter.connect()
+        code_1 = self.adapter.connect()
+        code_2 = self.adapter.connect()
+        self.assertEqual(code_1, MQTT_ERR_SUCCESS)
+        self.assertEqual(code_2, MQTT_ERR_SUCCESS)
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTED)
 
     def test_disconnecting_client_before_calling_connect_has_no_effect(self):

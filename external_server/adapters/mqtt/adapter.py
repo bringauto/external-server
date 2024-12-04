@@ -158,7 +158,7 @@ class MQTTClientAdapter:
         """The timeout for getting messages from the received messages queue."""
         return self._timeout
 
-    def connect(self) -> None:
+    def connect(self) -> int:
         """Connect to the MQTT broker using host and port provided during initialization.
 
         Raise an exception if the connection is refused.
@@ -175,6 +175,7 @@ class MQTTClientAdapter:
                 )
             else:
                 raise ConnectionRefusedError(error)
+        return code
 
     def _connect_to_broker(self) -> None:
         try:
@@ -321,6 +322,9 @@ class MQTTClientAdapter:
         except Empty:
             return None
 
+    def _client_thread_alive(self) -> bool:
+        return self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive()
+
     def _start_communication(self) -> int:
         self._set_up_callbacks()
         self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
@@ -398,6 +402,9 @@ class MQTTClientAdapter:
         self._mqtt_client.on_message = self._on_message
 
     def _start_client_loop(self) -> int:
+        if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
+            self._mqtt_client.loop_stop()
+            self._mqtt_client._thread = None
         return self._mqtt_client.loop_start()
 
     def _wait_for_connection(self, timeout: float) -> bool:  # pragma: no cover
