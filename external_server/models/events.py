@@ -40,7 +40,7 @@ class EventQueue:
     def add(self, event_type: EventType, data: Any = None) -> None:
         """Add new item to the queue."""
         self._queue.put(Event(event_type=event_type, data=data))
-        msg = f"Adding new event: {event_type}"
+        msg = f"Adding new event to queue: {event_type}"
         if data:
             msg += f" with data: {data}"
         logger.debug(msg, self._car)
