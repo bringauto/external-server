@@ -322,9 +322,6 @@ class MQTTClientAdapter:
         except Empty:
             return None
 
-    def _client_thread_alive(self) -> bool:
-        return self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive()
-
     def _start_communication(self) -> int:
         self._set_up_callbacks()
         self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
