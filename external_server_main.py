@@ -54,7 +54,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        config = load_config(args.config)
+        config = load_config(args   .config)
         configure_logging("External Server", config.logging)
     except InvalidConfiguration as exc:
         eslogger.error(f"Invalid config: {exc}")
