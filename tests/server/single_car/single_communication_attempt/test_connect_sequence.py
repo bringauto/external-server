@@ -7,7 +7,7 @@ import logging
 
 sys.path.append(".")
 
-from external_server.server import ServerState
+from external_server.server.single_car import ServerState
 from InternalProtocol_pb2 import Device  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as ExternalServerMsg,

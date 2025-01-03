@@ -11,7 +11,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     ExternalServer as ExternalServerMsg,
     Status,
 )
-from external_server.server import ServerState
+from external_server.server.single_car import ServerState
 from external_server.models.exceptions import UnexpectedMQTTDisconnect
 from external_server.models.events import Event, EventType
 from external_server.models.messages import cmd_response, connect_msg, status

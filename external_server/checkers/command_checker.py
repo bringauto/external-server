@@ -5,8 +5,8 @@ import dataclasses
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import CommandResponse as _CommandResponse
-from InternalProtocol_pb2 import Device as _Device
+from ExternalProtocol_pb2 import CommandResponse as _CommandResponse  # type: ignore
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
 
 from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME

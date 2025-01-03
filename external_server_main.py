@@ -3,7 +3,7 @@ import sys
 import argparse
 import os
 
-from external_server.server import ExternalServer, eslogger
+from external_server.server.all_cars import ExternalServer, logger
 from external_server.config import load_config, InvalidConfiguration
 from external_server.logs import configure_logging
 
@@ -49,19 +49,19 @@ def main() -> None:
     try:
         args = parsed_script_args()
     except argparse.ArgumentError as exc:
-        eslogger.error(f"Invalid arguments. {exc}")
+        logger.error(f"Invalid arguments. {exc}")
         print(f"Invalid arguments. {exc}")
         sys.exit(1)
 
     try:
-        config = load_config(args   .config)
+        config = load_config(args.config)
         configure_logging("External Server", config.logging)
     except InvalidConfiguration as exc:
-        eslogger.error(f"Invalid config: {exc}")
+        logger.error(f"Invalid config: {exc}")
         print(f"Invalid config: {exc}")
         sys.exit(1)
 
-    eslogger.info(f"Loaded config:\n{config.model_dump_json(indent=4)}")
+    logger.info(f"Loaded config:\n{config.model_dump_json(indent=4)}")
     server = ExternalServer(config)
     if args.tls:
         server.set_tls(args.ca, args.cert, args.key)

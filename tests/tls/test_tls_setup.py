@@ -7,7 +7,7 @@ sys.path.append(".")
 
 from pydantic import FilePath
 from external_server.config import CarConfig, ModuleConfig
-from external_server.server import CarServer
+from external_server.server.single_car import CarServer
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH, CAR_CONFIG_WITHOUT_MODULES
 from external_server.models.events import EventQueue

@@ -8,7 +8,7 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from pydantic import FilePath
 
 from external_server.config import CarConfig, ModuleConfig
-from external_server.server import CarServer, ServerState
+from external_server.server.single_car import CarServer, ServerState
 from external_server.models.events import EventQueue
 from external_server.adapters.mqtt.adapter import MQTTClientAdapter
 from external_server.checkers.command_checker import PublishedCommandChecker

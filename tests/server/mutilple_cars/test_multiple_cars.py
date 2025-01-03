@@ -9,8 +9,8 @@ from InternalProtocol_pb2 import (  # type: ignore
     DeviceStatus,
 )
 from ExternalProtocol_pb2 import Status  # type: ignore
-
-from external_server.server import ServerState, ExternalServer
+from external_server.server.single_car import ServerState
+from external_server.server.all_cars import ExternalServer
 from external_server.models.messages import connect_msg, status, cmd_response
 
 from tests.utils import get_test_server
