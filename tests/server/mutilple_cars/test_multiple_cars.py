@@ -1,20 +1,24 @@
 import unittest
 import sys
 import time
+import threading
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from InternalProtocol_pb2 import (  # type: ignore
-    Device,
-    DeviceStatus,
-)
+from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status  # type: ignore
 from external_server.server.single_car import ServerState
 from external_server.server.all_cars import ExternalServer
 from external_server.models.messages import connect_msg, status, cmd_response
+from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 
 from tests.utils import get_test_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
+
+
+def _device_status(device: _Device, status_data: bytes = b"") -> DeviceStatus:
+    return DeviceStatus(device=device, statusData=status_data)
 
 
 def wait_for_server_connection(
@@ -80,6 +84,65 @@ class Test_Multiple_Cars(unittest.TestCase):
         self.assertNotEqual(self.es.car_servers()["car_b"].state, ServerState.RUNNING)
 
     def tearDown(self) -> None:
+        self.es.stop()
+        self.broker.stop()
+
+
+class Test_Failed_Connection_With_Valid_Connect_Message_For_Single_Car(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server("x", "car_a", timeout=0.5, mqtt_timeout=0.7)
+        self.broker = MQTTBrokerTest(start=True)
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+
+    def test_connecting_to_broker_when_mqtt_loop_has_already_started(self):
+        server_a = self.es.car_servers()["car_a"]
+        server_a.mqtt.client._thread = threading.Thread(target=lambda: None)
+        with self.assertLogs(level="WARNING") as cm:
+            self.es.start()
+            time.sleep(0.1)
+            self.assertIn(
+                "Attempted to start MQTT client traffic-processing loop, but it is already running",
+                cm.output[0],
+            )
+
+    def tearDown(self):
+        self.es.stop()
+        self.broker.stop()
+
+
+class Test_Failed_Connection_With_Valid_Connect_Message_For_Two_Cars(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server("x", "car_a", "car_b", timeout=0.5, mqtt_timeout=0.7)
+        self.broker = MQTTBrokerTest(start=True)
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+
+    def test_connect_message_arrives_for_both_cars(self):
+        broker = self.broker
+        server_a = self.es.car_servers()["car_a"]
+        server_b = self.es.car_servers()["car_b"]
+        topic_a = server_a.mqtt.subscribe_topic
+        topic_b = server_b.mqtt.subscribe_topic
+        supported_status = _device_status(self.device)
+
+        self.es.start()
+        time.sleep(0.51)
+        broker.publish(topic_a, connect_msg("id", "company", [self.device]))
+        broker.publish(topic_b, connect_msg("id", "company", [self.device]))
+
+        time.sleep(0.5)
+        broker.publish(topic_a, connect_msg("id", "company", [self.device]))
+        broker.publish(topic_b, connect_msg("tid", "company", [self.device]))
+        broker.publish(topic_a, status("id", Status.CONNECTING, 0, supported_status))
+        broker.publish(topic_b, status("id", Status.CONNECTING, 0, supported_status))
+
+        broker.publish(topic_a, cmd_response("id", 0, CommandResponse.OK))
+        broker.publish(topic_b, cmd_response("id", 0, CommandResponse.OK))
+
+        time.sleep(50)
+
+    def tearDown(self):
         self.es.stop()
         self.broker.stop()
 

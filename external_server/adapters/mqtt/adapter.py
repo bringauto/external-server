@@ -419,13 +419,15 @@ class MQTTClientAdapter:
     def _start_client_loop(self) -> int:
         """Start the MQTT client traffic-processing loop. If the loop is already running it is
         stopped first and then started again."""
-        if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
+        # if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
+        if self._mqtt_client._thread is not None:
             _logger.warning(
                 "Attempted to start MQTT client traffic-processing loop, but it is already running. "
-                "Stopping the current loop and starting a new one.",
+                "Stopping the current loop, starting a new one.",
                 self._car,
             )
-            self._mqtt_client.loop_stop()
+            if self._mqtt_client._thread.is_alive():
+                self._mqtt_client.loop_stop()
             self._mqtt_client._thread = None
         return self._mqtt_client.loop_start()
 

@@ -16,10 +16,11 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.models.exceptions import ConnectSequenceFailure, CommunicationException
 from external_server.models.devices import DevicePy, device_status as _device_status
-from tests.utils.mqtt_broker import MQTTBrokerTest
-from tests.utils import get_test_car_server
 from external_server.models.messages import connect_msg, status, cmd_response
 from external_server.logs import LOGGER_NAME
+
+from tests.utils.mqtt_broker import MQTTBrokerTest
+from tests.utils import get_test_car_server
 
 
 logging.getLogger(LOGGER_NAME).setLevel(logging.DEBUG)
