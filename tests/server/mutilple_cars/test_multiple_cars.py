@@ -111,41 +111,5 @@ class Test_Failed_Connection_With_Valid_Connect_Message_For_Single_Car(unittest.
         self.broker.stop()
 
 
-class Test_Failed_Connection_With_Valid_Connect_Message_For_Two_Cars(unittest.TestCase):
-
-    def setUp(self):
-        self.es = get_test_server("x", "car_a", "car_b", timeout=0.5, mqtt_timeout=0.7)
-        self.broker = MQTTBrokerTest(start=True)
-        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
-
-    def test_connect_message_arrives_for_both_cars(self):
-        broker = self.broker
-        server_a = self.es.car_servers()["car_a"]
-        server_b = self.es.car_servers()["car_b"]
-        topic_a = server_a.mqtt.subscribe_topic
-        topic_b = server_b.mqtt.subscribe_topic
-        supported_status = _device_status(self.device)
-
-        self.es.start()
-        time.sleep(0.51)
-        broker.publish(topic_a, connect_msg("id", "company", [self.device]))
-        broker.publish(topic_b, connect_msg("id", "company", [self.device]))
-
-        time.sleep(0.5)
-        broker.publish(topic_a, connect_msg("id", "company", [self.device]))
-        broker.publish(topic_b, connect_msg("tid", "company", [self.device]))
-        broker.publish(topic_a, status("id", Status.CONNECTING, 0, supported_status))
-        broker.publish(topic_b, status("id", Status.CONNECTING, 0, supported_status))
-
-        broker.publish(topic_a, cmd_response("id", 0, CommandResponse.OK))
-        broker.publish(topic_b, cmd_response("id", 0, CommandResponse.OK))
-
-        time.sleep(50)
-
-    def tearDown(self):
-        self.es.stop()
-        self.broker.stop()
-
-
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
