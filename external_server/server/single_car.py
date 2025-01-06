@@ -428,15 +428,7 @@ class CarServer:
         Raise exception if the connection fails.
         """
         logger.info("Connecting to MQTT broker.", self._car_name)
-        try:
-            self._mqtt.connect()
-        except Exception as e:
-            str_e = str(e)
-            print("=" * len(str_e))
-            print(str_e)
-            print("Is connected:", self._mqtt.is_connected)
-            print("=" * len(str_e))
-            raise
+        self._mqtt.connect()
         self._set_state(ServerState.CONNECTED)
 
     def _get_and_send_first_commands(self) -> None:
@@ -805,7 +797,7 @@ class CarServer:
             if not self._running:
                 self._set_running_flag(True)
             self._init_sequence()
-        except Exception:
+        except:
             self._set_state(ServerState.ERROR)
             raise
 
