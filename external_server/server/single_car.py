@@ -733,11 +733,6 @@ class CarServer:
         info = f"Received status, counter={status.messageCounter}."
         logger.info(info, self._car_name)
 
-    def _log_and_set_error(self, exception: Exception, car_name: str = "") -> None:
-        """Log the exception and raise it. Set the server's state to ERROR."""
-        logger.log_on_exception(exception, car_name)
-        self._set_state(ServerState.ERROR)
-
     def _module_and_device(self, message: _Status) -> tuple[_ServerModule | None, _Device | None]:
         """Return server module and device referenced by the status messages.
 
