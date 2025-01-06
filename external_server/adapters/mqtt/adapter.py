@@ -72,7 +72,7 @@ def mqtt_error_from_code(code: int) -> str:
     enum_val = _MQTTErrorCode._value2member_map_.get(code)
     if enum_val is None:
         return "Unknown error code"
-    return _error_string(enum_val).rstrip(".")
+    return "(from MQTT error code): " + _error_string(enum_val).rstrip(".")
 
 
 class MQTTClientAdapter:
@@ -163,6 +163,7 @@ class MQTTClientAdapter:
 
         Raise an exception if the connection is refused.
         """
+
         self._set_up_connection_to_broker()
         code = self._start_communication()
         if code != mqtt.MQTT_ERR_SUCCESS:
@@ -182,15 +183,12 @@ class MQTTClientAdapter:
 
         Raise an exception if the connection is refused.
         """
-        try:
-            code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
-            if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.info(f"Connected to MQTT broker on {self.broker_address}.", self._car)
-            else:
-                error = mqtt_error_from_code(code)
-                raise ConnectionRefusedError(error)
-        except Exception as e:
-            raise ConnectionRefusedError from e
+        code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.info(f"Connected to MQTT broker on {self.broker_address}.", self._car)
+        else:
+            error = mqtt_error_from_code(code)
+            raise ConnectionRefusedError(error)
 
     def disconnect(self) -> int:
         """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
