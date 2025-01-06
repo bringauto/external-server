@@ -42,7 +42,7 @@ class MQTTSession:
         """Update the session ID."""
         if not session_id:
             raise ValueError("Session ID cannot be empty")
-        _logger.info("Setting the MQTT session ID.", self._car_name)
+        _logger.info(f"Setting the MQTT session ID to '{session_id}'.", self._car_name)
         self._id = session_id
 
     def start(self) -> None:
