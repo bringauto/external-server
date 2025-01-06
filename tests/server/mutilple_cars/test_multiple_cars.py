@@ -10,15 +10,9 @@ from ExternalProtocol_pb2 import Status  # type: ignore
 from external_server.server.single_car import ServerState
 from external_server.server.all_cars import ExternalServer
 from external_server.models.messages import connect_msg, status, cmd_response
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from ExternalProtocol_pb2 import Status, CommandResponse  # type: ignore
 
 from tests.utils import get_test_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
-
-
-def _device_status(device: _Device, status_data: bytes = b"") -> DeviceStatus:
-    return DeviceStatus(device=device, statusData=status_data)
 
 
 def wait_for_server_connection(
