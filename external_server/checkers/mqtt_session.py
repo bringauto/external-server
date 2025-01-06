@@ -23,7 +23,7 @@ class MQTTSession:
         self._id: str = ""
         self._car_name = car_name
 
-    @property   
+    @property
     def id(self) -> str:
         """Return the session ID."""
         return self._id
@@ -42,7 +42,7 @@ class MQTTSession:
         """Update the session ID."""
         if not session_id:
             raise ValueError("Session ID cannot be empty")
-        _logger.info(f"Updating session ID from '{self._id}' to '{session_id}'.", self._car_name)
+        _logger.info(f"Setting the MQTT session ID to '{session_id}'.", self._car_name)
         self._id = session_id
 
     def start(self) -> None:
@@ -52,13 +52,11 @@ class MQTTSession:
             self._timer.start()
             self._timer_running = True
             _logger.debug(
-                f"Started timer for MQTT session (id='{self._id}') with timeout set to {self._checker.timeout}.",
+                f"Started timer for the current MQTT session with timeout set to {self._checker.timeout}.",
                 self._car_name,
             )
         else:
-            _logger.warning(
-                f"Timer already running for MQTT session (id='{self._id}').", self._car_name
-            )
+            _logger.warning("Timer already running for the current MQTT session.", self._car_name)
 
     def reset_timer(self) -> None:
         """Resets the checker's timer.
@@ -71,7 +69,7 @@ class MQTTSession:
     def stop(self) -> None:
         """Stops the checker's timer."""
         if self._timer_running and self._timer is not None:
-            _logger.info(f"Stopping timer for MQTT session (id='{self._id}').", self._car_name)
+            _logger.info("Stopping timer for the current MQTT session.", self._car_name)
             if self._timer.is_alive():
                 self._timer.cancel()
                 self._timer.join()
@@ -79,4 +77,4 @@ class MQTTSession:
             self._timer_running = False
             self._timer = None
         else:
-            _logger.debug(f"No timer running for MQTT session (id='{self._id}').", self._car_name)
+            _logger.debug("No timer running for the current MQTT session.", self._car_name)

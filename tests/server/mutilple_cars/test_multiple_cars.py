@@ -1,16 +1,14 @@
 import unittest
 import sys
 import time
+import threading
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from InternalProtocol_pb2 import (  # type: ignore
-    Device,
-    DeviceStatus,
-)
+from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import Status  # type: ignore
-
-from external_server.server import ServerState, ExternalServer
+from external_server.server.single_car import ServerState
+from external_server.server.all_cars import ExternalServer
 from external_server.models.messages import connect_msg, status, cmd_response
 
 from tests.utils import get_test_server
@@ -80,6 +78,32 @@ class Test_Multiple_Cars(unittest.TestCase):
         self.assertNotEqual(self.es.car_servers()["car_b"].state, ServerState.RUNNING)
 
     def tearDown(self) -> None:
+        self.es.stop()
+        self.broker.stop()
+
+
+class Test_MQTT_Client_Thread_Exists_Before_Server_Is_Started(unittest.TestCase):
+
+    def setUp(self):
+        self.es = get_test_server("x", "car_a", timeout=0.5, mqtt_timeout=0.7)
+        self.broker = MQTTBrokerTest(start=True)
+        self.device = Device(module=1000, deviceType=0, deviceName="TestDevice", deviceRole="test")
+
+    def test_warning_is_logged_and_thread_is_replaced_with_new_valid_thread(self):
+        server_a = self.es.car_servers()["car_a"]
+        server_a.mqtt.client._thread = threading.Thread(target=lambda: None)
+        orig_invalid_thread = server_a.mqtt.client._thread
+        with self.assertLogs(level="WARNING") as cm:
+            self.es.start()
+            time.sleep(0.1)
+            self.assertIn(
+                "Attempted to start MQTT client traffic-processing loop, but it is already running",
+                cm.output[0],
+            )
+            self.assertTrue(server_a.mqtt.client._thread.is_alive())
+            self.assertNotEqual(server_a.mqtt.client._thread, orig_invalid_thread)
+
+    def tearDown(self):
         self.es.stop()
         self.broker.stop()
 

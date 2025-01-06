@@ -16,7 +16,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status as _Status,
 )
 from external_server.config import CarConfig, ModuleConfig
-from external_server.server import CarServer
+from external_server.server.single_car import CarServer
 from external_server.models.messages import (
     connect_msg,
     status,

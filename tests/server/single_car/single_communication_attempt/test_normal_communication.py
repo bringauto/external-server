@@ -8,7 +8,8 @@ import threading
 
 sys.path.append(".")
 
-from external_server.server import CarServer, ServerState, eslogger as _logger
+from external_server.server.single_car import CarServer, ServerState
+from external_server.server.all_cars import logger as _logger
 from external_server.models.structures import Buffer
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from ExternalProtocol_pb2 import (  # type: ignore
