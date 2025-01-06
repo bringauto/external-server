@@ -77,4 +77,4 @@ class MQTTSession:
             self._timer_running = False
             self._timer = None
         else:
-            _logger.debug("No timer running for the current MQTT session).", self._car_name)
+            _logger.debug("No timer running for the current MQTT session.", self._car_name)
