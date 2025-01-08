@@ -88,7 +88,6 @@ class ExternalServer:
         try:
             for car_server in self.car_servers().values():
                 car_server.stop(reason)
-                car_server._event_queue.add(_EventType.SERVER_STOPPED)
             for car_thread in self._car_threads.values():
                 if car_thread.is_alive():
                     car_thread.join()

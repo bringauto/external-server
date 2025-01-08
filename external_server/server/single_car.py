@@ -247,12 +247,13 @@ class CarServer:
         """
         msg = f"Stopping the external server part for car {self._config.car_name} of company {self._config.company_name}."
         self._set_state(ServerState.STOPPED)
+        self._event_queue.add(_EventType.SERVER_STOPPED)
         if reason:
             msg += f" Reason: {reason}"
         logger.info(msg, self._car_name)
         self._set_running_flag(False)
-        self._clear_context()
         self._clear_modules()
+        self._clear_context()
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to MQTT client."
