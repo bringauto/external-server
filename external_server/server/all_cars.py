@@ -70,6 +70,11 @@ class ExternalServer:
             self._car_threads[car] = threading.Thread(target=self._car_servers[car].start)
         for t in self._car_threads.values():
             t.start()
+        # The following for loop ensures, that the main thread waits for all car threads to finish
+        # This allows for the external_server_main script to run while the car threads are running
+        # This ensures the server can be stopped by KeyboardInterrupt
+        for t in self._car_threads.values():
+            t.join()
 
     def stop(self, reason: str = "") -> None:
         """Stop the external server.
