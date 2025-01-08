@@ -67,7 +67,7 @@ def main() -> None:
         server.set_tls(args.ca, args.cert, args.key)
 
     try:
-        server.start()
+        server.start(wait_for_join=True)
     except KeyboardInterrupt:
         server.stop(reason="keyboard interrupt")
 

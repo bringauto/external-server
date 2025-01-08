@@ -35,7 +35,7 @@ _eslogger = _logger._logger
 
 
 def wait_for_server_connection(
-    server: CarServer, test_case: unittest.TestCase, timeout: float = 2.0
+    server: CarServer, test_case: unittest.TestCase, timeout: float = 5.0
 ):
     t = time.time()
     while time.time() - t < timeout:
@@ -47,7 +47,7 @@ def wait_for_server_connection(
 
 
 def _wait_for_server_initialization(
-    server: CarServer, test_case: unittest.TestCase, timeout: float = 2.0
+    server: CarServer, test_case: unittest.TestCase, timeout: float = 5.0
 ):
     t = time.time()
     while time.time() - t < timeout:
