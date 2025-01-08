@@ -60,11 +60,14 @@ class ExternalServer:
         """Return parts of the external server responsible for each car defined in configuration."""
         return self._car_servers.copy()
 
-    def start(self) -> None:
+    def start(self, wait_for_join: bool = False) -> None:
         """Start the external server.
 
         For reach car defined in the configuration, create a separate thread and inside that,
         start an instance of the CarServer class.
+
+        The 'wait_for_join' parameter is used to determine if the main thread should wait
+        for all car threads to finish or just return and let the car threads run in the background.
         """
         for car in self._car_servers:
             self._car_threads[car] = threading.Thread(target=self._car_servers[car].start)
@@ -73,8 +76,9 @@ class ExternalServer:
         # The following for loop ensures, that the main thread waits for all car threads to finish
         # This allows for the external_server_main script to run while the car threads are running
         # This ensures the server can be stopped by KeyboardInterrupt
-        for t in self._car_threads.values():
-            t.join()
+        if wait_for_join:
+            for t in self._car_threads.values():
+                t.join()
 
     def stop(self, reason: str = "") -> None:
         """Stop the external server.
