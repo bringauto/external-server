@@ -340,7 +340,6 @@ class MQTTClientAdapter:
     def _start_communication(self) -> int:
         """Set up the MQTT client traffic processing (callbacks and subscriptions) and ensure the traffic processing loop is running."""
         self._set_up_callbacks()
-        self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
         code = self._start_client_loop()
         connection = self._wait_for_connection(_MQTT_CONNECTION_STATE_UPDATE_TIMEOUT)
         if connection:
@@ -370,6 +369,7 @@ class MQTTClientAdapter:
         - `rc` The connection result code indicating success or failure.
         - `properties` The properties associated with the connection event.
         """
+        self._mqtt_client.subscribe(self._subscribe_topic, qos=_QOS)
         self._log_connection_result(rc)
 
     def _on_disconnect(self, client: _Client, data: Any, flags: Any, rc, properties: Any) -> None:
