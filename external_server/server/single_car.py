@@ -247,12 +247,13 @@ class CarServer:
         """
         msg = f"Stopping the external server part for car {self._config.car_name} of company {self._config.company_name}."
         self._set_state(ServerState.STOPPED)
+        self._event_queue.add(_EventType.SERVER_STOPPED)
         if reason:
             msg += f" Reason: {reason}"
         logger.info(msg, self._car_name)
         self._set_running_flag(False)
-        self._clear_context()
         self._clear_modules()
+        self._clear_context()
 
     def tls_set(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         "Set tls security to MQTT client."
@@ -306,8 +307,9 @@ class CarServer:
         self._command_checker.reset()
         self._status_checker.reset()
         for device in self._known_devices.list_connected():
-            module_adapter = self._modules[device.module_id].api
-            module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
+            if device.module_id in self._modules:
+                module_adapter = self._modules[device.module_id].api
+                module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
         self._known_devices.clear()
         self._event_queue.clear()
 
@@ -398,7 +400,7 @@ class CarServer:
         drepr = device_repr(device)
         logger.info(f"Disconnecting device {drepr}.", self._car_name)
         if self._known_devices.is_not_connected(device):
-            logger.info(f"Device {drepr} is already disconnected.", self._car_name)
+            logger.warning(f"Device {drepr} is already disconnected.", self._car_name)
         else:
             self._known_devices.remove(DevicePy.from_device(device))
             code = self._modules[device.module].api.device_disconnected(disconnect_types, device)
@@ -517,6 +519,8 @@ class CarServer:
             module.api.forward_status(status)
             logger.info(f"Status from '{device_repr(device)}' has been forwarded.", self._car_name)
             self._publish_status_response(status)
+            if status.deviceState == _Status.DISCONNECT:
+                self._disconnect_device(DisconnectTypes.announced, device)
 
     def _handle_checked_status_by_device_state(self, status: _Status, device: _Device) -> bool:
         """Handle the status that has been checked by the status checker.
@@ -532,11 +536,14 @@ class CarServer:
                     logger.warning("Device is not connected. Ignoring status.", self._car_name)
                     status_ok = False
             case _Status.DISCONNECT:
-                status_ok = self._disconnect_device(DisconnectTypes.announced, device)
+                logger.info(
+                    f"Received status with a disconnect message for device {device_repr(device)}.", self._car_name
+                )
             case _:
                 logger.warning(
                     f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
                 )
+                status_ok = False
         return status_ok
 
     def _handle_command(self, module_id: int, data: bytes, device: _Device) -> None:
