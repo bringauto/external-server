@@ -518,6 +518,8 @@ class CarServer:
             module.api.forward_status(status)
             logger.info(f"Status from '{device_repr(device)}' has been forwarded.", self._car_name)
             self._publish_status_response(status)
+            if status.deviceState == _Status.DISCONNECT:
+                self._disconnect_device(DisconnectTypes.announced, device)
 
     def _handle_checked_status_by_device_state(self, status: _Status, device: _Device) -> bool:
         """Handle the status that has been checked by the status checker.
@@ -533,11 +535,12 @@ class CarServer:
                     logger.warning("Device is not connected. Ignoring status.", self._car_name)
                     status_ok = False
             case _Status.DISCONNECT:
-                status_ok = self._disconnect_device(DisconnectTypes.announced, device)
+                pass
             case _:
                 logger.warning(
                     f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
                 )
+                status_ok = False
         return status_ok
 
     def _handle_command(self, module_id: int, data: bytes, device: _Device) -> None:
