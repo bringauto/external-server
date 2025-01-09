@@ -307,8 +307,9 @@ class CarServer:
         self._command_checker.reset()
         self._status_checker.reset()
         for device in self._known_devices.list_connected():
-            module_adapter = self._modules[device.module_id].api
-            module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
+            if device.module_id in self._modules:
+                module_adapter = self._modules[device.module_id].api
+                module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
         self._known_devices.clear()
         self._event_queue.clear()
 
@@ -399,7 +400,7 @@ class CarServer:
         drepr = device_repr(device)
         logger.info(f"Disconnecting device {drepr}.", self._car_name)
         if self._known_devices.is_not_connected(device):
-            logger.info(f"Device {drepr} is already disconnected.", self._car_name)
+            logger.warning(f"Device {drepr} is already disconnected.", self._car_name)
         else:
             self._known_devices.remove(DevicePy.from_device(device))
             code = self._modules[device.module].api.device_disconnected(disconnect_types, device)
