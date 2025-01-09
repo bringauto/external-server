@@ -535,7 +535,9 @@ class CarServer:
                     logger.warning("Device is not connected. Ignoring status.", self._car_name)
                     status_ok = False
             case _Status.DISCONNECT:
-                pass
+                logger.info(
+                    f"Received status with a disconnect message for device {device_repr(device)}.", self._car_name
+                )
             case _:
                 logger.warning(
                     f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
