@@ -13,6 +13,7 @@ from external_server.models.structures import (
 )
 from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
+    EsErrorCode as _EsErrorCode,
 )
 from external_server.models.devices import device_repr
 from external_server.config import ModuleConfig
@@ -113,7 +114,7 @@ class APIClientAdapter:
         """
         device_identification = self._create_device_identification(device)
         code = self._library.device_disconnected(disconnect_types, device_identification)
-        self._check_device_disconnected_code(device.module, code, self._car)
+        self.check_device_disconnected_code(device, code, self._car)
         return code
 
     def _create_device_identification(self, device: _Device) -> DeviceIdentification:
@@ -299,24 +300,38 @@ class APIClientAdapter:
     def _check_forward_status_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in forward_status function, code: {code}.", car
+                f"Module {module_id}: Error in forward_status function, code: {code}.", car, 1
             )
 
     @staticmethod
     def _check_forward_error_message_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in forward_error_message function, code: {code}.", car
+                f"Module {module_id}: Error in forward_error_message function, code: {code}.",
+                car,
+                1,
             )
 
     @staticmethod
-    def _check_device_disconnected_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
+    def check_device_disconnected_code(device_id: _Device, code: int, car: str) -> None:
+        if code == _GeneralErrorCode.NOT_OK:
+            _logger.warning(
+                f"Module {device_id.module}: Device {device_id} not not among conected devices, code: {code}.",
+                car,
+                1,
+            )
+        elif code == _EsErrorCode.CONTEXT_INCORRECT:
+            _logger.error(f"Module {device_id.module}: Context incorrect, code: {code}.", car, 1)
+        elif code != _GeneralErrorCode.OK:
             _logger.error(
-                f"Module {module_id}: Error in device_disconnected function, code: {code}.", car
+                f"Module {device_id.module}: Error in device_disconnected function, code: {code}.",
+                car,
+                1,
             )
 
     @staticmethod
     def _check_command_ack_code(module_id: int, code: int, car: str) -> None:
         if code != _GeneralErrorCode.OK:
-            _logger.error(f"Module {module_id}: Error in command_ack function, code: {code}.", car)
+            _logger.error(
+                f"Module {module_id}: Error in command_ack function, code: {code}.", car, 1
+            )

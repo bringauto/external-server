@@ -10,7 +10,10 @@ sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # type: ignore
 from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
 from external_server.server.all_cars import logger as _logger
+from external_server.logs import LOGGER_NAME
+from external_server.adapters.api.adapter import APIClientAdapter
 from tests.utils import get_test_car_server
+from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from tests.utils.mqtt_broker import MQTTBrokerTest
 from external_server.models.messages import status, status_response
 
@@ -182,6 +185,35 @@ class Test_Forwarding_Status(unittest.TestCase):
     def tearDown(self) -> None:
         self.es.stop()
         self.broker.stop()
+
+
+class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
+
+    def setUp(self):
+        self.device = Device(
+            module=1, deviceType=4, deviceRole="test-device", deviceName="Test Device"
+        )
+
+    def test_warning_is_logged_if_disconnected_device_is_not_among_connected_devices(self):
+        with self.assertLogs(LOGGER_NAME, logging.WARNING) as cm:
+            APIClientAdapter.check_device_disconnected_code(
+                self.device, GeneralErrorCode.NOT_OK, "test-car"
+            )
+            self.assertIn("not among conected devices", cm.output[0])
+
+    def test_incorrect_context_error_logs_error(self):
+        with self.assertLogs(LOGGER_NAME, logging.WARNING) as cm:
+            APIClientAdapter.check_device_disconnected_code(
+                self.device,
+                EsErrorCode.CONTEXT_INCORRECT,
+                "test-car",
+            )
+            self.assertIn("context incorrect", cm.output[0].lower())
+
+    def test_error_is_logged_if_other_error_code_is_returned(self):
+        with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
+            APIClientAdapter.check_device_disconnected_code(self.device, -5, "test-car")
+            self.assertIn("Error in device_disconnected", cm.output[0])
 
 
 if __name__ == "__main__":  # pragma: no cover
