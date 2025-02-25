@@ -113,7 +113,7 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
         self.es._add_connected_devices(self.device)
         self.es._mqtt.session.set_id("session_id")
 
-    def test_connecting_state_connects_the_device_and_send_response(self, mock: Mock):
+    def test_connecting_state_connects_the_device_and_sends_response(self, mock: Mock):
         self.es._known_devices.not_connected(self.device)
         mock.side_effect = self.publish
         self.assertFalse(self.es._known_devices.is_connected(self.device))
