@@ -307,8 +307,10 @@ class CarServer:
         self._command_checker.reset()
         self._status_checker.reset()
         for device in self._known_devices.list_connected():
-            module_adapter = self._modules[device.module_id].api
-            module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
+            module = self._modules.get(device.module_id, None)
+            if module:
+                module_adapter = module.api
+                module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
         self._known_devices.clear()
         self._event_queue.clear()
 
