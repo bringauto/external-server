@@ -95,8 +95,8 @@ class MQTTClientAdapter:
         event_queue: _EventQueue,
         mqtt_timeout: float = 0.5,
     ) -> None:
-        self._publish_topic = f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
-        self._subscribe_topic = f"{company}/{car}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
+        self._publish_topic = self.get_publish_topic(company, car)
+        self._subscribe_topic = self.get_subscribe_topic(company, car)
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = create_mqtt_client(car)
         self._event_queue = event_queue
@@ -166,24 +166,30 @@ class MQTTClientAdapter:
 
         self._set_up_connection_to_broker()
         code = self._start_communication()
-        if code != mqtt.MQTT_ERR_SUCCESS:
-            error = mqtt_error_from_code(code)
-            if self._mqtt_client.is_connected():
-                _logger.warning(
-                    "External server MQTT connection - communication between client and broker "
-                    f"'{self.broker_address}' is established with error message: {error}",
-                    self._car,
-                )
-            else:
-                raise ConnectionRefusedError(error)
-        return code
+        return self._handle_response_code_of_setting_up_conn_to_broker(code)
+
+    def _handle_response_code_of_setting_up_conn_to_broker(self, code: int) -> int:
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            return code
+        error = mqtt_error_from_code(code)
+        if self._mqtt_client.is_connected():
+            _logger.warning(
+                "External server MQTT connection - communication between client and broker "
+                f"'{self.broker_address}' is established with error message: {error}",
+                self._car,
+            )
+            return code
+        else:
+            raise ConnectionRefusedError(error)
 
     def _set_up_connection_to_broker(self) -> None:
         """Create a connection to the MQTT broker. This is required before starting communication loop of the MQTT client.
 
         Raise an exception if the connection is refused.
         """
-        code = self._mqtt_client.connect(self._broker_host, self._broker_port, _KEEPALIVE)
+        code = self._mqtt_client.connect(
+            host=self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE
+        )
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Connected to MQTT broker on {self.broker_address}.", self._car)
         else:
@@ -437,3 +443,13 @@ class MQTTClientAdapter:
                 return True
             time.sleep(0.01)
         return False
+
+    @staticmethod
+    def get_subscribe_topic(company: str, car: str) -> str:
+        """Return the topic the MQTT client is subscribed to."""
+        return f"{company}/{car}/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
+
+    @staticmethod
+    def get_publish_topic(company: str, car: str) -> str:
+        """Return the topic the MQTT client is publishing to."""
+        return f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
