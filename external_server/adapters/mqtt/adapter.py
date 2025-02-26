@@ -201,14 +201,20 @@ class MQTTClientAdapter:
         if self._mqtt_client.is_connected():
             code = self._mqtt_client.disconnect()
             self.stop()
-            if code == mqtt.MQTT_ERR_SUCCESS:
-                _logger.info(f"Disconnected from MQTT broker: {self.broker_address}", self._car)
-            else:
-                error = mqtt_error_from_code(code)
-                _logger.error(
-                    f"Error when disconnecting from MQTT broker. ({self.broker_address}): {error}",
-                    self._car,
-                )
+            match code:
+                case mqtt.MQTT_ERR_SUCCESS:
+                    _logger.info(f"Disconnected from MQTT broker: {self.broker_address}", self._car)
+                case mqtt.MQTT_ERR_NO_CONN:
+                    _logger.warning(
+                        "Trying to disconnect from MQTT broker, but not connected. No action is taken.",
+                        self._car,
+                    )
+                case _:
+                    error = mqtt_error_from_code(code)
+                    _logger.error(
+                        f"Error when disconnecting from MQTT broker. ({self.broker_address}): {error}",
+                        self._car,
+                    )
             return code
         else:
             _logger.info(
