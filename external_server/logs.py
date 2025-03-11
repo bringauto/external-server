@@ -42,23 +42,23 @@ class _Logger(abc.ABC):
         return self._logger
 
     @abc.abstractmethod
-    def debug(self, msg: str, car_name: str) -> None:
+    def debug(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
         pass
 
     @abc.abstractmethod
-    def info(self, msg: str, car_name: str) -> None:
+    def info(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
         pass
 
     @abc.abstractmethod
-    def warning(self, msg: str, car_name: str) -> None:
+    def warning(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
         pass
 
     @abc.abstractmethod
-    def error(self, msg: str, car_name: str) -> None:
+    def error(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
         pass
 
     @abc.abstractmethod
-    def log_on_exception(self, e: Exception, car_name: str) -> None:
+    def log_on_exception(self, e: Exception, car_name: str, stack_level_up: int = 0) -> None:
         pass
 
     def format_caller_info(self, caller_info: tuple[str, int, str, Any]) -> str:
@@ -73,22 +73,31 @@ class CarLogger(_Logger):
     The car name is necessary to identify the source of the log message.
     """
 
-    def debug(self, msg: str, car_name: str) -> None:
-        self._logger.debug(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+    def debug(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
+        self._logger.debug(
+            self._msg(car_name, msg, self._logger.findCaller(stacklevel=2 + stack_level_up))
+        )
 
-    def info(self, msg: str, car_name: str) -> None:
-        self._logger.info(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+    def info(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
+        self._logger.info(
+            self._msg(car_name, msg, self._logger.findCaller(stacklevel=2 + stack_level_up))
+        )
 
-    def warning(self, msg: str, car_name: str) -> None:
-        self._logger.warning(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+    def warning(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
+        self._logger.warning(
+            self._msg(car_name, msg, self._logger.findCaller(stacklevel=2 + stack_level_up))
+        )
 
-    def error(self, msg: str, car_name: str) -> None:
-        self._logger.error(self._msg(car_name, msg, self._logger.findCaller(stacklevel=2)))
+    def error(self, msg: str, car_name: str, stack_level_up: int = 0) -> None:
+        self._logger.error(
+            self._msg(car_name, msg, self._logger.findCaller(stacklevel=2 + stack_level_up))
+        )
 
-    def log_on_exception(self, e: Exception, car_name: str) -> None:
+    def log_on_exception(self, e: Exception, car_name: str, stack_level_up: int = 0) -> None:
         log_level = LOG_LEVELS.get(type(e), logging.ERROR)
         self._logger.log(
-            log_level, self._msg(car_name, str(e), self._logger.findCaller(stacklevel=2))
+            log_level,
+            self._msg(car_name, str(e), self._logger.findCaller(stacklevel=2 + stack_level_up)),
         )
 
     def _msg(self, car_name: str, msg: str, caller_info: tuple[str, int, str, Any]) -> str:
@@ -102,21 +111,23 @@ class CarLogger(_Logger):
 class ESLogger(_Logger):
     """Logger class for logging messages at the level of the whole external server, outside of any car's context."""
 
-    def debug(self, msg: str, *args) -> None:
-        self._logger.debug(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+    def debug(self, msg: str, *args, stack_level_up: int = 0) -> None:
+        self._logger.debug(self._msg(msg, self._logger.findCaller(stacklevel=2 + stack_level_up)))
 
-    def info(self, msg: str, *args) -> None:
-        self._logger.info(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+    def info(self, msg: str, *args, stack_level_up: int = 0) -> None:
+        self._logger.info(self._msg(msg, self._logger.findCaller(stacklevel=2 + stack_level_up)))
 
-    def warning(self, msg: str, *args) -> None:
-        self._logger.warning(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+    def warning(self, msg: str, *args, stack_level_up: int = 0) -> None:
+        self._logger.warning(self._msg(msg, self._logger.findCaller(stacklevel=2 + stack_level_up)))
 
-    def error(self, msg: str, *args) -> None:
-        self._logger.error(self._msg(msg, self._logger.findCaller(stacklevel=2)))
+    def error(self, msg: str, *args, stack_level_up: int = 0) -> None:
+        self._logger.error(self._msg(msg, self._logger.findCaller(stacklevel=2 + stack_level_up)))
 
-    def log_on_exception(self, e: Exception, *args) -> None:
+    def log_on_exception(self, e: Exception, *args, stack_level_up: int = 0) -> None:
         log_level = LOG_LEVELS.get(type(e), logging.ERROR)
-        self._logger.log(log_level, self._msg(str(e), self._logger.findCaller(stacklevel=2)))
+        self._logger.log(
+            log_level, self._msg(str(e), self._logger.findCaller(stacklevel=2 + stack_level_up))
+        )
 
     def _msg(self, msg: str, caller_info: tuple[str, int, str, Any]) -> str:
         return f"{self.format_caller_info(caller_info)} (server)\t{msg}"

@@ -307,8 +307,9 @@ class CarServer:
         self._command_checker.reset()
         self._status_checker.reset()
         for device in self._known_devices.list_connected():
-            if device.module_id in self._modules:
-                module_adapter = self._modules[device.module_id].api
+            module = self._modules.get(device.module_id, None)
+            if module:
+                module_adapter = module.api
                 module_adapter.device_disconnected(DisconnectTypes.timeout, device.to_device())
         self._known_devices.clear()
         self._event_queue.clear()
@@ -537,8 +538,12 @@ class CarServer:
                     status_ok = False
             case _Status.DISCONNECT:
                 logger.info(
-                    f"Received status with a disconnect message for device {device_repr(device)}.", self._car_name
+                    f"Received status with a disconnect message for device {device_repr(device)}.",
+                    self._car_name,
                 )
+                if not self._known_devices.is_connected(device):
+                    logger.warning("Device is already disconnected.", self._car_name)
+                    status_ok = False
             case _:
                 logger.warning(
                     f"Unknown device state: {status.deviceState}. Ignoring status.", self._car_name
