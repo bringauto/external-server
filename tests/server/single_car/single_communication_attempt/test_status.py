@@ -202,7 +202,7 @@ class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
             self.assertIn("not among conected devices", cm.output[0])
 
     def test_incorrect_context_error_logs_error(self):
-        with self.assertLogs(LOGGER_NAME, logging.WARNING) as cm:
+        with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
             APIClientAdapter.check_device_disconnected_code(
                 self.device,
                 EsErrorCode.CONTEXT_INCORRECT,
