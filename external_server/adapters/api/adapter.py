@@ -134,7 +134,13 @@ class APIClientAdapter:
             device_role = device.deviceRole.encode("utf-8")
             device_name = device.deviceName.encode("utf-8")
         except UnicodeEncodeError as e:
-            _logger.error(f"Failed to encode device role or name: {e}", self._car)
+            _logger.error(
+                msg=(
+                    f"Failed to encode device role or name (utf-8). Device name = {device.deviceName}, "
+                    f"device role = {device.deviceRole}. Error: {e}"
+                ),
+                car_name=self._car,
+            )
             device_role = b""
             device_name = b""
         device_role_buffer = Buffer(data=device_role, size=len(device_role))
