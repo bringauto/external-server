@@ -18,15 +18,14 @@ from external_server.config import LoggingConfig as _Config
 LOGGER_NAME = "external_server"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 _DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-DEFAULT_EXCEPTION_LOG_LEVEL = logging.WARNING
 LOG_LEVELS: dict[Type[Exception], int] = {
-    CommunicationException: DEFAULT_EXCEPTION_LOG_LEVEL,
-    ConnectSequenceFailure: DEFAULT_EXCEPTION_LOG_LEVEL,
-    NoMessage: DEFAULT_EXCEPTION_LOG_LEVEL,
-    CommandResponseTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
-    SessionTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
-    StatusTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
-    UnexpectedMQTTDisconnect: DEFAULT_EXCEPTION_LOG_LEVEL,
+    CommunicationException: logging.WARNING,
+    ConnectSequenceFailure: logging.WARNING,
+    NoMessage: logging.INFO,
+    CommandResponseTimeout: logging.INFO,
+    SessionTimeout: logging.INFO,
+    StatusTimeout: logging.INFO,
+    UnexpectedMQTTDisconnect: logging.WARNING,
 }
 
 
