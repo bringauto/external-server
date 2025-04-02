@@ -71,9 +71,9 @@ class MQTTSession:
 
     def stop(self) -> None:
         """Stops the checker's timer."""
-        if self._timer_running and self._timer is not None:
+        if self._timer_running:
             _logger.info("Stopping timer for the current MQTT session.", self._car_name)
-            if self._timer.is_alive():
+            if self._timer is not None and self._timer.is_alive():
                 self._timer.cancel()
                 self._timer.join()
             self._checker._timeout_event.clear()

@@ -522,7 +522,7 @@ class CarServer:
         module, device = self._module_and_device(status)
         if not module or not device:
             logger.info(
-                f"Ignoring status (counter={status.messageCounter}') from unsupported device '{device_repr(device)}'.",
+                f"Ignoring status (counter={status.messageCounter}') from unsupported device '{device_repr(status.deviceStatus.device)}'.",
                 self._car_name,
             )
         elif self._handle_checked_status_by_device_state(status, device):

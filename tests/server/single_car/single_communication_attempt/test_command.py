@@ -58,29 +58,29 @@ class Test_Handling_Command_Response(unittest.TestCase):
     def test_to_command_not_sent_logs_warning_and_empties_checked_commands(self):
         self.es.mqtt._received_msgs.put(cmd_response("id", 0, CommandResponse.OK))
         self.assertEqual(self.es._command_checker.n_of_commands, 0)
-        with self.assertLogs(command_checker_logger._logger, level=logging.WARNING) as cm:
+        with self.assertLogs(command_checker_logger._logger, level=logging.INFO) as cm:
             self.es._handle_car_message()
-            self.assertIn("no commands", cm.output[0].lower())
+            self.assertIn("no commands", cm.output[-1].lower())
 
     def test_to_sent_command_but_with_session_id_not_matching_server_logs_warning_and_does_not_accept_response(
         self,
     ):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
         self.es.mqtt._received_msgs.put(cmd_response("wrong_id", 0, CommandResponse.OK))
-        with self.assertLogs(es_logger._logger, level=logging.WARNING) as cm:
+        with self.assertLogs(es_logger._logger, level=logging.INFO) as cm:
             self.es._handle_car_message()
-            self.assertIn("session id", cm.output[0].lower())
+            self.assertIn("session id", cm.output[-1].lower())
             # the response has not been accepted, checker still expects the response
             self.assertEqual(self.es._command_checker.n_of_commands, 1)
 
-    def test_to_sent_command_but_with_counter_not_matching_server_logs_warning_and_does_not_accept_response(
+    def test_to_sent_command_but_with_counter_not_matching_server_logs_info_and_does_not_accept_response(
         self,
     ):
         self.es._command_checker.add(HandledCommand(data=b"cmd", counter=0, device=self.device))
         self.es.mqtt._received_msgs.put(cmd_response("id", 1, CommandResponse.OK))
-        with self.assertLogs(command_checker_logger._logger, level=logging.WARNING) as cm:
+        with self.assertLogs(command_checker_logger._logger, level=logging.INFO) as cm:
             self.es._handle_car_message()
-            self.assertIn("counter", cm.output[0].lower())
+            self.assertIn("counter", cm.output[-1].lower())
             # the response has not been accepted, checker still expects the response
             self.assertEqual(self.es._command_checker.n_of_commands, 1)
 
