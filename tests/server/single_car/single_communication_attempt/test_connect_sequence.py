@@ -116,7 +116,7 @@ class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Conf
         self.assertEqual(self.es.state, ServerState.INITIALIZED)
 
     def tearDown(self):
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -152,7 +152,7 @@ class Test_Connecting_Device_Unsupported_By_Supported_Module(unittest.TestCase):
         self.assertFalse(self.es._known_devices.is_connected(self.unsupported))
 
     def tearDown(self):
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -242,7 +242,7 @@ class Test_Successful_Initialization_With_Multiple_Devices(unittest.TestCase):
         self.assertTrue(self.es._known_devices.is_connected(self.device_3))
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -275,7 +275,7 @@ class Test_Partially_Unsuccessful_Initialization_With_Multiple_Devices(unittest.
         self.assertEqual(self.es.state, ServerState.ERROR)
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -302,7 +302,7 @@ class Test_First_Command(unittest.TestCase):
             )
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 

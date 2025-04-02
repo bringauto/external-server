@@ -119,7 +119,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             self.assertEqual(msgs[0], status_response("id", 1).SerializeToString())
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -225,7 +225,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.assertIn(status_response("id", 2), msgs_objs)
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -282,7 +282,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             self.assertFalse(self.es._mqtt.session.timeout_event.is_set())
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 

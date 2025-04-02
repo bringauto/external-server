@@ -92,19 +92,19 @@ class MQTTClientAdapter:
         timeout: float,
         broker_host: str,
         port: int,
-        event_queue: _EventQueue,
+        event_queue: Optional[_EventQueue] = None,
         mqtt_timeout: float = 0.5,
     ) -> None:
         self._publish_topic = self.get_publish_topic(company, car)
         self._subscribe_topic = self.get_subscribe_topic(company, car)
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = create_mqtt_client(car)
-        self._event_queue = event_queue
+        self._event_queue = event_queue or _EventQueue(car=car)
         self._timeout = timeout
         self._keepalive = _KEEPALIVE
         self._broker_host = broker_host
         self._broker_port = port
-        self._session = MQTTSession(mqtt_timeout, event_queue, car)
+        self._session = MQTTSession(mqtt_timeout, self._event_queue, car)
         self._set_up_callbacks()
         self._car = car
 
@@ -168,14 +168,34 @@ class MQTTClientAdapter:
         code = self._start_communication()
         return self._handle_response_code_of_setting_up_conn_to_broker(code)
 
+    def disconnect(self) -> None:
+        """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
+        code = self._mqtt_client.disconnect()
+        broker_str = f"MQTT broker on address '{self.broker_address}'"
+        if code == mqtt.MQTT_ERR_SUCCESS:
+            _logger.info(f"Communication with {broker_str} is stopped.", self._car)
+        elif code == mqtt.MQTT_ERR_NO_CONN and not self._mqtt_client.is_connected():
+            _logger.info(f"Communication with {broker_str}  is already stopped.", self._car)
+        elif not self._mqtt_client.is_connected():
+            _logger.warning(
+                f"Communication with {broker_str} is stopped. Error: {mqtt_error_from_code(code)}",
+                self._car,
+            )
+        else:  # the client is still runnning and connected to the broker
+            _logger.error(
+                f"Failed to disconnect client from {broker_str}. Error: {mqtt_error_from_code(code)}",
+                self._car,
+            )
+        self._stop_client_loop()
+
     def _handle_response_code_of_setting_up_conn_to_broker(self, code: int) -> int:
         if code == mqtt.MQTT_ERR_SUCCESS:
             return code
         error = mqtt_error_from_code(code)
         if self._mqtt_client.is_connected():
             _logger.warning(
-                "External server MQTT connection - communication between client and broker "
-                f"'{self.broker_address}' is established with error message: {error}",
+                f"Communication between client and broker on '{self.broker_address}' is established "
+                f"with error message: {error}",
                 self._car,
             )
             return code
@@ -195,33 +215,6 @@ class MQTTClientAdapter:
         else:
             error = mqtt_error_from_code(code)
             raise ConnectionRefusedError(error)
-
-    def disconnect(self) -> int:
-        """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
-        if self._mqtt_client.is_connected():
-            code = self._mqtt_client.disconnect()
-            self.stop()
-            match code:
-                case mqtt.MQTT_ERR_SUCCESS:
-                    _logger.info(f"Disconnected from MQTT broker: {self.broker_address}", self._car)
-                case mqtt.MQTT_ERR_NO_CONN:
-                    _logger.warning(
-                        "Trying to disconnect from MQTT broker, but not connected. No action is taken.",
-                        self._car,
-                    )
-                case _:
-                    error = mqtt_error_from_code(code)
-                    _logger.error(
-                        f"Error when disconnecting from MQTT broker. ({self.broker_address}): {error}",
-                        self._car,
-                    )
-            return code
-        else:
-            _logger.warning(
-                "Trying to disconnect from MQTT broker, but not connected. No action is taken.",
-                self._car,
-            )
-            return mqtt.MQTT_ERR_SUCCESS
 
     def get_connect_message(self) -> _Connect | None:
         """Get expected connect message from MQTT client.
@@ -277,35 +270,13 @@ class MQTTClientAdapter:
             _logger.warning(msg, self._car)
             raise MQTTCommunicationError(msg)
 
-    def stop(self) -> None:
-        """Stop the MQTT client's event loop. If the client is already stopped, no action is taken."""
-        code = self._stop_client_loop()
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(
-                f"Communication between MQTT client and broker ('{self.broker_address}') is stopped.",
-                self._car,
-            )
-        elif not self._mqtt_client.is_connected():
-            _logger.warning(
-                f"Communication with MQTT broker is shut down, but error occured: {mqtt_error_from_code(code)}",
-                self._car,
-            )
-        else:
-            _logger.error(
-                f"Failed to stop MQTT client's loop: {mqtt_error_from_code(code)}", self._car
-            )
-
     def _stop_client_loop(self) -> int:
         """Stop the MQTT client's traffic-processing loop. If the loop is not running, no action is taken."""
         if self._mqtt_client._thread is not None and self._mqtt_client._thread.is_alive():
             code = self._mqtt_client.loop_stop()
             return code
         else:
-            _logger.warning(
-                "Attempted to stop MQTT client loop, but the loop is not running. No action is taken.",
-                self._car,
-            )
-            return mqtt.MQTT_ERR_SUCCESS
+            return mqtt.MQTT_ERR_NO_CONN
 
     def set_tls(self, ca_certs: str, certfile: str, keyfile: str) -> None:
         """Set the TLS configuration for the MQTT client.
@@ -365,10 +336,11 @@ class MQTTClientAdapter:
     def _log_connection_result(self, code: int) -> None:
         address = self.broker_address
         if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to a MQTT broker ({address}).", self._car)
+            _logger.info(f"Connected to a broker on '{address}'.", self._car)
         else:
             _logger.error(
-                f"Cannot connect to broker ({address}). {mqtt_error_from_code(code)}", self._car
+                f"Connecting to a broker on '{address}' failed. {mqtt_error_from_code(code)}",
+                self._car,
             )
 
     def _on_connect(self, client: _Client, data: Any, flags: Any, rc, properties: Any) -> None:
