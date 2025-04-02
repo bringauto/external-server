@@ -196,14 +196,14 @@ class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
 
     def test_warning_is_logged_if_disconnected_device_is_not_among_connected_devices(self):
         with self.assertLogs(LOGGER_NAME, logging.WARNING) as cm:
-            APIClientAdapter.check_device_disconnected_code(
+            APIClientAdapter.log_nok_device_disconnect(
                 self.device, GeneralErrorCode.NOT_OK, "test-car"
             )
             self.assertIn("not among conected devices", cm.output[0])
 
     def test_incorrect_context_error_logs_error(self):
         with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
-            APIClientAdapter.check_device_disconnected_code(
+            APIClientAdapter.log_nok_device_disconnect(
                 self.device,
                 EsErrorCode.CONTEXT_INCORRECT,
                 "test-car",
@@ -212,7 +212,7 @@ class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
 
     def test_error_is_logged_if_other_error_code_is_returned(self):
         with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
-            APIClientAdapter.check_device_disconnected_code(self.device, -5, "test-car")
+            APIClientAdapter.log_nok_device_disconnect(self.device, -5, "test-car")
             self.assertIn("Error in device_disconnected", cm.output[0])
 
 

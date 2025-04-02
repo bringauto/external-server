@@ -10,8 +10,6 @@ from external_server.models.structures import (
     Buffer,
     DeviceIdentification,
     DisconnectTypes,
-)
-from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
     EsErrorCode as _EsErrorCode,
 )
@@ -114,7 +112,8 @@ class APIClientAdapter:
         """
         device_identification = self._create_device_identification(device)
         code = self._library.device_disconnected(disconnect_types, device_identification)
-        self.check_device_disconnected_code(device, code, self._car)
+        if code != _GeneralErrorCode.OK:
+            self.log_nok_device_disconnect(device, code, self._car)
         return code
 
     def _create_device_identification(self, device: _Device) -> DeviceIdentification:
@@ -134,7 +133,7 @@ class APIClientAdapter:
             device_role = device.deviceRole.encode("utf-8")
             device_name = device.deviceName.encode("utf-8")
         except UnicodeEncodeError as e:
-            _logger.error(
+            _logger.info(
                 msg=(
                     f"Failed to encode device role or name (utf-8). Device name = {device.deviceName}, "
                     f"device role = {device.deviceRole}. Error: {e}"
@@ -185,14 +184,14 @@ class APIClientAdapter:
             The result of the library function call.
         """
         device_identification = self._create_device_identification(status.deviceStatus.device)
-        status_buffer = Buffer(
-            data=status.deviceStatus.statusData, size=len(status.deviceStatus.statusData)
-        )
-        code = self._library.forward_status(status_buffer, device_identification)
         drepr = device_repr(status.deviceStatus.device)
+        data = status.deviceStatus.statusData
+        status_buffer = Buffer(data=data, size=len(data))
+        code = self._library.forward_status(status_buffer, device_identification)
         if code == _GeneralErrorCode.OK:
             _logger.debug(f"Status for the device {drepr} forwarded to API", self._car)
-        self._check_forward_status_code(status.deviceStatus.device, code, self._car)
+        else:
+            self._log_nok_forward_status(status.deviceStatus.device, code, self._car)
         if status.errorMessage:
             _logger.info(f"Status for {drepr} contains error message.", self._car)
             self.forward_error_message(status.deviceStatus.device, status.errorMessage)
@@ -219,13 +218,10 @@ class APIClientAdapter:
         device_identification = self._create_device_identification(device)
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         code = self._library.forward_error_message(error_buffer, device_identification)
-        self._check_forward_error_message_code(device.module, code, self._car)
         if code == _GeneralErrorCode.OK:
             _logger.debug(f"Error message from {device_repr(device)} forwarded to API.", self._car)
         else:
-            _logger.debug(
-                f"Error message from {device_repr(device)} not forwarded to API.", self._car
-            )
+            self._log_nok_forward_error(device.module, code, self._car)
         return code
 
     def wait_for_command(self, timeout: int) -> int:
@@ -281,7 +277,8 @@ class APIClientAdapter:
         device_id = self._create_device_identification(device)
         command_buffer = Buffer(command_data, len(command_data))
         code = self._library.command_ack(command_buffer, device_id)
-        self._check_command_ack_code(device.module, code, self._car)
+        if code != _GeneralErrorCode.OK:
+            self._log_nok_command_ack(device.module, code, self._car)
         return code
 
     def deallocate(self, buffer: Buffer) -> None:
@@ -295,25 +292,23 @@ class APIClientAdapter:
         return code == _GeneralErrorCode.OK
 
     @staticmethod
-    def _check_forward_status_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in forward_status function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_forward_status(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in forward_status function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
 
     @staticmethod
-    def _check_forward_error_message_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in forward_error_message function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_forward_error(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in forward_error_message function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
 
     @staticmethod
-    def check_device_disconnected_code(device_id: _Device, code: int, car: str) -> None:
+    def log_nok_device_disconnect(device_id: _Device, code: int, car: str) -> None:
         if code == _GeneralErrorCode.NOT_OK:
             _logger.warning(
                 f"Module {device_id.module}: Device {device_id} not not among conected devices, code: {code}.",
@@ -322,7 +317,7 @@ class APIClientAdapter:
             )
         elif code == _EsErrorCode.CONTEXT_INCORRECT:
             _logger.error(f"Module {device_id.module}: Context incorrect, code: {code}.", car, 1)
-        elif code != _GeneralErrorCode.OK:
+        else:
             _logger.error(
                 f"Module {device_id.module}: Error in device_disconnected function, code: {code}.",
                 car,
@@ -330,10 +325,9 @@ class APIClientAdapter:
             )
 
     @staticmethod
-    def _check_command_ack_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in command_ack function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_command_ack(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in command_ack function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
