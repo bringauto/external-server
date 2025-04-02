@@ -393,12 +393,7 @@ class MQTTClientAdapter:
         - `rc (int)` The return code indicating the reason for disconnection.
         - `properties` The properties associated with the disconnection event.
         """
-        try:
-            self._event_queue.add(event_type=_EventType.MQTT_BROKER_DISCONNECTED)
-        except Exception as e:  # pragma: no cover
-            _logger.error(
-                f"MQTT on disconnect callback: Failed to disconnect from the broker. {e}", self._car
-            )
+        self._event_queue.add(event_type=_EventType.MQTT_BROKER_DISCONNECTED)
 
     def _on_message(self, client: _Client, data: Any, message: MQTTMessage) -> None:
         """Callback function for handling incoming messages.
