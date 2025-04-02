@@ -211,7 +211,7 @@ class MQTTClientAdapter:
             host=self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE
         )
         if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to MQTT broker on {self.broker_address}.", self._car)
+            _logger.info(f"Connected to MQTT broker on '{self.broker_address}'.", self._car)
         else:
             error = mqtt_error_from_code(code)
             raise ConnectionRefusedError(error)
