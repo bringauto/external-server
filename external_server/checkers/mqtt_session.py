@@ -56,7 +56,10 @@ class MQTTSession:
                 self._car_name,
             )
         else:
-            _logger.warning("Timer already running for the current MQTT session.", self._car_name)
+            _logger.warning(
+                "Timer already running for the current MQTT session. No action is taken.",
+                self._car_name,
+            )
 
     def reset_timer(self) -> None:
         """Resets the checker's timer.
@@ -77,4 +80,6 @@ class MQTTSession:
             self._timer_running = False
             self._timer = None
         else:
-            _logger.debug("No timer running for the current MQTT session.", self._car_name)
+            _logger.warning(
+                "No timer running for the current MQTT session. No action is taken", self._car_name
+            )
