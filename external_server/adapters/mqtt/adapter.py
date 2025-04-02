@@ -249,7 +249,7 @@ class MQTTClientAdapter:
         elif msg.HasField(field_name):
             return getattr(msg, field_name)
         else:
-            _logger.warning(
+            _logger.info(
                 f"Received message is not a {field_name}. "
                 f"Message type is {self._ext_client_message_type(msg)}",
                 self._car,
