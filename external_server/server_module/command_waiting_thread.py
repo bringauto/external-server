@@ -107,7 +107,7 @@ class CommandWaitingThread:
     def poll_commands(self) -> None:
         """Poll for a single command from the API.
 
-        If commands are available, they are saved in the queue.
+        If commands are avaiable, they are saved in the queue.
         If no commands are available before the timeout, no action is taken.
         If an error occurs, an error message is logged.
         """

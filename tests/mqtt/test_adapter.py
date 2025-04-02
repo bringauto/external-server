@@ -94,9 +94,7 @@ class Test_Creating_MQTT_Client(unittest.TestCase):
 class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
 
     def test_sets_up_subscribe_and_publish_topics_including_company_and_car_name(self):
-        adapter = MQTTClientAdapter(
-            "company", "car", 2, broker_host="127.0.0.1", port=1883, event_queue=EventQueue()
-        )
+        adapter = MQTTClientAdapter("company", "car", 2, broker_host="127.0.0.1", port=1883)
         self.assertEqual(
             adapter.subscribe_topic, f"company/car/{MQTTClientAdapter._MODULE_GATEWAY_SUFFIX}"
         )
@@ -106,21 +104,15 @@ class Test_Creating_MQTT_Client_Adapter(unittest.TestCase):
         self.assertEqual(adapter.broker_address, "127.0.0.1:1883")
 
     def test_creates_empty_received_message_queue(self) -> None:
-        adapter = MQTTClientAdapter(
-            "company", "car", timeout=2, broker_host="", port=0, event_queue=EventQueue()
-        )
+        adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", port=0)
         self.assertTrue(adapter.received_messages.empty())
 
     def test_mqtt_client_is_created(self):
-        adapter = MQTTClientAdapter(
-            "company", "car", timeout=2, broker_host="", port=0, event_queue=EventQueue()
-        )
+        adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", port=0)
         self.assertTrue(adapter.client)
 
     def test_sets_up_callbacks_on_connect_disconnect_and_on_message(self):
-        adapter = MQTTClientAdapter(
-            "company", "car", timeout=2, broker_host="", port=0, event_queue=EventQueue()
-        )
+        adapter = MQTTClientAdapter("company", "car", timeout=2, broker_host="", port=0)
         self.assertEqual(adapter.client._on_connect, adapter._on_connect)
         self.assertEqual(adapter.client._on_disconnect, adapter._on_disconnect)
         self.assertEqual(adapter.client._on_message, adapter._on_message)
