@@ -217,7 +217,7 @@ class MQTTClientAdapter:
                     )
             return code
         else:
-            _logger.info(
+            _logger.warning(
                 "Trying to disconnect from MQTT broker, but not connected. No action is taken.",
                 self._car,
             )
