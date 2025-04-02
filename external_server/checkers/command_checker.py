@@ -192,20 +192,20 @@ class PublishedCommandChecker(_Checker):
             return cmds
         else:
             if oldest_counter is None:
-                logger.warning(
+                logger.info(
                     "No commands in the queue awaiting a response. "
                     f"Ignoring the recevied response (counter={counter}).",
                     self._car,
                 )
             elif oldest_counter < counter <= self._commands.newest_command_counter:
                 self._received_response_counters.append(counter)
-                logger.warning(
+                logger.info(
                     f"Cannot pop command with counter={counter} "
                     f"because it is not the oldest command (counter={oldest_counter}).",
                     self._car,
                 )
             else:
-                logger.warning(
+                logger.info(
                     f"Ignoring received response (counter={counter}) as it "
                     f"corresponds to a command that is not in the queue.",
                     self._car,
