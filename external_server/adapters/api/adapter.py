@@ -186,25 +186,17 @@ class APIClientAdapter:
         """
         device_identification = self._create_device_identification(status.deviceStatus.device)
         status_buffer = Buffer(
-            data=status.deviceStatus.statusData,
-            size=len(status.deviceStatus.statusData),
+            data=status.deviceStatus.statusData, size=len(status.deviceStatus.statusData)
         )
         code = self._library.forward_status(status_buffer, device_identification)
+        drepr = device_repr(status.deviceStatus.device)
         if code == _GeneralErrorCode.OK:
-            _logger.debug(
-                f"Status for {device_repr(status.deviceStatus.device)} forwarded to API", self._car
-            )
+            _logger.debug(f"Status for the device {drepr} forwarded to API", self._car)
         self._check_forward_status_code(status.deviceStatus.device, code, self._car)
         if status.errorMessage:
-            self._log_status_error(status)
+            _logger.info(f"Status for {drepr} contains error message.", self._car)
             self.forward_error_message(status.deviceStatus.device, status.errorMessage)
         return code
-
-    def _log_status_error(self, status: _Status) -> None:
-        """Log error if the status contains a non-empty error message."""
-        if status.errorMessage:
-            drepr = device_repr(status.deviceStatus.device)
-            _logger.info(f"Status for {drepr} contains error.", self._car)
 
     def forward_error_message(self, device: _Device, error_bytes: bytes) -> int:
         """
