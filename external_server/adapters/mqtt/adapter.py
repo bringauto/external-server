@@ -175,7 +175,7 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Communication with {broker_str} is stopped.", self._car)
         elif code == mqtt.MQTT_ERR_NO_CONN and not self._mqtt_client.is_connected():
-            _logger.info(f"Communication with {broker_str}  is already stopped.", self._car)
+            _logger.info(f"Communication with {broker_str} is already stopped.", self._car)
         elif not self._mqtt_client.is_connected():
             _logger.warning(
                 f"Communication with {broker_str} is stopped. Error: {mqtt_error_from_code(code)}",
