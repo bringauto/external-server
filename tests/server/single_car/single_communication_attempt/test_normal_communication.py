@@ -119,7 +119,7 @@ class Test_Receiving_Disconnect_State_From_Single_Supported_Device(unittest.Test
             self.assertEqual(msgs[0], status_response("id", 1).SerializeToString())
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -225,7 +225,7 @@ class Test_Receiving_Running_Status_Sent_By_Single_Supported_Device(unittest.Tes
             self.assertIn(status_response("id", 2), msgs_objs)
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -282,7 +282,7 @@ class Test_Session_Time_Out(unittest.TestCase):
             self.assertFalse(self.es._mqtt.session.timeout_event.is_set())
 
     def tearDown(self) -> None:
-        self.es.mqtt.stop()
+        self.es.mqtt.disconnect()
         self.broker.stop()
 
 
@@ -357,10 +357,10 @@ class Test_Receiving_Connect_Message(unittest.TestCase):
             self.es._status_checker.set_counter(1)
             ex.submit(self.es._run_normal_communication)
             wait_for_server_connection(self.es, self)
-            with self.assertLogs(_eslogger, logging.ERROR) as cm:
+            with self.assertLogs(_eslogger, logging.INFO) as cm:
                 self.broker.publish(sub_topic, connect_msg("id", "company", [self.device]))
                 time.sleep(0.1)
-                self.assertIn("already existing session", cm.records[0].message)
+                self.assertIn("already existing session", cm.records[-1].message)
 
     def test_connect_message_with_other_session_id_does_not_logs_warning(self):
         sub_topic = self.es.mqtt.subscribe_topic
@@ -462,18 +462,15 @@ class Test_Command_Response(unittest.TestCase):
             self.broker.publish(topic, cmd_response("id", 0, CommandResponse.DEVICE_NOT_CONNECTED))
             _wait_for_server_initialization(self.es, self)
 
-    def test_command_response_with_other_session_id_is_ignored(self):
+    def test_command_response_with_other_sessioni_id_is_ignored(self):
         sub_topic = self.es.mqtt.subscribe_topic
         with futures.ThreadPoolExecutor() as ex:
             ex.submit(self.es._run_normal_communication)
             time.sleep(0.1)
-            with self.assertLogs(_eslogger, logging.WARNING):
-                self.es._command_checker.add(
-                    HandledCommand(data=b"cmd", counter=1, device=self.device)
-                )
-                self.broker.publish(sub_topic, cmd_response("other_id", 1, CommandResponse.OK))
-                time.sleep(0.1)
-                self.broker.publish(sub_topic, cmd_response("id", 1, CommandResponse.OK))
+            self.es._command_checker.add(HandledCommand(data=b"cmd", counter=1, device=self.device))
+            self.broker.publish(sub_topic, cmd_response("other_id", 1, CommandResponse.OK))
+            time.sleep(0.1)
+            self.broker.publish(sub_topic, cmd_response("id", 1, CommandResponse.OK))
 
     def test_timeout_event_is_set_if_command_response_is_not_received_in_time(self):
         with futures.ThreadPoolExecutor() as ex:
@@ -579,9 +576,9 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
     def test_connect_message_logs_error_and_produces_connect_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es.mqtt._received_msgs.put(connect_msg("id", company="company", devices=[]))
-        with self.assertLogs(_eslogger, logging.WARNING) as cm:
+        with self.assertLogs(_eslogger, logging.INFO) as cm:
             self.es._handle_car_message()
-            self.assertIn("already existing session", cm.output[0])
+            self.assertIn("already existing session", cm.output[-1])
 
     def test_connect_message_with_session_id_not_matching_current_session_logs_error_and_yields_no_action(
         self,
@@ -589,9 +586,9 @@ class Test_Handling_Car_Message_On_Normal_Communication(unittest.TestCase):
         self.es.mqtt._received_msgs.put(
             connect_msg("other_session_id", company="company", devices=[])
         )
-        with self.assertLogs(_eslogger, logging.ERROR) as cm:
+        with self.assertLogs(_eslogger, logging.INFO) as cm:
             self.es._handle_car_message()
-            self.assertIn("not matching current session", cm.output[0])
+            self.assertIn("not matching current one", cm.output[-1])
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -129,11 +129,11 @@ class Test_Handling_Checked_Status_From_Disconnected_Device(unittest.TestCase):
     def test_running_state_logs_warning_and_does_not_send_response(self, mock: Mock):
         mock.side_effect = self.publish
         self.es._known_devices.not_connected(self.device)
-        with self.assertLogs(_eslogger, logging.WARNING) as cm:
+        with self.assertLogs(_eslogger, logging.INFO) as cm:
             self.es._handle_checked_status(
                 status("session_id", Status.RUNNING, 1, DeviceStatus(device=self.device)).status
             )
-            self.assertIn("not connected", cm.output[0])
+            self.assertIn("not connected", cm.output[-1])
             self.assertEqual(self.published_responses, [])
 
     def test_disconnect_state_logs_error_and_does_not_send_response(self, mock: Mock):
@@ -196,14 +196,14 @@ class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
 
     def test_warning_is_logged_if_disconnected_device_is_not_among_connected_devices(self):
         with self.assertLogs(LOGGER_NAME, logging.WARNING) as cm:
-            APIClientAdapter.check_device_disconnected_code(
+            APIClientAdapter.log_nok_device_disconnect(
                 self.device, GeneralErrorCode.NOT_OK, "test-car"
             )
             self.assertIn("not among conected devices", cm.output[0])
 
     def test_incorrect_context_error_logs_error(self):
         with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
-            APIClientAdapter.check_device_disconnected_code(
+            APIClientAdapter.log_nok_device_disconnect(
                 self.device,
                 EsErrorCode.CONTEXT_INCORRECT,
                 "test-car",
@@ -212,7 +212,7 @@ class Test_API_Client_Library_Func_Return_Codes_Handling(unittest.TestCase):
 
     def test_error_is_logged_if_other_error_code_is_returned(self):
         with self.assertLogs(LOGGER_NAME, logging.ERROR) as cm:
-            APIClientAdapter.check_device_disconnected_code(self.device, -5, "test-car")
+            APIClientAdapter.log_nok_device_disconnect(self.device, -5, "test-car")
             self.assertIn("Error in device_disconnected", cm.output[0])
 
 

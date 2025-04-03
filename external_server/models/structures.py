@@ -69,6 +69,52 @@ class DeviceIdentification(ct.Structure):
         ("priority", ct.c_uint),
     ]
 
+    def is_valid(self) -> bool:
+        """Check if the device identification is empty."""
+        return len(self.device_role.data) > 0
+
+    @classmethod
+    def get_empty(cls) -> "DeviceIdentification":
+        return _empty_device_identification
+
+    @classmethod
+    def from_device(cls, device: _Device) -> "DeviceIdentification":
+        """Creates a DeviceIdentification structure based on the provided device object.
+
+        Parameters
+        ----------
+        device: Device
+            The device object.
+
+        Returns
+        -------
+        DeviceIdentification
+            The created DeviceIdentification structure.
+        """
+        try:
+            device_role = device.deviceRole.encode("utf-8")
+            device_name = device.deviceName.encode("utf-8")
+        except UnicodeEncodeError:
+            return _empty_device_identification
+        device_role_buffer = Buffer(data=device_role, size=len(device_role))
+        device_name_buffer = Buffer(data=device_name, size=len(device_name))
+        return cls(
+            module=device.module,
+            device_type=device.deviceType,
+            device_role=device_role_buffer,
+            device_name=device_name_buffer,
+            priority=device.priority,
+        )
+
+
+_empty_device_identification = DeviceIdentification(
+    module=0,
+    device_type=0,
+    device_role=Buffer(data=b"", size=0),
+    device_name=Buffer(data=b"", size=0),
+    priority=0,
+)
+
 
 class KeyValue(ct.Structure):
     _fields_ = [("key", Buffer), ("value", Buffer)]
