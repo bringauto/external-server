@@ -338,7 +338,7 @@ class MQTTClientAdapter:
         if code == mqtt.MQTT_ERR_SUCCESS:
             _logger.info(f"Connected to a broker on '{address}'.", self._car)
         else:
-            _logger.error(
+            _logger.info(
                 f"Connecting to a broker on '{address}' failed. {mqtt_error_from_code(code)}",
                 self._car,
             )
