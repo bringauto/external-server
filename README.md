@@ -80,10 +80,10 @@ See the `config/config.json` for an example of car configuration.
 After configuration and installation of the dependencies, run External Server with this command:
 
 ```bash
-python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
+python3 -m external_server <config> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
 ```
 
-- `-c or --config <str>` = path to the config file, default = `./config/config.json`
+- `<config>` = path to the config file, default = `./config/config.json`
 - `--tls` = tls mqtt authentication
 
 Following arguments are used if argument `tls` is set:

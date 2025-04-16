@@ -4,7 +4,7 @@ import argparse
 
 sys.path.append(".")
 
-from external_server_main import parsed_script_args
+from external_server.__main__ import parsed_script_args
 
 
 class Test_Argparse_Init(unittest.TestCase):

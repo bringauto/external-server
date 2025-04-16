@@ -2,7 +2,7 @@
 
 FROM bringauto/cpp-build-environment:latest AS mission_module_builder
 
-ARG MISSION_MODULE_VERSION=v1.2.11
+ARG MISSION_MODULE_VERSION=v1.2.12
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -27,7 +27,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM bringauto/cpp-build-environment:latest AS io_module_builder
 
-ARG IO_MODULE_VERSION=v1.3.1
+ARG IO_MODULE_VERSION=v1.3.2
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -51,7 +51,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM bringauto/cpp-build-environment:latest AS transparent_module_builder
 
-ARG TRANSPARENT_MODULE_VERSION=v1.0.1
+ARG TRANSPARENT_MODULE_VERSION=v1.0.2
 
 WORKDIR /home/bringauto/
 ADD --chown=bringauto:bringauto https://github.com/bringauto/transparent-module.git#$TRANSPARENT_MODULE_VERSION transparent-module
@@ -67,19 +67,18 @@ FROM bringauto/python-environment:latest
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 # ensure PYTHONPATH is defined and append to it
-ENV PYTHONPATH=${PYTHONPATH:-}:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
+ENV PYTHONPATH=/home/bringauto/external_server:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
 WORKDIR /home/bringauto
 
 # Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
-RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install -r /home/bringauto/external_server/requirements.txt
+RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install --no-cache-dir -r /home/bringauto/external_server/requirements.txt
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server/
 COPY config/for_docker.json /home/bringauto/config/for_docker.json
 COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
-COPY external_server_main.py /home/bringauto/external_server/
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
@@ -92,5 +91,5 @@ RUN mkdir /home/bringauto/log/
 # Set the entrypoint
 # "bash" and "-c" have to be used to be able to use environment variables
 # $0 and $@ are needed to pass arguments to the script
-ENTRYPOINT [ "bash", "-c", "$PYTHON_ENVIRONMENT_PYTHON3 /home/bringauto/external_server/external_server_main.py $0 $@" ]
-CMD [ "-c", "/home/bringauto/config/for_docker.json" ]
+ENTRYPOINT [ "bash", "-c", "$PYTHON_ENVIRONMENT_PYTHON3 -m external_server $0 $@" ]
+CMD [ "/home/bringauto/config/for_docker.json" ]
