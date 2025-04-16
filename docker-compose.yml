@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: -c "./config/for_docker.json"
+    command: "./config/for_docker.json"
     restart: always
     volumes:
       - "./config:/home/bringauto/config/"

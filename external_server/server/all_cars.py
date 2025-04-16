@@ -74,7 +74,7 @@ class ExternalServer:
         for t in self._car_threads.values():
             t.start()
         # The following for loop ensures, that the main thread waits for all car threads to finish
-        # This allows for the external_server_main script to run while the car threads are running
+        # This allows for the external server __main__ script to run while the car threads are running
         # This ensures the server can be stopped by KeyboardInterrupt
         if wait_for_join:
             for t in self._car_threads.values():
