@@ -1,15 +1,14 @@
 import unittest
 import sys
 from unittest.mock import patch, Mock
-import json
 
 sys.path.append(".")
 
-from InternalProtocol_pb2 import Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
 from external_server.models.structures import HandledCommand
 from external_server.models.messages import cmd_response
 from external_server.models.exceptions import ConnectSequenceFailure
-from ExternalProtocol_pb2 import CommandResponse  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import CommandResponse
 from tests.utils import get_test_car_server
 from tests.utils.mqtt_broker import MQTTBrokerTest
 

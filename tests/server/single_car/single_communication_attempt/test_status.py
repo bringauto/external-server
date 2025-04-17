@@ -5,10 +5,9 @@ import sys
 import time
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg  # type: ignore
-from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import Status, ExternalServer as ExternalServerMsg
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device, DeviceStatus
 from external_server.server.all_cars import logger as _logger
 from external_server.logs import LOGGER_NAME
 from external_server.adapters.api.adapter import APIClientAdapter

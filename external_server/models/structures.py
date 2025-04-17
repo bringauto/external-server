@@ -2,11 +2,11 @@ import ctypes as ct
 from enum import IntEnum
 import dataclasses
 
-from InternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
     Device as _Device,
     DeviceCommand as _DeviceCommand,
 )
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     Command as _Command,
     ExternalServer as _ExternalServerMsg,
 )

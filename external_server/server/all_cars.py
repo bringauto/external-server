@@ -1,10 +1,7 @@
 from __future__ import annotations
-import sys
 import threading
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     CommandResponse as _CommandResponse,
     Connect as _Connect,
     Status as _Status,

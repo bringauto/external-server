@@ -1,11 +1,10 @@
 from typing import Callable
 import threading
 from queue import Queue, Empty
-import sys
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device as _Device
+)
 from external_server.models.structures import GeneralErrorCode, EsErrorCode
 from external_server.adapters.api.adapter import APIClientAdapter  # type: ignore
 from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue

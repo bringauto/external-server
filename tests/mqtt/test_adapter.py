@@ -7,7 +7,6 @@ import logging
 import threading
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from paho.mqtt.client import MQTTMessage, Client, MQTTErrorCode
 
@@ -19,12 +18,12 @@ from external_server.adapters.mqtt.adapter import (  # type: ignore
     mqtt_error_from_code,
     _QOS,
 )
-from InternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
     Device,
     DeviceCommand,
     DeviceStatus,
 )
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     CommandResponse,
     ConnectResponse,
     Connect,

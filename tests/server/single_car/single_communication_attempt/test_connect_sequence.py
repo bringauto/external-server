@@ -8,8 +8,8 @@ import logging
 sys.path.append(".")
 
 from external_server.server.single_car import ServerState
-from InternalProtocol_pb2 import Device  # type: ignore
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     ExternalServer as ExternalServerMsg,
     Status,
     CommandResponse,

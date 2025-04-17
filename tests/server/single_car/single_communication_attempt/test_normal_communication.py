@@ -11,8 +11,11 @@ sys.path.append(".")
 from external_server.server.single_car import CarServer, ServerState
 from external_server.server.all_cars import logger as _logger
 from external_server.models.structures import Buffer
-from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device,
+    DeviceStatus
+)
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     CommandResponse,
     ExternalServer as ExternalServerMsg,
     Status,

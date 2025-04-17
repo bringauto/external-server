@@ -1,7 +1,7 @@
 import unittest
 
 from external_server.models.devices import KnownDevices, DevicePy
-from InternalProtocol_pb2 import Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
 
 
 class Test_Known_Devices(unittest.TestCase):

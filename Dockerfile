@@ -66,19 +66,19 @@ FROM bringauto/python-environment:latest
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
-# ensure PYTHONPATH is defined and append to it
-ENV PYTHONPATH=/home/bringauto/external_server:/home/bringauto/external_server/lib/fleet-protocol/protobuf/compiled/python
 
 WORKDIR /home/bringauto
 
 # Install Python dependencies while ignoring overriding system packages inside the container
 COPY requirements.txt /home/bringauto/external_server/requirements.txt
+COPY --chown=bringauto:bringauto lib /home/bringauto/external_server/lib/
+# Workdir needs to be set before installing requirements because of the local protobuf package
+WORKDIR /home/bringauto/external_server
 RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install --no-cache-dir -r /home/bringauto/external_server/requirements.txt
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server/
 COPY config/for_docker.json /home/bringauto/config/for_docker.json
-COPY --chown=bringauto:bringauto lib/ /home/bringauto/external_server/lib/
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules

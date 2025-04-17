@@ -2,11 +2,10 @@ import unittest
 import sys
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.models.exceptions import ConnectSequenceFailure
 from external_server import CarServer as ES
-from ExternalProtocol_pb2 import Status as _Status  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import Status as _Status
 
 
 class Test_Connecting_State(unittest.TestCase):

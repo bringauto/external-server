@@ -1,11 +1,9 @@
-import sys
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from InternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
     Device as _Device,
 )
-from ExternalProtocol_pb2 import Status as _Status  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
+    Status as _Status
+)
 from external_server.models.structures import (
     Buffer,
     DeviceIdentification,
