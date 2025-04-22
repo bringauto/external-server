@@ -92,4 +92,4 @@ RUN mkdir /home/bringauto/log/
 # "bash" and "-c" have to be used to be able to use environment variables
 # $0 and $@ are needed to pass arguments to the script
 ENTRYPOINT [ "bash", "-c", "$PYTHON_ENVIRONMENT_PYTHON3 -m external_server $0 $@" ]
-CMD [ "/home/bringauto/config/for_docker.json" ]
+CMD [ "/home/bringauto/external_server/config/for_docker.json" ]
