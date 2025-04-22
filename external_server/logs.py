@@ -6,6 +6,7 @@ import os
 from external_server.models.exceptions import (  # type: ignore
     CommunicationException,
     ConnectSequenceFailure,
+    CouldNotConnectToBroker,
     StatusTimeout,
     NoMessage,
     CommandResponseTimeout,
@@ -22,6 +23,7 @@ DEFAULT_EXCEPTION_LOG_LEVEL = logging.WARNING
 LOG_LEVELS: dict[Type[Exception], int] = {
     CommunicationException: DEFAULT_EXCEPTION_LOG_LEVEL,
     ConnectSequenceFailure: DEFAULT_EXCEPTION_LOG_LEVEL,
+    CouldNotConnectToBroker: logging.INFO,
     NoMessage: DEFAULT_EXCEPTION_LOG_LEVEL,
     CommandResponseTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
     SessionTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,

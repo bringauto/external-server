@@ -34,7 +34,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 )
 from external_server.models.events import EventType, EventQueue  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
-from external_server.models.exceptions import MQTTCommunicationError
+from external_server.models.exceptions import MQTTCommunicationError, CouldNotConnectToBroker
 from external_server.logs import LOGGER_NAME
 
 from tests.utils.mqtt_broker import MQTTBrokerTest  # type: ignore
@@ -193,7 +193,7 @@ class Test_Connecting_To_Broker(unittest.TestCase):
 
     def test_connecting_to_not_running_broker_leaves_client_in_connecting_state(self):
         # the broker was not started
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.adapter.connect()
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTING)
         self.assertFalse(self.adapter.is_connected)
@@ -249,7 +249,7 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
 
     def test_client_loop_is_not_started_if_broker_does_not_exist(self):
         self.assertFalse(MQTTBrokerTest.running_processes())
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.adapter.connect()
         self.adapter.client.publish(self.adapter.publish_topic)
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTING)
@@ -290,7 +290,7 @@ class Test_MQTT_Client_Connection(unittest.TestCase):
     @patch("paho.mqtt.client.Client.connect")
     def test_error_raised_when_non_ok_return_code_is_returned_from_mqtt_client(self, mock: Mock):
         mock.return_value = MQTT_ERR_SUCCESS + 1
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.adapter.connect()
 
     def tearDown(self) -> None:
@@ -571,7 +571,7 @@ class Test_Unsuccessful_Connection_To_Broker(unittest.TestCase):
             port=1884,
             event_queue=EventQueue(),
         )
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             adapter.connect()
 
 
@@ -750,7 +750,7 @@ class Test_Logging_Connection_Result(unittest.TestCase):
 
     def test_error_is_raised_when_connecting_to_nonexistent_broker(self):
         # broker does not exist
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.adapter.connect()
 
     def test_info_is_logged_when_just_connected_to_broker(self):

@@ -14,7 +14,11 @@ from ExternalProtocol_pb2 import (  # type: ignore
     Status,
     CommandResponse,
 )
-from external_server.models.exceptions import ConnectSequenceFailure, CommunicationException
+from external_server.models.exceptions import (
+    ConnectSequenceFailure,
+    CommunicationException,
+    CouldNotConnectToBroker,
+)
 from external_server.models.devices import DevicePy, device_status as _device_status
 from external_server.models.messages import connect_msg, status, cmd_response
 from external_server.logs import LOGGER_NAME
@@ -41,7 +45,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
         self.es = get_test_car_server()
 
     def test_without_running_broker_raises_error(self):
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.es._run_initial_sequence()
 
 
