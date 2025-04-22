@@ -58,7 +58,8 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
 
     def tearDown(self):
         self.es.stop()
-        self.thread.join()
+        if self.thread.is_alive():
+            self.thread.join()
 
 
 class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Configured_Device(
