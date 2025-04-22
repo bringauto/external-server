@@ -185,7 +185,7 @@ class MQTTClientAdapter:
     def _set_up_connection_to_broker(self) -> None:
         """Create a connection to the MQTT broker. This is required before starting communication loop of the MQTT client.
 
-        Raise an exception if the connection is refused.
+        Raise an exception if the connection is not estabilished or if MQTT client returns code other that MQTT_ERR_SUCCESS.
         """
         code = self._mqtt_client.connect(
             host=self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE

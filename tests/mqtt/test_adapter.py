@@ -9,7 +9,7 @@ import threading
 sys.path.append(".")
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, MQTT_ERR_INVAL, Client
+from paho.mqtt.client import MQTTMessage, MQTT_ERR_SUCCESS, Client
 
 from queue import Empty
 from external_server.adapters.mqtt.adapter import (  # type: ignore
@@ -35,7 +35,7 @@ from ExternalProtocol_pb2 import (  # type: ignore
 from external_server.models.events import EventType, EventQueue  # type: ignore
 from external_server.models.messages import command, connect_msg, status as status_msg, cmd_response
 from external_server.models.exceptions import MQTTCommunicationError
-from external_server.logs import configure_logging, LOGGER_NAME
+from external_server.logs import LOGGER_NAME
 
 from tests.utils.mqtt_broker import MQTTBrokerTest  # type: ignore
 
