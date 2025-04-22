@@ -164,7 +164,7 @@ class MQTTClientAdapter:
         Raise an exception if the connection is refused.
         """
 
-        self._set_up_connection_to_broker()
+        self._connect_to_broker()
         code = self._start_communication()
         return self._handle_response_code_of_setting_up_conn_to_broker(code)
 
@@ -182,7 +182,7 @@ class MQTTClientAdapter:
         else:
             raise ConnectionRefusedError(error)
 
-    def _set_up_connection_to_broker(self) -> None:
+    def _connect_to_broker(self) -> None:
         """Create a connection to the MQTT broker. This is required before starting communication loop of the MQTT client.
 
         Raise an exception if the connection is not estabilished or if MQTT client returns code other that MQTT_ERR_SUCCESS.
