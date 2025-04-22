@@ -3,9 +3,8 @@ import time
 import sys
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python/")
 
-from InternalProtocol_pb2 import Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
 from external_server.models.structures import HandledCommand
 from external_server.checkers.command_checker import PublishedCommandChecker
 from external_server.models.messages import cmd_response

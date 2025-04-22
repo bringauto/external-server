@@ -1,14 +1,11 @@
-import sys
 from typing import Optional
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from InternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
     Device as _Device,
     DeviceCommand as _DeviceCommand,
     DeviceStatus as DeviceStatus,
 )
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     Command as _Command,
     Connect as _Connect,
     CommandResponse as _CommandResponse,

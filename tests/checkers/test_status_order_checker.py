@@ -4,9 +4,8 @@ import sys
 import logging
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from ExternalProtocol_pb2 import Status  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import Status
 from external_server.checkers.status_checker import StatusChecker
 from external_server.models.events import EventQueue
 

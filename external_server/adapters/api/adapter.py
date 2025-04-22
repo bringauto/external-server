@@ -1,11 +1,9 @@
-import sys
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from InternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
     Device as _Device,
 )
-from ExternalProtocol_pb2 import Status as _Status  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
+    Status as _Status
+)
 from external_server.models.structures import (
     Buffer,
     DeviceIdentification,
@@ -140,10 +138,12 @@ class APIClientAdapter:
         device.priority = device_id.priority
         device.deviceType = device_id.device_type
         device.deviceRole = (
-            device_id.device_role.data.decode("utf-8") if device_id.device_role.data else ""
+            device_id.device_role.data[: device_id.device_role.size].decode("utf-8") if (
+                device_id.device_role.data and device_id.device_role.size > 0 ) else ""
         )
         device.deviceName = (
-            device_id.device_name.data.decode("utf-8") if device_id.device_name.data else ""
+            device_id.device_name.data[: device_id.device_name.size].decode("utf-8") if (
+                device_id.device_name.data and device_id.device_name.size > 0) else ""
         )
         return device
 

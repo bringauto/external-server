@@ -1,20 +1,19 @@
 from __future__ import annotations
 from functools import partial
-import sys
 import enum
 from typing import Any
 import time
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     CommandResponse as _CommandResponse,
     Connect as _Connect,
     ConnectResponse as _ConnectResponse,
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device as _Device
+)
 
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 from external_server.checkers.command_checker import (

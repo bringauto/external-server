@@ -5,12 +5,11 @@ import logging
 import threading
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.adapters.api.adapter import APIClientAdapter
 from external_server.server_module.command_waiting_thread import CommandWaitingThread
 from external_server.config import ModuleConfig
-from InternalProtocol_pb2 import Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
 from external_server.models.structures import EsErrorCode, GeneralErrorCode, ReturnCode
 from tests.utils import EXAMPLE_MODULE_SO_LIB_PATH
 from external_server.server_module.command_waiting_thread import logger

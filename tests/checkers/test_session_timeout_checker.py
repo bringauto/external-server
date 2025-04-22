@@ -1,8 +1,5 @@
 import unittest
 import time
-import sys
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.checkers.mqtt_session import MQTTSession
 from external_server.models.events import EventQueue

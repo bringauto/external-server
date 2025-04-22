@@ -4,10 +4,12 @@ import logging
 import sys
 
 sys.path.append(".")
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
-from InternalProtocol_pb2 import Device  # type: ignore
-from ExternalProtocol_pb2 import CommandResponse, ExternalServer as ExternalServerMsg  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
+    CommandResponse,
+    ExternalServer as ExternalServerMsg
+)
 from external_server.server.all_cars import logger as es_logger
 from external_server.checkers.command_checker import logger as command_checker_logger
 from external_server.models.structures import HandledCommand

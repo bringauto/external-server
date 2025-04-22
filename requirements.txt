@@ -2,3 +2,4 @@ paho-mqtt==2.0.0
 protobuf==4.25.3
 pydantic==2.6.0
 rich==13.7.1
+file:lib/fleet-protocol/protobuf/compiled/python

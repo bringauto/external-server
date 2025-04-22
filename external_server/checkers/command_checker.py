@@ -1,12 +1,13 @@
 from queue import Queue
 from threading import Lock as _Lock, Timer as _Timer
-import sys
 import dataclasses
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from ExternalProtocol_pb2 import CommandResponse as _CommandResponse  # type: ignore
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
+    CommandResponse as _CommandResponse
+)
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device as _Device
+)
 
 from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME

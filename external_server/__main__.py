@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 import argparse
 import os
@@ -8,11 +7,10 @@ from external_server.config import load_config, InvalidConfiguration
 from external_server.logs import configure_logging
 
 
-def parsed_script_args() -> argparse.Namespace:
+def parsed_script_args() -> tuple[argparse.Namespace, str]:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-c",
-        "--config",
+        "<config-file-path>",
         type=str,
         default="./config/config.json",
         help="path to the configuration file",
@@ -27,8 +25,9 @@ def parsed_script_args() -> argparse.Namespace:
 
     args = parser.parse_args()
 
-    if not os.path.isfile(args.config):
-        raise FileNotFoundError(f"Config file {os.path.abspath(args.config)} not found.")
+    config_path = args.__dict__.pop("<config-file-path>")
+    if not os.path.isfile(config_path):
+        raise FileNotFoundError(f"Config file {os.path.abspath(config_path)} not found.")
     if args.tls:
         missing_fields = []
         if not args.ca:
@@ -41,20 +40,20 @@ def parsed_script_args() -> argparse.Namespace:
             raise argparse.ArgumentError(
                 None, f"TLS requires additional parameters: {', '.join(missing_fields)}"
             )
-    return args
+    return args, config_path
 
 
 def main() -> None:
     """Main entry of external server"""
     try:
-        args = parsed_script_args()
+        args, config_path = parsed_script_args()
     except argparse.ArgumentError as exc:
         logger.error(f"Invalid arguments. {exc}")
         print(f"Invalid arguments. {exc}")
         sys.exit(1)
 
     try:
-        config = load_config(args.config)
+        config = load_config(config_path)
         configure_logging("External Server", config.logging)
     except InvalidConfiguration as exc:
         logger.error(f"Invalid config: {exc}")
