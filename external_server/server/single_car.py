@@ -229,7 +229,7 @@ class CarServer:
             self._get_first_commands_responses()
 
     def start(self) -> None:
-        """Starts the external server.
+        """Starts this part of external server.
 
         This includes:
         - starting thread waiting for commands for each of the supported modules,

@@ -23,7 +23,7 @@ DEFAULT_EXCEPTION_LOG_LEVEL = logging.WARNING
 LOG_LEVELS: dict[Type[Exception], int] = {
     CommunicationException: DEFAULT_EXCEPTION_LOG_LEVEL,
     ConnectSequenceFailure: DEFAULT_EXCEPTION_LOG_LEVEL,
-    CouldNotConnectToBroker: logging.INFO,
+    CouldNotConnectToBroker: DEFAULT_EXCEPTION_LOG_LEVEL,
     NoMessage: DEFAULT_EXCEPTION_LOG_LEVEL,
     CommandResponseTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,
     SessionTimeout: DEFAULT_EXCEPTION_LOG_LEVEL,

@@ -1,6 +1,7 @@
 import unittest
 import sys
 import time
+import threading
 import concurrent.futures as futures
 from unittest.mock import Mock, patch
 import logging
@@ -43,10 +44,21 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
 
     def setUp(self):
         self.es = get_test_car_server()
+        self.thread = threading.Thread(target=self.es.start)
 
     def test_without_running_broker_raises_error(self):
         with self.assertRaises(CouldNotConnectToBroker):
             self.es._run_initial_sequence()
+
+    def test_info_is_logged(self):
+        with self.assertLogs(LOGGER_NAME, level="WARNING") as cm:
+            self.thread.start()
+            time.sleep(1)
+            print(cm.output[0])
+
+    def tearDown(self):
+        self.es.stop()
+        self.thread.join()
 
 
 class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Configured_Device(
