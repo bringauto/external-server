@@ -83,7 +83,7 @@ After configuration and installation of the dependencies, run External Server wi
 python3 -m external_server <config> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
 ```
 
-- `<config>` = path to the config file, default = `./config/config.json`
+- `<config>` = path to the config file
 - `--tls` = tls mqtt authentication
 
 Following arguments are used if argument `tls` is set:

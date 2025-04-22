@@ -78,7 +78,7 @@ RUN "$PYTHON_ENVIRONMENT_PYTHON3" -m pip install --no-cache-dir -r /home/bringau
 
 # Copy project files into the docker image
 COPY external_server /home/bringauto/external_server/external_server/
-COPY config/for_docker.json /home/bringauto/config/for_docker.json
+COPY config/for_docker.json /home/bringauto/external_server/config/for_docker.json
 
 # Copy module libraries
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
