@@ -167,11 +167,14 @@ The External Server can also be used with Docker Compose. In the `docker-compose
 
 ## Type checking
 
-To allow for type checking of the classes from compiler protobuf of Fleet Protocol, run:
+To allow for type checking of the classes from compiler protobuf of Fleet Protocol, run the code below.
+
+> [!WARNING]
+> After you update the Fleet Protocol submodule, ensure that all imports in the generated files are correct. The generated files are located in `lib/fleet-protocol/protobuf/compiled/python/fleet_protocol_protobuf_files`.
 
 ```bash
 pushd lib/fleet-protocol/protobuf && \
-find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python/build/lib/fleet_protocol_protobuf_files --pyi_out=./compiled/python/build/lib/fleet_protocol_protobuf_files {} +
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python/fleet_protocol_protobuf_files --pyi_out=./compiled/python/fleet_protocol_protobuf_files {} +
 popd
 ```
 
