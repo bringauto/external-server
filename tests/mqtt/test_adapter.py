@@ -243,11 +243,11 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
 
     def setUp(self) -> None:
         MQTTBrokerTest.kill_all_test_brokers()
-        self.adapter = MQTTClientAdapter(
-            "some_company", "test_car", 1, "127.0.0.1", 1883, EventQueue()
-        )
 
     def test_client_loop_is_not_started_if_broker_does_not_exist(self):
+        self.adapter = MQTTClientAdapter(
+            "some_company", "test_car", 1, "127.0.0.1", 1884, EventQueue()
+        )
         self.assertFalse(MQTTBrokerTest.running_processes())
         with self.assertRaises(CouldNotConnectToBroker):
             self.adapter.connect()
@@ -255,6 +255,9 @@ class Test_Starting_MQTT_Client_From_Adapter(unittest.TestCase):
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTING)
 
     def test_client_loop_is_started_and_returns_connected_state_if_broker_does_exist(self):
+        self.adapter = MQTTClientAdapter(
+            "some_company", "test_car", 1, "127.0.0.1", 1883, EventQueue()
+        )
         broker = MQTTBrokerTest(start=True, port=1883)
         self.adapter.connect()
         self.assertEqual(self.adapter.client._state, ClientConnectionState.MQTT_CS_CONNECTED)
