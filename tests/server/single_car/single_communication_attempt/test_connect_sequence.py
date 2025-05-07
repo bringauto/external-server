@@ -54,6 +54,7 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
         with self.assertLogs(LOGGER_NAME, level="WARNING") as cm:
             self.thread.start()
             time.sleep(1)
+            self.assertIn("Could not connect", cm.output[0])
 
     def tearDown(self):
         self.es.stop()
