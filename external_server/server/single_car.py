@@ -11,9 +11,7 @@ from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
-from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
-    Device as _Device
-)
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device as _Device
 
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 from external_server.checkers.command_checker import (
