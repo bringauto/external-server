@@ -1,14 +1,11 @@
 import secrets
 import string
 from queue import Queue, Empty
-import sys
 import ssl
 from typing import Optional, Any
 import time
 import os
 import threading
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.client import (
@@ -21,7 +18,7 @@ from paho.mqtt.client import (
 from external_server.logs import CarLogger as _CarLogger
 from external_server.checkers.mqtt_session import MQTTSession
 from paho.mqtt.enums import CallbackAPIVersion
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     Connect as _Connect,
     ExternalClient as _ExternalClientMsg,
     ExternalServer as ExternalServerMsg,

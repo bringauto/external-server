@@ -1,12 +1,9 @@
 import unittest
-import sys
 import time
 import threading
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
-from ExternalProtocol_pb2 import Status  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device, DeviceStatus
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import Status
 from external_server.server.single_car import ServerState
 from external_server.server.all_cars import ExternalServer
 from external_server.models.messages import connect_msg, status, cmd_response

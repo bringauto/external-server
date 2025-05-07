@@ -1,10 +1,7 @@
 import ctypes as ct
-import sys
 from typing import Any, Optional
 import os
 import threading
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from external_server.models.structures import (
     Config,

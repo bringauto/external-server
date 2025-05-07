@@ -12,7 +12,7 @@ import paho.mqtt.publish as publish  # type: ignore
 import paho.mqtt.client as client  # type: ignore
 
 import external_server as _external_server
-from ExternalProtocol_pb2 import ExternalClient as Ex  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import ExternalClient as Ex
 
 
 logger = logging.getLogger("MQTT Broker")

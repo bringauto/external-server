@@ -1,9 +1,6 @@
 import unittest
-import sys
 import concurrent.futures as futures
 import time
-
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 
 from pydantic import FilePath
 

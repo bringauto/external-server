@@ -7,7 +7,9 @@ from external_server.server_module.command_waiting_thread import (
 )
 from external_server.config import ModuleConfig as _ModuleConfig
 from external_server.models.events import EventQueue as _EventQueue
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device as _Device
+)
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 
 

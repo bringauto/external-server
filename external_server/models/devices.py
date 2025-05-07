@@ -1,8 +1,12 @@
 from __future__ import annotations
 import dataclasses
 
-from InternalProtocol_pb2 import Device as _Device  # type: ignore
-from InternalProtocol_pb2 import DeviceStatus as DeviceStatus  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    Device as _Device
+)
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
+    DeviceStatus as DeviceStatus
+)
 
 
 def device_status(device: _Device, status_data: bytes = b"") -> DeviceStatus:

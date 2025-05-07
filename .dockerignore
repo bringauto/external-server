@@ -32,7 +32,10 @@
 **/secrets.dev.yaml
 **/values.dev.yaml
 **/*.log
+**/*.egg-info
 htmlcov
 tests
 LICENSE
 README.md
+
+lib/fleet-protocol/protobuf/compiled/python/build

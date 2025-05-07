@@ -12,22 +12,22 @@ It handles communication between a cloud instance and multiple cars registered u
 
 ## Install dependencies
 
+### Submodules
+
+First, update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule
+
+```bash
+git submodule update --init lib/fleet-protocol
+```
+
 ### Python packages
 
-Install the required Python packages in a virtual environment by running the following:
+Install the required Python packages in a virtual environment by running the following (run pip3 install in the project root):
 
 ```bash
 python3 -m venv .venv && \
 source .venv/bin/activate && \
 pip3 install -r requirements.txt
-```
-
-### Submodules
-
-Update the [fleet protocol](https://github.com/bringauto/fleet-protocol) submodule
-
-```bash
-git submodule update --init lib/fleet-protocol
 ```
 
 ## Configure the External Server
@@ -80,10 +80,10 @@ See the `config/config.json` for an example of car configuration.
 After configuration and installation of the dependencies, run External Server with this command:
 
 ```bash
-python3 external_server_main.py --config <str> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
+python3 -m external_server <config> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
 ```
 
-- `-c or --config <str>` = path to the config file, default = `./config/config.json`
+- `<config>` = path to the config file
 - `--tls` = tls mqtt authentication
 
 Following arguments are used if argument `tls` is set:
@@ -175,4 +175,4 @@ find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./co
 popd
 ```
 
-Then add `<project-root-directory>/lib/fleet-protocol/protobuf/compiled/python`to the `PYTHONPATH` environment variable.
+Then reinstall the requirements.

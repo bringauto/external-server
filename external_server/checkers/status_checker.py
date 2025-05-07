@@ -1,10 +1,9 @@
 from threading import Lock as _Lock, Timer as _Timer
 from queue import PriorityQueue as _PriorityQueue, Queue as _Queue
-import sys
 
-sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
-
-from ExternalProtocol_pb2 import Status as _Status  # type: ignore
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
+    Status as _Status
+)
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME
 from external_server.checkers.checker import TimeoutChecker as _Checker
 from external_server.models.structures import TimeoutType as _TimeoutType

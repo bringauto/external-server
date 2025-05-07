@@ -5,8 +5,8 @@ import time
 
 sys.path.append(".")
 
-from InternalProtocol_pb2 import Device, DeviceStatus  # type: ignore
-from ExternalProtocol_pb2 import (  # type: ignore
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device, DeviceStatus
+from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     CommandResponse,
     ExternalServer as ExternalServerMsg,
     Status,
