@@ -2,7 +2,6 @@ from typing import Callable
 import threading
 from queue import Queue, Empty
 import sys
-import time
 
 sys.path.append("lib/fleet-protocol/protobuf/compiled/python")
 

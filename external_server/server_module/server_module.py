@@ -55,7 +55,7 @@ class ServerModule:
 
         real_mod_number = self._api_adapter.get_module_number()
         if real_mod_number != module_id:
-            msg = f"Module number '{real_mod_number}' returned from API does not match module ID{module_id} in config."
+            msg = f"Module number '{real_mod_number}' returned from API does not match module ID '{module_id}' in config."
             logger.error(msg, car)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(

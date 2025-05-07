@@ -145,6 +145,10 @@ class StatusChecker(_Checker):
         try:
             timer.start()
             self._skipped.put((counter, timer))
-            logger.warning(f"Status with counter {counter} is missing.", self._car)
+            logger.warning(
+                f"Status with counter {counter} is missing. Timer will not be started.", self._car
+            )
         except Exception as e:
-            logger.error(f"Failed to start timer for counter {counter}: {e}", self._car)
+            logger.error(
+                f"Failed to start timer for status with counter value {counter}: {e}", self._car
+            )

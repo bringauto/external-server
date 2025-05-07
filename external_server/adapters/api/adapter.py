@@ -10,8 +10,6 @@ from external_server.models.structures import (
     Buffer,
     DeviceIdentification,
     DisconnectTypes,
-)
-from external_server.models.structures import (
     GeneralErrorCode as _GeneralErrorCode,
     EsErrorCode as _EsErrorCode,
 )
@@ -79,6 +77,14 @@ class APIClientAdapter:
         """Returns `True` if device is initialized, `False` otherwise."""
         return self._library.context is not None
 
+    def _invalid_identification_msg(self, device: _Device) -> str:
+        """Returns a message indicating that the device identification is invalid."""
+        device_str = device.SerializeToString().replace("\n", ", ")
+        return (
+            f"Module {device.module}: Device {device_str} has invalid identification."
+            "Check the role (must be utf-8 encodable nonempty string) and name (must be utf-8 encodable nonempty string)."
+        )
+
     def device_connected(self, device: _Device) -> int:
         """Handles device connection by creating the device identification and calling
         the library function.
@@ -93,7 +99,12 @@ class APIClientAdapter:
             The result of the library function call.
         """
         device.priority = 0  # Set priority to zero - the external server must ignore the priority.
-        device_identification = self._create_device_identification(device)
+        device_identification = DeviceIdentification.from_device(device)
+        if not device_identification.is_valid():
+            _logger.warning(
+                self._invalid_identification_msg(device) + " Cannot connect.", self._car
+            )
+            return _GeneralErrorCode.NOT_OK
         return self._library.device_connected(device_identification)  # type: ignore
 
     def device_disconnected(self, disconnect_types: DisconnectTypes, device: _Device) -> int:
@@ -112,41 +123,16 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        device_identification = self._create_device_identification(device)
+        device_identification = DeviceIdentification.from_device(device)
+        if not device_identification.is_valid():
+            _logger.warning(
+                self._invalid_identification_msg(device) + " Cannot disconnect.", self._car
+            )
+            return _GeneralErrorCode.NOT_OK
         code = self._library.device_disconnected(disconnect_types, device_identification)
-        self.check_device_disconnected_code(device, code, self._car)
+        if code != _GeneralErrorCode.OK:
+            self.log_nok_device_disconnect(device, code, self._car)
         return code
-
-    def _create_device_identification(self, device: _Device) -> DeviceIdentification:
-        """Creates a DeviceIdentification structure based on the provided device object.
-
-        Parameters
-        ----------
-        device: Device
-            The device object.
-
-        Returns
-        -------
-        DeviceIdentification
-            The created DeviceIdentification structure.
-        """
-        try:
-            device_role = device.deviceRole.encode("utf-8")
-            device_name = device.deviceName.encode("utf-8")
-        except UnicodeEncodeError as e:
-            _logger.error(f"Failed to encode device role or name: {e}", self._car)
-            device_role = b""
-            device_name = b""
-        device_role_buffer = Buffer(data=device_role, size=len(device_role))
-        device_name_buffer = Buffer(data=device_name, size=len(device_name))
-
-        return DeviceIdentification(
-            module=device.module,
-            device_type=device.deviceType,
-            device_role=device_role_buffer,
-            device_name=device_name_buffer,
-            priority=device.priority,
-        )
 
     def _create_protobuf_device(self, device_id: DeviceIdentification) -> _Device:
         device = _Device()
@@ -178,27 +164,26 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        device_identification = self._create_device_identification(status.deviceStatus.device)
-        status_buffer = Buffer(
-            data=status.deviceStatus.statusData,
-            size=len(status.deviceStatus.statusData),
-        )
+        device_identification = DeviceIdentification.from_device(status.deviceStatus.device)
+        if not device_identification.is_valid():
+            _logger.warning(
+                self._invalid_identification_msg(status.deviceStatus.device)
+                + " Cannot forward status.",
+                self._car,
+            )
+            return _GeneralErrorCode.NOT_OK
+        drepr = device_repr(status.deviceStatus.device)
+        data = status.deviceStatus.statusData
+        status_buffer = Buffer(data=data, size=len(data))
         code = self._library.forward_status(status_buffer, device_identification)
         if code == _GeneralErrorCode.OK:
-            _logger.debug(
-                f"Status for {device_repr(status.deviceStatus.device)} forwarded to API", self._car
-            )
-        self._check_forward_status_code(status.deviceStatus.device, code, self._car)
+            _logger.debug(f"Status for the device {drepr} forwarded to API", self._car)
+        else:
+            self._log_nok_forward_status(status.deviceStatus.device, code, self._car)
         if status.errorMessage:
-            self._log_status_error(status)
+            _logger.info(f"Status for {drepr} contains error message.", self._car)
             self.forward_error_message(status.deviceStatus.device, status.errorMessage)
         return code
-
-    def _log_status_error(self, status: _Status) -> None:
-        """Log error if the status contains a non-empty error message."""
-        if status.errorMessage:
-            drepr = device_repr(status.deviceStatus.device)
-            _logger.info(f"Status for {drepr} contains error.", self._car)
 
     def forward_error_message(self, device: _Device, error_bytes: bytes) -> int:
         """
@@ -218,16 +203,19 @@ class APIClientAdapter:
         int
             The result of the library function call.
         """
-        device_identification = self._create_device_identification(device)
+        device_identification = DeviceIdentification.from_device(device)
+        if not device_identification.is_valid():
+            _logger.warning(
+                self._invalid_identification_msg(device) + " Cannot forward error message.",
+                self._car,
+            )
+            return _GeneralErrorCode.NOT_OK
         error_buffer = Buffer(data=error_bytes, size=len(error_bytes))
         code = self._library.forward_error_message(error_buffer, device_identification)
-        self._check_forward_error_message_code(device.module, code, self._car)
         if code == _GeneralErrorCode.OK:
             _logger.debug(f"Error message from {device_repr(device)} forwarded to API.", self._car)
         else:
-            _logger.debug(
-                f"Error message from {device_repr(device)} not forwarded to API.", self._car
-            )
+            self._log_nok_forward_error(device.module, code, self._car)
         return code
 
     def wait_for_command(self, timeout: int) -> int:
@@ -280,10 +268,17 @@ class APIClientAdapter:
 
     def command_ack(self, command_data: bytes, device: _Device) -> int:
         """Calls command_ack function from API."""
-        device_id = self._create_device_identification(device)
+        device_id = DeviceIdentification.from_device(device)
+        if not device_id.is_valid():
+            _logger.warning(
+                self._invalid_identification_msg(device) + " Cannot acknowledge command.",
+                self._car,
+                stack_level_up=1,
+            )
         command_buffer = Buffer(command_data, len(command_data))
         code = self._library.command_ack(command_buffer, device_id)
-        self._check_command_ack_code(device.module, code, self._car)
+        if code != _GeneralErrorCode.OK:
+            self._log_nok_command_ack(device.module, code, self._car)
         return code
 
     def deallocate(self, buffer: Buffer) -> None:
@@ -297,25 +292,23 @@ class APIClientAdapter:
         return code == _GeneralErrorCode.OK
 
     @staticmethod
-    def _check_forward_status_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in forward_status function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_forward_status(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in forward_status function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
 
     @staticmethod
-    def _check_forward_error_message_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in forward_error_message function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_forward_error(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in forward_error_message function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
 
     @staticmethod
-    def check_device_disconnected_code(device_id: _Device, code: int, car: str) -> None:
+    def log_nok_device_disconnect(device_id: _Device, code: int, car: str) -> None:
         if code == _GeneralErrorCode.NOT_OK:
             _logger.warning(
                 f"Module {device_id.module}: Device {device_id} not not among conected devices, code: {code}.",
@@ -324,7 +317,7 @@ class APIClientAdapter:
             )
         elif code == _EsErrorCode.CONTEXT_INCORRECT:
             _logger.error(f"Module {device_id.module}: Context incorrect, code: {code}.", car, 1)
-        elif code != _GeneralErrorCode.OK:
+        else:
             _logger.error(
                 f"Module {device_id.module}: Error in device_disconnected function, code: {code}.",
                 car,
@@ -332,10 +325,9 @@ class APIClientAdapter:
             )
 
     @staticmethod
-    def _check_command_ack_code(module_id: int, code: int, car: str) -> None:
-        if code != _GeneralErrorCode.OK:
-            _logger.error(
-                f"Module {module_id}: Error in command_ack function, code: {code}.",
-                car,
-                stack_level_up=1,
-            )
+    def _log_nok_command_ack(module_id: int, code: int, car: str) -> None:
+        _logger.error(
+            f"Module {module_id}: Error in command_ack function, code: {code}.",
+            car,
+            stack_level_up=1,
+        )
