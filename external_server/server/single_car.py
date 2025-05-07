@@ -11,9 +11,7 @@ from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     ExternalClient as _ExternalClientMsg,
     Status as _Status,
 )
-from fleet_protocol_protobuf_files.InternalProtocol_pb2 import (
-    Device as _Device
-)
+from fleet_protocol_protobuf_files.InternalProtocol_pb2 import Device as _Device
 
 from external_server.logs import CarLogger as _CarLogger, LOGGER_NAME as _LOGGER_NAME
 from external_server.checkers.command_checker import (
@@ -229,7 +227,7 @@ class CarServer:
             self._get_first_commands_responses()
 
     def start(self) -> None:
-        """Starts the external server.
+        """Starts this part of external server.
 
         This includes:
         - starting thread waiting for commands for each of the supported modules,
@@ -423,7 +421,9 @@ class CarServer:
                 )
         else:
             logger.warning(
-                f"Ignoring device {device_repr(device)} from unsupported module.", self._car_name
+                f"Ignoring device {device_repr(device)} from unsupported module.",
+                self._car_name,
+                stack_level_up=0,
             )
 
     def _ensure_connection_to_broker(self) -> None:
@@ -431,9 +431,7 @@ class CarServer:
 
         Raise exception if the connection fails.
         """
-        logger.info(
-            f"Connecting to MQTT broker on address '{self._mqtt.broker_address}'.", self._car_name
-        )
+        logger.info("Connecting to MQTT broker.", self._car_name)
         self._mqtt.connect()
         self._set_state(ServerState.CONNECTED)
 

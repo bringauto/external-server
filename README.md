@@ -171,7 +171,7 @@ To allow for type checking of the classes from compiler protobuf of Fleet Protoc
 
 ```bash
 pushd lib/fleet-protocol/protobuf && \
-find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python --pyi_out=./compiled/python {} +
+find ./definition -name "*.proto" -exec protoc -I=./definition --python_out=./compiled/python/build/lib/fleet_protocol_protobuf_files --pyi_out=./compiled/python/build/lib/fleet_protocol_protobuf_files {} +
 popd
 ```
 

@@ -1,6 +1,7 @@
 import unittest
 import sys
 import time
+import threading
 import concurrent.futures as futures
 from unittest.mock import Mock, patch
 import logging
@@ -14,7 +15,11 @@ from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     Status,
     CommandResponse,
 )
-from external_server.models.exceptions import ConnectSequenceFailure, CommunicationException
+from external_server.models.exceptions import (
+    ConnectSequenceFailure,
+    CommunicationException,
+    CouldNotConnectToBroker,
+)
 from external_server.models.devices import DevicePy, device_status as _device_status
 from external_server.models.messages import connect_msg, status, cmd_response
 from external_server.logs import LOGGER_NAME
@@ -39,10 +44,22 @@ class Test_Intializing_Server_Communication_Without_Running_Broker(unittest.Test
 
     def setUp(self):
         self.es = get_test_car_server()
+        self.thread = threading.Thread(target=self.es.start)
 
     def test_without_running_broker_raises_error(self):
-        with self.assertRaises(ConnectionRefusedError):
+        with self.assertRaises(CouldNotConnectToBroker):
             self.es._run_initial_sequence()
+
+    def test_warning_is_logged(self):
+        with self.assertLogs(LOGGER_NAME, level="WARNING") as cm:
+            self.thread.start()
+            time.sleep(1)
+            self.assertIn("Could not connect", cm.output[0])
+
+    def tearDown(self):
+        self.es.stop()
+        if self.thread.is_alive():
+            self.thread.join()
 
 
 class Test_Initializing_Server_Communication_With_Running_Broker_And_Single_Configured_Device(

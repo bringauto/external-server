@@ -25,7 +25,7 @@ from fleet_protocol_protobuf_files.ExternalProtocol_pb2 import (
     Status as _Status,
 )
 from external_server.models.events import EventType as _EventType, EventQueue as _EventQueue
-from external_server.models.exceptions import MQTTCommunicationError
+from external_server.models.exceptions import MQTTCommunicationError, CouldNotConnectToBroker
 
 # maximum number of messages in outgoing queue
 # value reasoning: external server can handle approximatelly 20 devices
@@ -156,12 +156,8 @@ class MQTTClientAdapter:
         return self._timeout
 
     def connect(self) -> int:
-        """Connect to the MQTT broker using host and port provided during initialization.
-
-        Raise an exception if the connection is refused.
-        """
-
-        self._set_up_connection_to_broker()
+        """Connect to the MQTT broker using host and port provided during initialization."""
+        self._connect_to_broker()
         code = self._start_communication()
         return self._handle_response_code_of_setting_up_conn_to_broker(code)
 
@@ -186,32 +182,39 @@ class MQTTClientAdapter:
         self._stop_client_loop()
 
     def _handle_response_code_of_setting_up_conn_to_broker(self, code: int) -> int:
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            return code
-        error = mqtt_error_from_code(code)
-        if self._mqtt_client.is_connected():
-            _logger.warning(
-                f"Communication between client and broker on '{self.broker_address}' is established "
-                f"with error message: {error}",
-                self._car,
-            )
-            return code
-        else:
-            raise ConnectionRefusedError(error)
+        try:
+            if code == mqtt.MQTT_ERR_SUCCESS:
+                return code
+            error = mqtt_error_from_code(code)
+            if self._mqtt_client.is_connected():
+                _logger.warning(
+                    "External server MQTT connection - communication between client and broker "
+                    f"'{self.broker_address}' is established with error message: {error}",
+                    self._car,
+                )
+                return code
+            else:
+                raise CouldNotConnectToBroker(error)
+        except Exception as e:
+            raise CouldNotConnectToBroker from e
 
-    def _set_up_connection_to_broker(self) -> None:
+    def _connect_to_broker(self) -> None:
         """Create a connection to the MQTT broker. This is required before starting communication loop of the MQTT client.
 
-        Raise an exception if the connection is refused.
+        Raise `CouldNotConnectToBroker` if the connection is not estabilished or if MQTT client returns code other that MQTT_ERR_SUCCESS.
         """
-        code = self._mqtt_client.connect(
-            host=self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE
-        )
-        if code == mqtt.MQTT_ERR_SUCCESS:
-            _logger.info(f"Connected to MQTT broker on '{self.broker_address}'.", self._car)
-        else:
-            error = mqtt_error_from_code(code)
-            raise ConnectionRefusedError(error)
+        try:
+            code = self._mqtt_client.connect(
+                host=self._broker_host, port=self._broker_port, keepalive=_KEEPALIVE
+            )
+            if code == mqtt.MQTT_ERR_SUCCESS:
+                _logger.info(f"Connected to MQTT broker on {self.broker_address}.", self._car)
+            else:
+                error = mqtt_error_from_code(code)
+                raise CouldNotConnectToBroker(error)
+            assert code == mqtt.MQTT_ERR_SUCCESS
+        except Exception as e:
+            raise CouldNotConnectToBroker(f"Could not connect to the MQTT broker. {e}") from e
 
     def get_connect_message(self) -> _Connect | None:
         """Get expected connect message from MQTT client.

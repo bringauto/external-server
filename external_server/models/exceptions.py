@@ -9,6 +9,10 @@ class CommunicationException(Exception):
     pass
 
 
+class CouldNotConnectToBroker(Exception):
+    pass
+
+
 class UnexpectedMQTTDisconnect(Exception):
     pass
 
