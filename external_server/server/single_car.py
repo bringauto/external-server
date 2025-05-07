@@ -430,7 +430,7 @@ class CarServer:
 
         Raise exception if the connection fails.
         """
-        logger.info("Connecting to MQTT broker.", self._car_name)
+        logger.info("Connecting to MQTT broker.", self._car_name, stack_level_up=0)
         self._mqtt.connect()
         self._set_state(ServerState.CONNECTED)
 

@@ -197,7 +197,7 @@ class MQTTClientAdapter:
                 raise CouldNotConnectToBroker(error)
             assert code == mqtt.MQTT_ERR_SUCCESS
         except Exception as e:
-            raise CouldNotConnectToBroker(f"Failure when connecting to MQTT broker: {e}") from e
+            raise CouldNotConnectToBroker(f"Could not connect to the MQTT broker. {e}") from e
 
     def disconnect(self) -> int:
         """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
