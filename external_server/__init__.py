@@ -1,4 +1,5 @@
 import os
+from external_server.__main__ import main
 from external_server.server.single_car import CarServer
 from external_server.server.all_cars import ExternalServer
 
