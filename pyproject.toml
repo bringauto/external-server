@@ -4,4 +4,4 @@ version = "2.2.3"
 
 
 [tool.setuptools.packages.find]
-include = ["external_server", "config", "docs"]
+include = ["external_server", "external_server.*", "config", "docs"]

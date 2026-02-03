@@ -92,6 +92,27 @@ Following arguments are used if argument `tls` is set:
 - `--cert <str>` = path to cert file
 - `--key <str>` = path to key file
 
+## Build Standalone Package (.pyz)
+
+The External Server can be packaged as a standalone `.pyz` file using [shiv](https://github.com/linkedin/shiv). This is useful for deployment or integration testing.
+
+### Prerequisites
+
+- Complete the [Install dependencies](#install-dependencies) steps
+- Install shiv: `pip install shiv`
+
+### Build
+
+```bash
+shiv -e external_server.__main__:main -o external_server.pyz . -r requirements.txt --compressed
+```
+
+This creates `external_server.pyz` which bundles the application with all dependencies. Run it with:
+
+```bash
+python3 external_server.pyz <config> [--tls] [--ca <str>] [--cert <str>] [--key <str>]
+```
+
 # Unit tests
 
 ## Necessary steps before testing
