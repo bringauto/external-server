@@ -2,9 +2,11 @@
 
 FROM bringauto/cpp-build-environment:latest AS cpp_build_base
 
+ARG CMCONF_VERSION=master
+
 RUN mkdir /home/bringauto/cmconf && \
     wget -O /home/bringauto/cmconf/CMCONF_FLEET_PROTOCOLConfig.cmake \
-    https://github.com/bringauto/packager-fleet-protocol-context/raw/master/config/CMCONF_FLEET_PROTOCOLConfig.cmake
+    https://github.com/bringauto/packager-fleet-protocol-context/raw/"$CMCONF_VERSION"/config/CMCONF_FLEET_PROTOCOLConfig.cmake
 
 
 FROM cpp_build_base AS mission_module_builder
