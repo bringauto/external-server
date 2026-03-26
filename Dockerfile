@@ -2,7 +2,7 @@
 
 FROM bringauto/cpp-build-environment:latest AS mission_module_builder
 
-ARG MISSION_MODULE_VERSION=v1.2.12
+ARG MISSION_MODULE_VERSION=v1.3.0
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -27,7 +27,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM bringauto/cpp-build-environment:latest AS io_module_builder
 
-ARG IO_MODULE_VERSION=v1.3.2
+ARG IO_MODULE_VERSION=v1.3.3
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
