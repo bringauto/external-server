@@ -1,6 +1,15 @@
 # syntax=docker/dockerfile:1
 
-FROM bringauto/cpp-build-environment:latest AS mission_module_builder
+FROM bringauto/cpp-build-environment:latest AS cpp_build_base
+
+ARG CMCONF_VERSION=master
+
+RUN mkdir /home/bringauto/cmconf && \
+    wget -O /home/bringauto/cmconf/CMCONF_FLEET_PROTOCOLConfig.cmake \
+    https://github.com/bringauto/packager-fleet-protocol-context/raw/"$CMCONF_VERSION"/config/CMCONF_FLEET_PROTOCOLConfig.cmake
+
+
+FROM cpp_build_base AS mission_module_builder
 
 ARG MISSION_MODULE_VERSION=v1.3.0
 
@@ -13,7 +22,8 @@ RUN mkdir /home/bringauto/modules/cmake && \
     wget -O cmake/Dependencies.cmake https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/cmake/Dependencies.cmake
 
 WORKDIR /home/bringauto/modules/package_build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf
 
 # Build mission module
 WORKDIR /home/bringauto
@@ -21,11 +31,12 @@ ADD --chown=bringauto:bringauto https://github.com/bringauto/mission-module.git#
 WORKDIR /home/bringauto/mission-module/_build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
     -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/mission_module/ \
-    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf .. && \
     make install
 
 
-FROM bringauto/cpp-build-environment:latest AS io_module_builder
+FROM cpp_build_base AS io_module_builder
 
 ARG IO_MODULE_VERSION=v1.3.3
 
@@ -38,7 +49,8 @@ RUN mkdir /home/bringauto/modules/cmake && \
     wget -O cmake/Dependencies.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/cmake/Dependencies.cmake
 
 WORKDIR /home/bringauto/modules/package_build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf
 
 # Build io module
 WORKDIR /home/bringauto
@@ -46,10 +58,11 @@ ADD --chown=bringauto:bringauto https://github.com/bringauto/io-module.git#$IO_M
 WORKDIR /home/bringauto/io-module/_build
 RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
     -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/io_module/ \
-    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf .. && \
     make install
 
-FROM bringauto/cpp-build-environment:latest AS transparent_module_builder
+FROM cpp_build_base AS transparent_module_builder
 
 ARG TRANSPARENT_MODULE_VERSION=v1.0.3
 
@@ -57,8 +70,10 @@ WORKDIR /home/bringauto/
 ADD --chown=bringauto:bringauto https://github.com/bringauto/transparent-module.git#$TRANSPARENT_MODULE_VERSION transparent-module
 
 WORKDIR /home/bringauto/transparent-module/_build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/transparent_module/ \
-    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF .. && \
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/transparent_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf && \
     make install
 
 FROM bringauto/python-environment:latest
