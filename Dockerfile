@@ -4,7 +4,7 @@ FROM bringauto/cpp-build-environment:latest AS cpp_build_base
 
 ARG CMCONF_VERSION=master
 
-RUN mkdir /home/bringauto/cmconf && \
+RUN mkdir -p /home/bringauto/cmconf && \
     wget -O /home/bringauto/cmconf/CMCONF_FLEET_PROTOCOLConfig.cmake \
     https://github.com/bringauto/packager-fleet-protocol-context/raw/"$CMCONF_VERSION"/config/CMCONF_FLEET_PROTOCOLConfig.cmake
 
@@ -16,7 +16,7 @@ ARG MISSION_MODULE_VERSION=v1.3.2
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
 
-RUN mkdir /home/bringauto/modules/cmake && \
+RUN mkdir -p /home/bringauto/modules/cmake && \
     wget -O CMakeLists.txt https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/CMakeLists.txt && \
     wget -O CMLibStorage.cmake https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/CMLibStorage.cmake && \
     wget -O cmake/Dependencies.cmake https://github.com/bringauto/mission-module/raw/"$MISSION_MODULE_VERSION"/cmake/Dependencies.cmake
@@ -43,7 +43,7 @@ ARG IO_MODULE_VERSION=v1.3.4
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
 
-RUN mkdir /home/bringauto/modules/cmake && \
+RUN mkdir -p /home/bringauto/modules/cmake && \
     wget -O CMakeLists.txt https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/CMakeLists.txt && \
     wget -O CMLibStorage.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/CMLibStorage.cmake && \
     wget -O cmake/Dependencies.cmake https://github.com/bringauto/io-module/raw/"$IO_MODULE_VERSION"/cmake/Dependencies.cmake
@@ -101,7 +101,7 @@ COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=transparent_module_builder /home/bringauto/modules /home/bringauto/modules
 
 USER 5000:5000
-RUN mkdir /home/bringauto/log/
+RUN mkdir -p /home/bringauto/log/
 
 # Set the entrypoint
 # "bash" and "-c" have to be used to be able to use environment variables
