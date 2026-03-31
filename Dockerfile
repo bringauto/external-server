@@ -11,7 +11,7 @@ RUN mkdir /home/bringauto/cmconf && \
 
 FROM cpp_build_base AS mission_module_builder
 
-ARG MISSION_MODULE_VERSION=v1.3.0
+ARG MISSION_MODULE_VERSION=v1.3.1
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
