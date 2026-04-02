@@ -12,6 +12,7 @@ RUN mkdir -p /home/bringauto/cmconf && \
 FROM cpp_build_base AS mission_module_builder
 
 ARG MISSION_MODULE_VERSION=v1.3.2
+ARG CACHE_BUST=none
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -39,6 +40,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 FROM cpp_build_base AS io_module_builder
 
 ARG IO_MODULE_VERSION=v1.3.4
+ARG CACHE_BUST=none
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -65,6 +67,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 FROM cpp_build_base AS transparent_module_builder
 
 ARG TRANSPARENT_MODULE_VERSION=v1.0.4
+ARG CACHE_BUST=none
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
