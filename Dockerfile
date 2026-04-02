@@ -64,7 +64,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM cpp_build_base AS transparent_module_builder
 
-ARG TRANSPARENT_MODULE_VERSION=v1.0.3
+ARG TRANSPARENT_MODULE_VERSION=v1.0.4
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
