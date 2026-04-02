@@ -66,6 +66,19 @@ FROM cpp_build_base AS transparent_module_builder
 
 ARG TRANSPARENT_MODULE_VERSION=v1.0.3
 
+WORKDIR /home/bringauto/modules
+ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
+
+RUN mkdir -p /home/bringauto/modules/cmake && \
+    wget -O CMakeLists.txt https://github.com/bringauto/transparent-module/raw/"$TRANSPARENT_MODULE_VERSION"/CMakeLists.txt && \
+    wget -O CMLibStorage.cmake https://github.com/bringauto/transparent-module/raw/"$TRANSPARENT_MODULE_VERSION"/CMLibStorage.cmake && \
+    wget -O cmake/Dependencies.cmake https://github.com/bringauto/transparent-module/raw/"$TRANSPARENT_MODULE_VERSION"/cmake/Dependencies.cmake
+
+WORKDIR /home/bringauto/modules/package_build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf
+
+# Build transparent module
 WORKDIR /home/bringauto/
 ADD --chown=bringauto:bringauto https://github.com/bringauto/transparent-module.git#$TRANSPARENT_MODULE_VERSION transparent-module
 
