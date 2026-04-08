@@ -479,11 +479,13 @@ class CarServer:
                     logger.info("Received a command response.", self._car_name)
                     return response.commandResponse
             else:
-                # ignore other messages
-                if response.HasField("status"):
+                if response.HasField("connect"):
+                    raise ConnectSequenceFailure(
+                        "Received connect message while waiting for command response. "
+                        "Restarting init sequence."
+                    )
+                elif response.HasField("status"):
                     msg_type = "status"
-                elif response.HasField("connect"):
-                    msg_type = "connect message"
                 else:
                     msg_type = "other"
                 logger.info(
@@ -498,10 +500,15 @@ class CarServer:
         # matching and not matching session ID are handled differently from the rest of the 'handle_*' methods
         if connect_msg.sessionId == self._mqtt.session.id:
             self._publish_connect_response(_ConnectResponse.ALREADY_LOGGED)
-            msg = "Received connect message with ID of already existing session. Ignoring."
+            logger.info(
+                "Received connect message with ID of already existing session. Ignoring.",
+                self._car_name,
+            )
         else:
-            msg = "Received connect message with session ID not matching current one. Ignoring."
-        logger.info(msg, self._car_name)
+            raise CommunicationException(
+                "Received connect message with session ID not matching current one. "
+                "Restarting to handle new gateway connection."
+            )
 
     def _handle_status(self, received_status: _Status) -> None:
         """Handle the status received during normal communication, i.e., after init sequence.
