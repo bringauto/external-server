@@ -480,6 +480,7 @@ class CarServer:
                     return response.commandResponse
             else:
                 if response.HasField("connect"):
+                    self._mqtt.received_messages.put(response)
                     raise ConnectSequenceFailure(
                         "Received connect message while waiting for command response. "
                         "Restarting init sequence."
@@ -654,7 +655,11 @@ class CarServer:
         message = self._car_message_from_mqtt()
         if message.HasField("connect"):
             # This message is not expected outside of a init sequence
-            self._handle_unexpected_connect_msg(message.connect)
+            try:
+                self._handle_unexpected_connect_msg(message.connect)
+            except CommunicationException:
+                self._mqtt.received_messages.put(message)
+                raise
         elif message.HasField("status"):
             if self._is_valid_session_id(message.status.sessionId, "status"):
                 self._reset_session_checker()
