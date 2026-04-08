@@ -161,6 +161,11 @@ class MQTTClientAdapter:
         code = self._start_communication()
         return self._handle_response_code_of_setting_up_conn_to_broker(code)
 
+    def clear_received_messages(self) -> None:
+        """Discard all messages currently buffered in the received-messages queue."""
+        with self._received_msgs.mutex:
+            self._received_msgs.queue.clear()
+
     def disconnect(self) -> None:
         """Disconnect from the MQTT broker. No action is taken if the MQTT client is already disconnected."""
         code = self._mqtt_client.disconnect()
