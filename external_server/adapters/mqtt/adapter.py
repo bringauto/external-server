@@ -80,6 +80,7 @@ class MQTTClientAdapter:
     """
 
     _EXTERNAL_SERVER_SUFFIX = "external_server"
+    _EXTERNAL_SERVER_DISCONNECT_SUFFIX = "external_server_disconnect"
     _MODULE_GATEWAY_SUFFIX = "module_gateway"
 
     def __init__(
@@ -93,6 +94,7 @@ class MQTTClientAdapter:
         mqtt_timeout: float = 0.5,
     ) -> None:
         self._publish_topic = self.get_publish_topic(company, car)
+        self._disconnect_notification_topic = self.get_disconnect_notification_topic(company, car)
         self._subscribe_topic = self.get_subscribe_topic(company, car)
         self._received_msgs: Queue[_ExternalClientMsg] = Queue()
         self._mqtt_client = create_mqtt_client(car)
@@ -431,3 +433,18 @@ class MQTTClientAdapter:
     def get_publish_topic(company: str, car: str) -> str:
         """Return the topic the MQTT client is publishing to."""
         return f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_SUFFIX}"
+
+    @staticmethod
+    def get_disconnect_notification_topic(company: str, car: str) -> str:
+        """Return the topic used to notify the gateway that this server is disconnecting."""
+        return f"{company}/{car}/{MQTTClientAdapter._EXTERNAL_SERVER_DISCONNECT_SUFFIX}"
+
+    def publish_disconnect_notification(self) -> None:
+        """Publish an empty disconnect notification to signal the gateway to reconnect immediately."""
+        if not self._mqtt_client.is_connected():
+            return
+        code = self._mqtt_client.publish(self._disconnect_notification_topic, payload=b"", qos=_QOS).rc
+        if code != mqtt.MQTT_ERR_SUCCESS:
+            _logger.warning(
+                f"Failed to publish disconnect notification. {mqtt_error_from_code(code)}.", self._car
+            )

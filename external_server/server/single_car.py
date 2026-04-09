@@ -298,6 +298,7 @@ class CarServer:
         all timers and threads, clear the known devices and all queues.
         """
         logger.info("Clearing the context.", self._car_name)
+        self._mqtt.publish_disconnect_notification()
         self._mqtt.disconnect()
         self._mqtt.clear_received_messages()
         self._mqtt.session.stop()
