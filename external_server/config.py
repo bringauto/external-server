@@ -9,6 +9,7 @@ from pydantic import (
     model_validator,
     StringConstraints,
     ValidationError,
+    computed_field,
 )
 
 
@@ -38,6 +39,16 @@ CompanyName = Annotated[str, StringConstraints(pattern=_COMPANY_NAME_PATTERN)]
 CarName = Annotated[str, StringConstraints(pattern=_CAR_NAME_PATTERN)]
 MQTTAdress = Annotated[str, StringConstraints(pattern=_MQTT_ADDRESS_PATTERN)]
 ModuleID = Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)]
+
+
+class ExternalCommunicationConfig(BaseModel):
+    protocol: Literal["MQTT", "QUIC"]
+    server_port: int = Field(ge=0, le=65535)
+    server_address: str
+    ca_certs_file: str = ""
+    cert_file: str = ""
+    key_file: str = ""
+    timeout_ms: int = Field(ge=0)
 
 
 class CarConfig(BaseModel):
@@ -79,15 +90,28 @@ class CarConfig(BaseModel):
 
 class ServerConfig(BaseModel):
     company_name: CompanyName
-    mqtt_address: MQTTAdress
-    mqtt_port: int = Field(ge=0, le=65535)
-    mqtt_timeout: float = Field(ge=0)
+    external_communication: ExternalCommunicationConfig
     timeout: float = Field(ge=0)
     send_invalid_command: bool
     sleep_duration_after_connection_refused: float = Field(ge=0)
     common_modules: dict[ModuleID, ModuleConfig]
     cars: dict[str, CarModulesConfig]
     logging: LoggingConfig
+
+    @computed_field
+    @property
+    def mqtt_address(self) -> str:
+        return self.external_communication.server_address
+
+    @computed_field
+    @property
+    def mqtt_port(self) -> int:
+        return self.external_communication.server_port
+
+    @computed_field
+    @property
+    def mqtt_timeout(self) -> float:
+        return self.external_communication.timeout_ms / 1000.0
 
     @model_validator(mode="before")
     @classmethod

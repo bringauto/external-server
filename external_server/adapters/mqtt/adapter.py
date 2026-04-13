@@ -443,8 +443,12 @@ class MQTTClientAdapter:
         """Publish an empty disconnect notification to signal the gateway to reconnect immediately."""
         if not self._mqtt_client.is_connected():
             return
-        code = self._mqtt_client.publish(self._disconnect_notification_topic, payload=b"", qos=_QOS).rc
-        if code != mqtt.MQTT_ERR_SUCCESS:
+        msg_info = self._mqtt_client.publish(self._disconnect_notification_topic, payload=b"", qos=_QOS)
+        if msg_info.rc != mqtt.MQTT_ERR_SUCCESS:
             _logger.warning(
-                f"Failed to publish disconnect notification. {mqtt_error_from_code(code)}.", self._car
+                f"Failed to publish disconnect notification. {mqtt_error_from_code(msg_info.rc)}.", self._car
             )
+            return
+        msg_info.wait_for_publish(timeout=2.0)
+        if not msg_info.is_published():
+            _logger.warning("Disconnect notification was not acknowledged before disconnecting.", self._car)
