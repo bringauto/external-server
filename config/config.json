@@ -10,10 +10,13 @@
         "path": "./log/"
     }
   },
+  "external_communication": {
+    "protocol": "MQTT",
+    "server_address": "mosquitto",
+    "server_port": 1883,
+    "timeout_ms": 30000
+  },
   "company_name": "bringauto",
-  "mqtt_address": "mosquitto",
-  "mqtt_port": 1883,
-  "mqtt_timeout": 30,
   "timeout": 30,
   "send_invalid_command": false,
   "sleep_duration_after_connection_refused": 0.5,
