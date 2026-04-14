@@ -42,7 +42,7 @@ ModuleID = Annotated[str, StringConstraints(pattern=_MODULE_ID_PATTERN)]
 
 
 class ExternalCommunicationConfig(BaseModel):
-    protocol: Literal["MQTT", "QUIC"]
+    protocol: Literal["MQTT"]
     server_port: int = Field(ge=0, le=65535)
     server_address: str
     ca_certs_file: str = ""
