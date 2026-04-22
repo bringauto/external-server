@@ -385,6 +385,7 @@ class CarServer:
             code = self._modules[device.module].api.device_connected(device)
             if code == GeneralErrorCode.OK:
                 self._add_connected_devices(device)
+                self._modules[device.module].thread.clear_commands()
                 logger.info(f"Device {drepr} has been connected.", self._car_name)
                 return True
             logger.error(
