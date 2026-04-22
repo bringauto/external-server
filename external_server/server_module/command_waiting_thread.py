@@ -99,6 +99,11 @@ class CommandWaitingThread:
         if self._waiting_thread.is_alive():
             self._waiting_thread.join()
 
+    def clear_commands(self) -> None:
+        """Discard all buffered commands. Call on device reconnect to avoid sending stale commands."""
+        with self._commands_lock:
+            self._commands.clear()
+
     def pop_command(self) -> tuple[bytes, _Device] | None:
         """Return available command if currently available, else returns None."""
         return self._commands.get()
