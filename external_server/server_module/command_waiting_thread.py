@@ -23,8 +23,9 @@ class _CommandQueue:
 
     def clear(self) -> None:
         """Clear the stored commands in the queue."""
-        while not self._queue.empty():
-            self._queue.get()
+        with self._queue.mutex:
+            self._queue.queue.clear()
+            self._queue.unfinished_tasks = 0
         logger.debug("Command queue of command waiting thread has been emptied.", self._car)
 
     def empty(self) -> bool:
