@@ -105,6 +105,18 @@ class CommandWaitingThread:
         with self._commands_lock:
             self._commands.clear()
 
+    def perform_atomic_add_and_clear(
+        self,
+        pre_check: Callable[[], bool],
+        on_connect: Callable[[], None],
+    ) -> None:
+        """Under the enqueue lock: run pre_check, call on_connect, clear queue if pre_check returned False."""
+        with self._commands_lock:
+            already_had_device = pre_check()
+            on_connect()
+            if not already_had_device:
+                self._commands.clear()
+
     def pop_command(self) -> tuple[bytes, _Device] | None:
         """Return available command if currently available, else returns None."""
         return self._commands.get()
