@@ -155,6 +155,7 @@ class LoggingConfig(BaseModel):
 class ModuleConfig(BaseModel):
     lib_path: FilePath
     config: dict[str, str | int] = Field(exclude=True)
+    timeout_ms: int = Field(default=1000, ge=1)
 
 
 def load_config(config_path: str) -> ServerConfig:
