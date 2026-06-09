@@ -136,7 +136,7 @@ ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
 # of the image. The clone (incl. its tokenised remote URL in .git/config) lives
 # only in this builder stage, which is discarded — the final image copies just
 # /home/bringauto/modules.
-RUN --mount=type=secret,id=gitlab_token,required=true \
+RUN --mount=type=secret,id=gitlab_token,required=true,uid=5000 \
     BA_GITLAB_TOKEN="$(cat /run/secrets/gitlab_token)" && \
     git clone --depth 1 --branch "$TELEOP_MODULE_VERSION" \
       "https://oauth2:${BA_GITLAB_TOKEN}@${TELEOP_MODULE_REPO_HOST}/${TELEOP_MODULE_REPO_PATH}.git" \
