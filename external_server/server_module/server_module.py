@@ -61,7 +61,7 @@ class ServerModule:
             logger.error(msg, car)
             raise RuntimeError(msg)
         self._thread = _CommandWaitingThread(
-            self._api_adapter, connection_check, event_queue=event_queue
+            self._api_adapter, connection_check, event_queue=event_queue, timeout_ms=config.timeout_ms
         )
 
     @property

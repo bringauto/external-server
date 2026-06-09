@@ -1,4 +1,5 @@
 import secrets
+import socket
 import string
 from queue import Queue, Empty
 import ssl
@@ -45,6 +46,10 @@ ClientConnectionState = _ConnectionState
 _logger = _CarLogger()
 
 
+def _on_socket_open(client: _Client, userdata: Any, sock: Any) -> None:
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+
 def create_mqtt_client(car: str) -> _Client:
     try:
         client_id = "".join(secrets.choice(string.ascii_letters) for _ in range(_ID_LENGTH))
@@ -55,6 +60,7 @@ def create_mqtt_client(car: str) -> _Client:
             reconnect_on_failure=True,
         )
         client.max_queued_messages_set(_MAX_QUEUED_MESSAGES)
+        client.on_socket_open = _on_socket_open
         return client
     except Exception as e:
         _logger.error(f"Failed to create MQTT client: {e}", car)
