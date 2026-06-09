@@ -11,7 +11,9 @@ RUN mkdir -p /home/bringauto/cmconf && \
 
 FROM cpp_build_base AS mission_module_builder
 
-ARG MISSION_MODULE_VERSION=v1.3.2
+# NOTE: v2.0.0 tag is created only after mission-module PR #31 is merged
+# (branch protection currently blocks self-merge — awaiting approval).
+ARG MISSION_MODULE_VERSION=v2.0.0
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -38,7 +40,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM cpp_build_base AS io_module_builder
 
-ARG IO_MODULE_VERSION=v1.3.4
+ARG IO_MODULE_VERSION=v1.3.5
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -64,7 +66,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM cpp_build_base AS transparent_module_builder
 
-ARG TRANSPARENT_MODULE_VERSION=v1.0.4
+ARG TRANSPARENT_MODULE_VERSION=v1.0.5
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -85,6 +87,75 @@ ADD --chown=bringauto:bringauto https://github.com/bringauto/transparent-module.
 WORKDIR /home/bringauto/transparent-module/_build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
     -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/transparent_module/ \
+    -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf && \
+    make install
+
+# ============================================================================
+# teleop module builder
+#
+# teleop-module lives on a PRIVATE gitlab.bringauto.com repo, so it is cloned
+# with the TeamCity gitlab access token. The token is passed as a BuildKit
+# secret (NOT a build ARG/ENV) so it is never written into an image layer or
+# `docker history`.
+#
+# TeamCity wiring (see teamcity-settings, drafted alongside this change):
+#   * The build exposes the shared gitlab access token
+#     (credentialsJSON:fb400766-9fbe-4c3d-967c-6158545b143e, the same
+#     "gitlabAccessToken" used by the VCS features) as the secure env var
+#     BA_GITLAB_TOKEN, following the existing Hardware_LightDBW precedent.
+#   * The "Docker build" step passes it to BuildKit as a secret:
+#         --secret id=gitlab_token,env=BA_GITLAB_TOKEN
+#     (requires BuildKit; the Dockerfile already opts in via the top
+#     `# syntax=docker/dockerfile:1` directive).
+#   * Local equivalent:
+#         DOCKER_BUILDKIT=1 docker build \
+#           --secret id=gitlab_token,env=BA_GITLAB_TOKEN \
+#           -t external-server .
+#
+# Verified locally with GCC 13.3.0 that teleop-module v1.0.3 builds the
+# external-server shared lib against gitea packages (incl. ba-logger v2.0.0),
+# producing libteleop-external-server-shared.so. The clone form
+# (https://oauth2:<token>@gitlab.bringauto.com/...) was verified against the
+# real private repo. NOTE: the library is copied into the final image below and
+# registered as module id 3 in config/for_docker.json (confirm api_url/car_name
+# for your deployment).
+# ============================================================================
+FROM cpp_build_base AS teleop_module_builder
+
+ARG TELEOP_MODULE_VERSION=v1.0.3
+ARG TELEOP_MODULE_REPO_HOST=gitlab.bringauto.com
+ARG TELEOP_MODULE_REPO_PATH=bring-auto/teleoperation/control/teleop-module
+
+WORKDIR /home/bringauto
+ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
+
+# Clone the private repo at the release tag using the mounted token. Using a
+# shallow clone of the working tree (rather than wget of raw files +
+# `ADD <git-url>`) keeps the credential in a single secret-mounted step and out
+# of the image. The clone (incl. its tokenised remote URL in .git/config) lives
+# only in this builder stage, which is discarded — the final image copies just
+# /home/bringauto/modules.
+RUN --mount=type=secret,id=gitlab_token,required=true \
+    BA_GITLAB_TOKEN="$(cat /run/secrets/gitlab_token)" && \
+    git clone --depth 1 --branch "$TELEOP_MODULE_VERSION" \
+      "https://oauth2:${BA_GITLAB_TOKEN}@${TELEOP_MODULE_REPO_HOST}/${TELEOP_MODULE_REPO_PATH}.git" \
+      /home/bringauto/teleop-module
+
+# Pre-fetch dependency packages (mirrors the other module stages); reuse the
+# cmake files from the clone instead of re-downloading them.
+RUN mkdir -p /home/bringauto/modules/cmake && \
+    cp /home/bringauto/teleop-module/CMakeLists.txt      /home/bringauto/modules/CMakeLists.txt && \
+    cp /home/bringauto/teleop-module/CMLibStorage.cmake  /home/bringauto/modules/CMLibStorage.cmake && \
+    cp /home/bringauto/teleop-module/cmake/Dependencies.cmake /home/bringauto/modules/cmake/Dependencies.cmake
+WORKDIR /home/bringauto/modules/package_build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON \
+    -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf
+
+# Build teleop module
+WORKDIR /home/bringauto/teleop-module/_build
+RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
+    -DCMAKE_INSTALL_PREFIX=/home/bringauto/modules/teleop_module/ \
     -DFLEET_PROTOCOL_BUILD_MODULE_GATEWAY=OFF \
     -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf && \
     make install
@@ -112,6 +183,7 @@ COPY config/for_docker.json /home/bringauto/external_server/config/for_docker.js
 COPY --from=mission_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=io_module_builder /home/bringauto/modules /home/bringauto/modules
 COPY --from=transparent_module_builder /home/bringauto/modules /home/bringauto/modules
+COPY --from=teleop_module_builder /home/bringauto/modules /home/bringauto/modules
 
 USER 5000:5000
 RUN mkdir -p /home/bringauto/log/

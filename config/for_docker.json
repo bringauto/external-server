@@ -39,6 +39,19 @@
         "delay_after_threshold_reached_ms": "5000",
         "retry_requests_delay_ms": "200"
       }
+    },
+    "3": {
+      "lib_path": "/home/bringauto/modules/teleop_module/lib/libteleop-external-server-shared.so",
+      "config": {
+        "api_url": "http://http-api:8080/v2/protocol",
+        "api_key": "ProtocolStaticAccessKey",
+        "company_name": "bringauto",
+        "car_name": "virtual_vehicle",
+        "max_requests_threshold_count": "10",
+        "max_requests_threshold_period_ms": "5000",
+        "delay_after_threshold_reached_ms": "5000",
+        "retry_requests_delay_ms": "200"
+      }
     }
   },
   "cars": {
