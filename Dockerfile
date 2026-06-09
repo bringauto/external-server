@@ -113,7 +113,7 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 #           --secret id=gitlab_token,env=BA_GITLAB_TOKEN \
 #           -t external-server .
 #
-# Verified locally with GCC 13.3.0 that teleop-module v1.0.3 builds the
+# Verified locally with GCC 13.3.0 that teleop-module v1.0.4 builds the
 # external-server shared lib against gitea packages (incl. ba-logger v2.0.0),
 # producing libteleop-external-server-shared.so. The clone form
 # (https://oauth2:<token>@gitlab.bringauto.com/...) was verified against the
@@ -123,7 +123,7 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 # ============================================================================
 FROM cpp_build_base AS teleop_module_builder
 
-ARG TELEOP_MODULE_VERSION=v1.0.3
+ARG TELEOP_MODULE_VERSION=v1.0.4
 ARG TELEOP_MODULE_REPO_HOST=gitlab.bringauto.com
 ARG TELEOP_MODULE_REPO_PATH=bring-auto/teleoperation/control/teleop-module
 
