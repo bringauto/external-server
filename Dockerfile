@@ -13,7 +13,7 @@ FROM cpp_build_base AS mission_module_builder
 
 # NOTE: v2.0.0 tag is created only after mission-module PR #31 is merged
 # (branch protection currently blocks self-merge — awaiting approval).
-ARG MISSION_MODULE_VERSION=v2.0.0
+ARG MISSION_MODULE_VERSION=v2.0.1
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -40,7 +40,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM cpp_build_base AS io_module_builder
 
-ARG IO_MODULE_VERSION=v1.3.5
+ARG IO_MODULE_VERSION=v1.3.6
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
@@ -66,7 +66,7 @@ RUN cmake -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 
 FROM cpp_build_base AS transparent_module_builder
 
-ARG TRANSPARENT_MODULE_VERSION=v1.0.5
+ARG TRANSPARENT_MODULE_VERSION=v1.0.6
 
 WORKDIR /home/bringauto/modules
 ARG CMLIB_REQUIRED_ENV_TMP_PATH=/home/bringauto/modules/cmlib_cache
