@@ -147,7 +147,8 @@ RUN --mount=type=secret,id=gitlab_token,required=true,uid=5000 \
 RUN mkdir -p /home/bringauto/modules/cmake && \
     cp /home/bringauto/teleop-module/CMakeLists.txt      /home/bringauto/modules/CMakeLists.txt && \
     cp /home/bringauto/teleop-module/CMLibStorage.cmake  /home/bringauto/modules/CMLibStorage.cmake && \
-    cp /home/bringauto/teleop-module/cmake/Dependencies.cmake /home/bringauto/modules/cmake/Dependencies.cmake
+    cp /home/bringauto/teleop-module/cmake/Dependencies.cmake /home/bringauto/modules/cmake/Dependencies.cmake && \
+    cp /home/bringauto/teleop-module/version.txt         /home/bringauto/modules/version.txt
 WORKDIR /home/bringauto/modules/package_build
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_GET_PACKAGES_ONLY=ON \
     -DCMCONF_FLEET_PROTOCOL_DIR=/home/bringauto/cmconf
