@@ -123,7 +123,7 @@ RUN cmake .. -DCMAKE_BUILD_TYPE=Release -DBRINGAUTO_INSTALL=ON \
 # ============================================================================
 FROM cpp_build_base AS teleop_module_builder
 
-ARG TELEOP_MODULE_VERSION=v1.0.4
+ARG TELEOP_MODULE_VERSION=v1.0.6
 ARG TELEOP_MODULE_REPO_HOST=gitlab.bringauto.com
 ARG TELEOP_MODULE_REPO_PATH=bring-auto/teleoperation/control/teleop-module
 
