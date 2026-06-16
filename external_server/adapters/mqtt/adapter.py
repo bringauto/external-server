@@ -230,11 +230,28 @@ class MQTTClientAdapter:
             raise CouldNotConnectToBroker(f"Could not connect to the MQTT broker. {e}") from e
 
     def get_connect_message(self) -> _Connect | None:
-        """Get expected connect message from MQTT client.
+        """Get the expected connect message from the MQTT client.
 
-        Return None if the message is not received or is not a connect message.
+        Discard any non-connect messages (e.g. statuses buffered before a reconnect) and
+        keep reading until a connect arrives or the timeout budget elapses. A single stale
+        status must NOT abort the connect sequence: doing so deadlocks (the sequence fails,
+        clears the context, retries, and meets the same buffered status again, forever).
+
+        Return None if no connect message arrives within the timeout.
         """
-        return self._get_message_field("connect")
+        deadline = time.monotonic() + (self._timeout or 0.0)
+        while True:
+            msg = self._get_message()
+            if msg is None:
+                return None
+            if msg.HasField("connect"):
+                return msg.connect
+            _logger.info(
+                f"Discarding {self._ext_client_message_type(msg)} message while waiting for connect.",
+                self._car,
+            )
+            if time.monotonic() >= deadline:
+                return None
 
     def get_status(self) -> _Status | None:
         """Get expected status message from MQTT client.
